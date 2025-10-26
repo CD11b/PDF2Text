@@ -1,4 +1,3 @@
-import sys
 from typing import Any, Generator
 import pymupdf
 import os
