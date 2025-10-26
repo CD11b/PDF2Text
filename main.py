@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from collections import Counter
 import logging
 import pandas as pd
+import argparse
 
 os.environ["TESSDATA_PREFIX"] = "./training"
 
@@ -648,10 +649,12 @@ class OutputWriter:
 
 def main():
 
-    if len(sys.argv) > 1:
-        pdf_path = sys.argv[1]
-    else:
-        pdf_path = "./docs/test_OCR.pdf"
+    parser = argparse.ArgumentParser(description="Process a PDF file.")
+
+    parser.add_argument("--input-path", nargs="?", default="./docs/test_OCR.pdf", help="Path to the PDF file")
+
+    args = parser.parse_args()
+    pdf_path = args.input_path
 
     if os.path.exists(pdf_path) and os.path.isfile(pdf_path):
         with PDFReader(pdf_path) as pdf_reader:
