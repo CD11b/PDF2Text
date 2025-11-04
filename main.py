@@ -220,7 +220,11 @@ class ProcessedText:
                 lines[i].text += "\n"
         return lines
 
-    def is_at_left_margin(self, line: StyledLine) -> bool:
+    def is_at_left_margin(self, line: StyledLine, whole_document: bool | None = None) -> bool:
+        if whole_document:
+            for page in self.document_heuristics.all_pages:
+                if line.start_x == page['start x']['most common']:
+                    return True
         return line.start_x == self.left_boundary
 
     def is_after_left_margin(self, line: StyledLine) -> bool:
