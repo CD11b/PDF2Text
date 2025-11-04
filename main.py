@@ -629,10 +629,26 @@ class PDFReader:
         return False
 
     def iter_pages(self, sort=False):
-        for i in range(self.get_page_count()):
-            yield DocumentAnalysis.get_page_blocks_from_dict(pdf=self.pdf, page_number=i, sort=sort)
+        page_info = self.get_page_count()
 
-    def get_page_count(self) -> int:
+        # Handle tuple (start, end)
+        if isinstance(page_info, tuple):
+            start, end = page_info
+        else:
+            start, end = 0, page_info  # Default range from 0 to page_count
+
+        for i in range(start, end):
+            logging.info(f"[---- Reading page {i} ----]")
+            yield DocumentAnalysis.get_page_blocks_from_dict(
+                pdf=self.pdf, page_number=i, sort=sort
+            )
+
+    def get_page_count(self) -> tuple[int , int] | int:
+
+
+        if self.page_start and self.page_end:
+            return self.page_start, self.page_end
+
         return self.pdf.page_count
 
     def open(self):
@@ -680,19 +696,27 @@ def main():
 
     parser = argparse.ArgumentParser(description="Process a PDF file.")
 
-    parser.add_argument("--input-path", nargs="?", default="./docs/test_OCR.pdf", help="Path to the PDF file")
+    default_path = "./docs/test_OCRpdf"
+    parser.add_argument("--input-path", nargs="?", default=default_path, help="Path to the PDF file")
+    parser.add_argument("--page-start", type=int, nargs="?", help="Page to start reading")
+    parser.add_argument("--page-end", type=int, nargs="?", help="Page to end reading")
+    parser.add_argument("--log-level", default="INFO", choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"], help="Set the logging level")
+
 
     args = parser.parse_args()
+
     pdf_path = args.input_path
+    page_start = args.page_start
+    page_end = args.page_end
+    logging.getLogger().setLevel(args.log_level.upper())
 
     if os.path.exists(pdf_path) and os.path.isfile(pdf_path):
-        with PDFReader(pdf_path) as pdf_reader:
+        with PDFReader(pdf_path, page_start, page_end) as pdf_reader:
 
             output_writer = OutputWriter()
             output_writer.set_output_path(pdf=pdf_reader.pdf, pdf_path=pdf_path)
 
             output_writer.write(mode="w")
-
             hanging_open = None
             for page_blocks in pdf_reader.iter_pages(sort=False):
 
