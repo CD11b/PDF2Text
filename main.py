@@ -8,8 +8,21 @@ from collections import Counter
 import logging
 import pandas as pd
 import argparse
+import sys
 
 os.environ["TESSDATA_PREFIX"] = "./training"
+
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    handlers=[
+        logging.StreamHandler(sys.stdout),  # Log to console
+        logging.FileHandler("pdf2text.log", mode='w', encoding='utf-8')  # Log to file
+    ]
+)
+
+
 
 @dataclass
 class StyledLine:
@@ -141,6 +154,7 @@ class ProcessedText:
 
                             if diff == 0:
                                 if hanging_open:
+                                    logging.debug(f"Cleaning i={opens_in}, [CASE: Hanging Open Bracket Closed on First Line]: line={lines[opens_in]}")
                                     lines[opens_in].text = after_close.lstrip()
                                     hanging_open = None
                                 else:
@@ -149,19 +163,27 @@ class ProcessedText:
                                         before_typo, _, after_typo = before_open.partition(value)
                                         before_open = before_typo + after_typo
                                         _, _, after_close = after_close.partition(value)
-
-                                    lines[opens_in].text = ''.join([before_open.rstrip(), after_close])
+                                        logging.warning(f"Cleaning i={opens_in}, [CASE: Author typo - Hanging Close]: line={lines[opens_in]}")
+                                        lines[opens_in].text = ''.join([before_open.rstrip(), after_close])
+                                    else:
+                                        logging.debug(f"Cleaning i={opens_in}, [CASE: Parentheses Closed on Same Line]: line={lines[opens_in]}")
+                                        lines[opens_in].text = ''.join([before_open.rstrip(), after_close])
                             elif diff > 0:
 
                                 if hanging_open:
+                                    logging.debug(f"Cleaning i={closes_in}, [CASE: Hanging Open Bracket Closed After Multiple Lines]: line={lines[closes_in]}")
                                     lines[closes_in].text = after_close.lstrip()
                                     hanging_open = None
                                     opens_in -= 1
                                 else:
+                                    logging.debug(f"Cleaning i={opens_in}, [CASE: Parentheses Closed After Multiple Lines]: line={lines[opens_in]}")
                                     lines[opens_in].text = ''.join([before_open.rstrip(), after_close])
+                                    logging.debug(f"Cleaned: line={lines[opens_in]}")
+                                    logging.debug(f"Removing i={closes_in}, [CASE: Removing Multi-Line Parentheses]: line={lines[closes_in]}")
                                     lines.pop(closes_in)
 
                             for k in range(closes_in - 1, opens_in, -1):
+                                logging.debug(f"Removing i={k}, [CASE: Removing Multi-Line Parentheses]: line={lines[k]}")
                                 lines.pop(k)
 
                             if self.has_parentheses(line=lines[i], key=key):
@@ -255,21 +277,29 @@ class ProcessedText:
         self.set_page_boundaries()
 
     @staticmethod
-    def skip_line(i: int, y_boundary: float, lines) -> int:
-        while i < len(lines) and lines[i].start_y == y_boundary:
+    def skip_line(i: int, lines: list[StyledLine], case: str, unhandled: bool | None=None) -> int:
+        starting_boundary = lines[i].start_y
+        while i < len(lines) and lines[i].start_y == starting_boundary:
+            if unhandled:
+                logging.error(f"Skipped i={i}, [CASE: {case}]: line={lines[i]}")
+            else:
+                logging.info(f"Skipped i={i}, [CASE: {case}]: line={lines[i]}")
             i += 1
         return i
 
     @staticmethod
-    def collect_line(i: int, y_boundary: float, lines) -> tuple[list[StyledLine], int]:
+    def collect_line(i: int, lines: list[StyledLine], case: str) -> tuple[list[StyledLine], int]:
         current_line = []
-        while i <= len(lines) - 1 and lines[i].start_y == y_boundary:
+        starting_boundary = lines[i].start_y
+        while i <= len(lines) - 1 and lines[i].start_y == starting_boundary:
+            logging.debug(f"Collected i={i}, [CASE: {case}]: line={lines[i]}")
             current_line.append(lines[i])
             i += 1
         return current_line, i
 
     @staticmethod
-    def collect_once(i: int, lines) -> tuple[list[StyledLine], int]:
+    def collect_once(i: int, lines: list[StyledLine], case: str) -> tuple[list[StyledLine], int]:
+        logging.debug(f"Collected Once i={i}, [CASE: {case}]: line={lines[i]}")
         current_line = [lines[i]]
         return current_line, i + 1
 
@@ -332,10 +362,10 @@ class ProcessedText:
 
                     if self.is_body_paragraph(lines=lines[i:]):
                         self.top_boundary = current_word.start_y
-                        current_line, i = ProcessedText.collect_line(i, line_y_boundary, lines)
+                        current_line, i = ProcessedText.collect_line(i, lines, case="First Body Paragraph")
 
                     else: # Aligned header
-                        i = ProcessedText.skip_line(i, line_y_boundary, lines)
+                        i = ProcessedText.skip_line(i, lines, case="Aligned Header")
 
                 elif self.is_after_left_margin(line=current_word):  # Edge case: Indented main body
 
@@ -343,9 +373,9 @@ class ProcessedText:
                         if self.is_title_font(line=current_word):
                             i = ProcessedText.skip_line(i, line_y_boundary, lines)
                         else:
-                            current_line, i = ProcessedText.collect_line(i, line_y_boundary, lines)
+                            current_line, i = ProcessedText.collect_line(i, lines, case="Indented Main Body")
                     else:
-                        i = ProcessedText.skip_line(i, line_y_boundary, lines)
+                        i = ProcessedText.skip_line(i, lines, case="Right-side Header")
 
                 else:
                     i = ProcessedText.skip_line(i, line_y_boundary, lines)
