@@ -41,8 +41,10 @@ class StyledLine:
 
 
 class ProcessedText:
-    def __init__(self):
+    def __init__(self, document_heuristics, ocr):
         self.page_heuristics = None
+        self.document_heuristics = document_heuristics
+        self.ocr = ocr
         self.bottom_boundary = None
         self.top_boundary = None
         self.left_boundary = None
@@ -264,16 +266,17 @@ class ProcessedText:
         self.left_boundary = self.page_heuristics['start x']['most common']
         self.bottom_boundary = self.page_heuristics['start y']['maximum']
 
-    def setup(self, lines: list[StyledLine], ocr: bool) -> None:
+    def setup(self, lines: list[StyledLine]) -> None:
 
-        page_heuristics = TextHeuristics()
+        page_heuristics = TextHeuristics(ocr=self.ocr)
 
-        self.page_heuristics = page_heuristics.analyze(lines=lines, ocr=ocr)
+        self.page_heuristics = page_heuristics.analyze(lines=lines)
 
-        if ocr and self.page_heuristics['font name']['most common'] != 'GlyphLessFont':
-            ocr = False
-            self.page_heuristics = page_heuristics.analyze(lines=lines, ocr=ocr)
+        if self.ocr and self.page_heuristics['font name']['most common'] != 'GlyphLessFont':
+            self.ocr = False
+            self.page_heuristics = page_heuristics.analyze(lines=lines)
 
+        self.document_heuristics.add_page(self.page_heuristics)
         self.set_page_boundaries()
 
     @staticmethod
@@ -340,12 +343,12 @@ class ProcessedText:
 
         return current_line, i
 
-    def filter_by_boundaries(self, lines, ocr):
+    def filter_by_boundaries(self, lines):
 
         filtered_lines: list[StyledLine] = []
         current_line: list[StyledLine] = []
 
-        self.setup(lines, ocr)
+        self.setup(lines)
 
         i = 0
         while i < len(lines):
@@ -433,8 +436,9 @@ class ProcessedText:
 
 
 class TextHeuristics:
-    def __init__(self) -> None:
+    def __init__(self, ocr) -> None:
         self.threshold = None
+        self.ocr = ocr
 
     @staticmethod
     def get_styling_counter(lines: list, attribute: str) -> Counter:
@@ -508,14 +512,14 @@ class TextHeuristics:
         return self.compute_bounds(indents, threshold=2)
 
 
-    def set_threshold(self, ocr: bool) -> None:
+    def set_threshold(self) -> None:
 
-        if ocr:
+        if self.ocr:
             self.threshold = 3.0
         else:
             self.threshold = 1.0
 
-    def analyze(self, lines: list, ocr: bool) -> dict:
+    def analyze(self, lines: list) -> dict:
 
         counters = {
             attr: self.get_styling_counter(lines, attr)
@@ -524,7 +528,7 @@ class TextHeuristics:
 
         most_common = {k: self.most_common_value(v) for k, v in counters.items()}
 
-        self.set_threshold(ocr=ocr)
+        self.set_threshold()
 
         font_sizes = [size for size, freq in counters['font_size'].items() for _ in range(freq)]
         font_bounds = self.compute_bounds(font_sizes)
@@ -536,7 +540,7 @@ class TextHeuristics:
         edge_gaps = [edge for edge, freq in counters['end_x'].items() for _ in range(freq)]
         edge_bounds = self.compute_bounds(edge_gaps)
 
-        if ocr:
+        if self.ocr:
             word_gaps = self.compute_word_gaps(lines=lines)
         else:
             word_gaps = [None, None]
@@ -608,6 +612,30 @@ class DocumentAnalysis:
             return True
         else:
             return False
+
+class DocumentHeuristics:
+    def __init__(self):
+        self.document = None
+        self.all_pages = []
+
+    def add_page(self, page_heuristics):
+        self.all_pages.append(page_heuristics)
+
+    def compute_document_heuristics(self):
+        all_keys = set().union(*(page.keys() for page in self.all_pages))
+
+        self.document = {
+            key: {
+                subkey: list({
+                    page[key][subkey]
+                    for page in self.all_pages
+                    if key in page and subkey in page[key]
+                })
+                for subkey in next(page[key].keys() for page in self.all_pages if key in page)
+            }
+            for key in all_keys
+        }
+
 
 class PDFReader:
     def __init__(self, pdf_path: str):
@@ -718,18 +746,21 @@ def main():
 
             output_writer.write(mode="w")
             hanging_open = None
+
+            document_heuristics = DocumentHeuristics()
             for page_blocks in pdf_reader.iter_pages(sort=False):
 
                 lines_with_styling = list(DocumentAnalysis.iter_pdf_styling_from_blocks(page_blocks=page_blocks))
-                processed_text = ProcessedText()
 
                 ocr = False
                 if DocumentAnalysis.check_ocr(lines=lines_with_styling):
                     ocr = True
 
-                lines_with_styling = processed_text.filter_by_boundaries(lines=lines_with_styling, ocr=ocr)
+                processed_text = ProcessedText(document_heuristics, ocr)
+
+                lines_with_styling = processed_text.filter_by_boundaries(lines=lines_with_styling)
                 lines_without_numbers = ProcessedText.clean_page_numbers(lines=lines_with_styling)
-                cleaned_text, hanging_open = processed_text.clean_parentheses(lines=lines_without_numbers, hanging_open=hanging_open, ocr=ocr)
+                cleaned_text, hanging_open = processed_text.clean_parentheses(lines=lines_without_numbers, hanging_open=hanging_open)
                 in_paragraphs = processed_text.add_paragraph_breaks(lines=cleaned_text)
                 page_text = ProcessedText.join_broken_sentences(lines=in_paragraphs)
 
