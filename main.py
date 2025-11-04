@@ -638,8 +638,10 @@ class DocumentHeuristics:
 
 
 class PDFReader:
-    def __init__(self, pdf_path: str):
+    def __init__(self, pdf_path: str, page_start: int | None = None, page_end: int | None = None):
         self.pdf_path = pdf_path
+        self.page_start = page_start
+        self.page_end = page_end
         self.pdf = None
 
 
