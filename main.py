@@ -308,36 +308,45 @@ class ProcessedText:
 
     def filter_indented_lines(self, i, ocr, lines: list[StyledLine], line_y_boundary, current_word, filtered_lines):
         current_line = []
-        while lines[i].start_y <= line_y_boundary:
+        starting_boundary = lines[i].start_y
+        while lines[i].start_y <= starting_boundary:
 
             if self.is_continued_indented_paragraph(current_line=current_word, last_line=filtered_lines[-1]):
 
-                if i == len(lines) - 1:
-                    print(f"skipped i={i}, line={lines[i]}")
-                    current_line, i = ProcessedText.collect_once(i, lines)
+                if self.is_last_line(i, lines):
+                    current_line, i = ProcessedText.collect_once(i, lines, case="Last Line is Continued Indented Paragraph")
                 elif self.is_body_paragraph(lines=lines[i-1:]):
-                    current_line, i = ProcessedText.collect_line(i, line_y_boundary, lines)
+                    current_line, i = ProcessedText.collect_line(i, lines, case="Indented Body Paragraph")
                 else:
-                    i = ProcessedText.skip_line(i, line_y_boundary, lines)
+                    i = ProcessedText.skip_line(i, lines, case="Unhandled Indented Line", unhandled=True)
 
             elif self.is_indented_paragraph(line=current_word):
                 if self.is_title_font(line=current_word):
-                    i = ProcessedText.skip_line(i, line_y_boundary, lines)
+                    current_line, i = self.filter_title_font(i, lines)
                 else:
-                    current_line, i = ProcessedText.collect_line(i, line_y_boundary, lines)
+                    current_line, i = ProcessedText.collect_line(i, lines, case="Indented Paragraph")
 
-            elif ocr:
+            elif self.ocr:
                 if self.is_footer_region(line=current_word):
-                    i = ProcessedText.skip_line(i, line_y_boundary, lines)
+                    i = ProcessedText.skip_line(i, lines, case="Indented Line @ Footer")
                 elif self.is_dominant_word_gap(current_word=lines[i], next_word=lines[i + 1]):
-                    current_line, i = ProcessedText.collect_line(i, line_y_boundary, lines)
+                    current_line, i = ProcessedText.collect_line(i, lines, case="OCR - Indented Line Following Dominant Word Gap")
+                else:
+                    i = ProcessedText.skip_line(i, lines, case="Unhandled Indented Line", unhandled=True)
 
-            elif self.is_dominant_font(line=current_word):
-                current_line, i = ProcessedText.collect_once(i, lines)
+            # elif self.is_dominant_font(line=current_word):
+            #     if self.is_header_region():
+            #         i = ProcessedText.skip_line(i, lines, case=f"Outside Indent Bounds {self.page_heuristics['start x']} - Dominant Font Indented Line @ Header", unhandled=True)
+            #     elif self.is_footer_region(line=current_word):
+            #         i = ProcessedText.skip_line(i, lines, case=f"Outside Indent Bounds ({self.page_heuristics['start x']['lower bound']}-{self.page_heuristics['start x']['lower bound']})  - Dominant Font Indented Line @ Footer", unhandled=True)
+            #     else:
+            #         current_line, i = ProcessedText.collect_once(i, lines, case=f"Outside Indent Bounds - Indented Line is Dominant Font")
 
             else:
-                print(f"skipped i={i}, line={lines[i]}")
-                i = ProcessedText.skip_line(i, line_y_boundary, lines)
+                if self.is_indented_paragraph(line=current_word, whole_document=True):
+                    current_line, i = ProcessedText.collect_line(i, lines, case="Whole Document - Indented Paragraph")
+                else:
+                    i = ProcessedText.skip_line(i, lines, case="Unhandled Indented Line", unhandled=True)
                 # current_line, i = ProcessedText.collect_once(i, lines)
             break
 
@@ -359,7 +368,10 @@ class ProcessedText:
             if self.is_header_region():
 
                 if self.is_before_left_margin(line=current_word):  # Header
-                    i = ProcessedText.skip_line(i, line_y_boundary, lines)
+                    if self.within_body_boundaries(line=current_word):  # OCR inaccuracy
+                        current_line, i = ProcessedText.collect_line(i, lines, case="OCR - Misrecognized Body Paragraph as Indented")
+                    else:
+                        i = ProcessedText.skip_line(i, lines, case="Non-aligned Header")
 
                 if self.is_at_left_margin(line=current_word):  # Body start
 
