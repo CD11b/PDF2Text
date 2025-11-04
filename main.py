@@ -128,7 +128,7 @@ class ProcessedText:
 
         return line.text.count(key)
 
-    def clean_parentheses(self, lines: list[StyledLine], ocr: bool, hanging_open: str | None=None) -> tuple[list[StyledLine], str | None]:
+    def clean_parentheses(self, lines: list[StyledLine], hanging_open: str | None=None) -> tuple[list[StyledLine], str | None]:
 
         i = 0
         while i < len(lines):
@@ -195,7 +195,8 @@ class ProcessedText:
                                 line_cleaned = False
 
                         else:
-                            if ocr and j - i > 2: # Likely recognized 'C' as open parentheses
+                            if self.ocr and j - i > 2:
+                                logging.warning("OCR - Likely recognized 'C' as open parentheses")
                                 break
 
                             hanging_open = key
