@@ -696,7 +696,7 @@ class DocumentAnalysis:
             else:
                 phrases += 1
 
-        if words / phrases > 0.75:
+        if words / phrases > 0.95:
             return True
         else:
             return False
