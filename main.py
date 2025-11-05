@@ -1,14 +1,17 @@
 from typing import Any, Generator
-import pymupdf
 import os
 import re
 import unicodedata
-from dataclasses import dataclass
 from collections import Counter
 import logging
 import pandas as pd
 import argparse
 import sys
+
+from pdf_reader import PDFReader
+from output_writer import OutputWriter
+from document_analysis import DocumentAnalysis
+from styled_line import StyledLine
 
 os.environ["TESSDATA_PREFIX"] = "./training"
 
@@ -21,24 +24,6 @@ logging.basicConfig(
         logging.FileHandler("pdf2text.log", mode='w', encoding='utf-8')  # Log to file
     ]
 )
-
-
-
-@dataclass
-class StyledLine:
-    text: str
-    font_size: float
-    font_name: str
-    start_x: float
-    start_y: float
-    end_x: float
-
-    def __post_init__(self):
-        self.font_size = round(self.font_size)
-        self.start_x = round(self.start_x)
-        self.start_y = round(self.start_y)
-        self.end_x = round(self.end_x)
-
 
 class FilterText:
     def __init__(self, page):
@@ -671,42 +656,6 @@ class TextHeuristics:
                 'font size': {'most common': most_common['font_size'], 'lower bound': font_bounds[0], 'upper bound': font_bounds[1]},
                 'font name': {'most common': most_common['font_name']}}
 
-
-class DocumentAnalysis:
-
-    @staticmethod
-    def get_page_blocks_from_dict(pdf: pymupdf.Document, page_number: int, sort: bool) -> list:
-
-        try:
-            page_text = pdf[page_number].get_textpage()
-            page_dict = page_text.extractDICT(sort=sort)
-            page_blocks = page_dict["blocks"]
-
-            return page_blocks
-
-        except Exception as e:
-            logging.exception(f"Error reading PDF blocks: {e}")
-            raise
-
-    @staticmethod
-    def iter_pdf_styling_from_blocks(page_blocks: list) -> Generator[StyledLine]:
-
-        try:
-            for block in page_blocks:
-                if block["type"] != 0:
-                    continue # text blocks only
-
-                for line in block["lines"]:
-                    for span in line["spans"]:
-                        text = "".join(span["text"]).strip()
-                        if text:
-                            yield StyledLine(text, span["size"], span["font"], span["origin"][0], span["origin"][1], span["bbox"][2])
-
-
-        except Exception as e:
-            logging.exception(f"Error reading styles from PDF blocks: {e}")
-            raise
-
 class DocumentHeuristics:
     def __init__(self):
         self.document = None
@@ -729,92 +678,6 @@ class DocumentHeuristics:
             }
             for key in all_keys
         }
-
-
-class PDFReader:
-    def __init__(self, pdf_path: str, page_start: int | None = None, page_end: int | None = None):
-        self.pdf_path = pdf_path
-        self.page_start = page_start
-        self.page_end = page_end
-        self.pdf = None
-
-
-    def __enter__(self) :
-        self.open()
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        if self.pdf:
-            self.close()
-
-        if exc_type:
-            logging.error(f"An exception occurred: {exc_val}")
-
-        return False
-
-    def iter_pages(self, sort=False):
-        page_info = self.get_page_count()
-
-        # Handle tuple (start, end)
-        if isinstance(page_info, tuple):
-            start, end = page_info
-        else:
-            start, end = 0, page_info  # Default range from 0 to page_count
-
-        for i in range(start, end):
-            logging.info(f"[---- Reading page {i} ----]")
-            yield DocumentAnalysis.get_page_blocks_from_dict(
-                pdf=self.pdf, page_number=i, sort=sort
-            )
-
-    def get_page_count(self) -> tuple[int , int] | int:
-
-
-        if self.page_start and self.page_end:
-            return self.page_start, self.page_end
-
-        return self.pdf.page_count
-
-    def open(self):
-        if self.pdf is None:
-            self.pdf = pymupdf.open(str(self.pdf_path))
-            logging.debug(f"Opened PDF: {self.pdf_path}")
-            return self.pdf
-        return None
-
-    def close(self):
-        if self.pdf:
-            try:
-                self.pdf.close()
-                logging.debug(f"Closed PDF: {self.pdf_path}")
-            except Exception as e:
-                logging.error(f"Error closing PDF: {e}")
-            finally:
-                self.pdf = None
-
-
-class OutputWriter:
-    def __init__(self):
-        self.output_path = None
-
-    def set_output_path(self, pdf: pymupdf.Document, pdf_path: str) -> str:
-
-        os.makedirs("./generated", exist_ok=True)
-        if len(pdf.metadata['title']) > 1:
-            sanitized_title = re.sub(r'[<>:"/\\|?*\n\r\t;]', '_', pdf.metadata['title']).strip()
-            self.output_path = f"./generated/{sanitized_title}.txt"
-
-        else:
-            base_name = os.path.splitext(os.path.basename(pdf_path))[0]
-            self.output_path = f"./generated/{base_name}.txt"
-
-        return self.output_path
-
-    def write(self, mode: str, text: str | None = None):
-        with open(self.output_path, mode, encoding='utf-8') as f:
-            if text is not None:
-                f.write(text)
-
 
 def main():
 
