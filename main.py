@@ -40,17 +40,11 @@ class StyledLine:
         self.end_x = round(self.end_x)
 
 
-class ProcessedText:
-    def __init__(self, document_heuristics, ocr):
-        self.page_heuristics = None
-        self.document_heuristics = document_heuristics
-        self.ocr = ocr
-        self.bottom_boundary = None
-        self.top_boundary = None
-        self.left_boundary = None
+class FilterText:
+    def __init__(self, page):
+        self.page = page
 
-    @staticmethod
-    def clean_page_numbers(lines: list) -> list:
+    def clean_page_numbers(self) -> list:
 
         logging.debug(f"Cleaning page numbers")
 
@@ -58,15 +52,14 @@ class ProcessedText:
             PAGE_NUMBER_PATTERN = re.compile(r'\s*\d+\s*')
 
             return [
-                line for line in lines if not PAGE_NUMBER_PATTERN.fullmatch(line.text)
+                line for line in self.page.filtered_lines if not PAGE_NUMBER_PATTERN.fullmatch(line.text)
             ]
 
         except Exception as e:
             logging.exception(f"Error cleaning page numbers: {e}")
             raise
 
-    @staticmethod
-    def join_broken_sentences(lines: list) -> str:
+    def join_broken_sentences(self) -> str:
 
         logging.debug(f"Joining broken sentences.")
 
@@ -77,7 +70,7 @@ class ProcessedText:
             page_line_text = []
             skip_until = -1  # highest index of merged lines
 
-            for i, current_line in enumerate(lines):
+            for i, current_line in enumerate(self.page.filtered_lines):
                 # Skip lines already merged into previous text
                 if i <= skip_until:
                     continue
@@ -88,9 +81,9 @@ class ProcessedText:
                 if BROKEN_WORD_PATTERN.search(current_text):
                     j = i + 1
                     # Keep merging as long as there are more broken lines
-                    while j < len(lines):
-                        current_text = HYPHEN_END_PATTERN.sub('', current_text) + lines[j].text.lstrip()
-                        if BROKEN_WORD_PATTERN.search(current_text) and j + 1 < len(lines):
+                    while j < len(self.page.filtered_lines):
+                        current_text = HYPHEN_END_PATTERN.sub('', current_text) + self.page.filtered_lines[j].text.lstrip()
+                        if BROKEN_WORD_PATTERN.search(current_text) and j + 1 < len(self.page.filtered_lines):
                             j += 1
                             continue
                         else:
@@ -124,12 +117,13 @@ class ProcessedText:
             if k != hanging_open:
                 yield k, v
 
-    def has_parentheses(self, line: StyledLine, key: str) -> int:
+    def has_parentheses(self, i: int, key: str) -> int:
 
-        return line.text.count(key)
+        return self.page.filtered_lines[i].text.count(key)
 
-    def clean_parentheses(self, lines: list[StyledLine], hanging_open: str | None=None) -> tuple[list[StyledLine], str | None]:
+    def clean_parentheses(self, hanging_open: str | None=None) -> tuple[list[StyledLine], str | None]:
 
+        lines = self.page.filtered_lines
         i = 0
         while i < len(lines):
 
@@ -188,14 +182,14 @@ class ProcessedText:
                                 logging.debug(f"Removing i={k}, [CASE: Removing Multi-Line Parentheses]: line={lines[k]}")
                                 lines.pop(k)
 
-                            if self.has_parentheses(line=lines[i], key=key):
+                            if self.has_parentheses(i, key):
                                 line_cleaned = True
                                 break
                             else:
                                 line_cleaned = False
 
                         else:
-                            if self.ocr and j - i > 2:
+                            if self.page.ocr and j - i > 2:
                                 logging.warning("OCR - Likely recognized 'C' as open parentheses")
                                 break
 
@@ -212,99 +206,14 @@ class ProcessedText:
             i += 1
         return lines, hanging_open
 
-    def add_paragraph_breaks(self, lines: list[StyledLine]):
+    def add_paragraph_breaks(self):
 
-        for i, line in enumerate(lines):
-            if self.is_body_paragraph(lines[i:]):
+        for i, line in enumerate(self.page.filtered_lines):
+            if self.page.is_body_paragraph(i):
                 pass
             else:
-                lines[i].text += "\n"
-        return lines
-
-    def is_at_left_margin(self, line: StyledLine, whole_document: bool | None = None) -> bool:
-        if whole_document:
-            for page in self.document_heuristics.all_pages:
-                if line.start_x == page['start x']['most common']:
-                    return True
-        return line.start_x == self.left_boundary
-
-    def is_after_left_margin(self, line: StyledLine) -> bool:
-        return line.start_x > self.left_boundary
-
-    def is_before_left_margin(self, line: StyledLine) -> bool:
-        return line.start_x < self.left_boundary
-
-    def is_footer_region(self, line: StyledLine) -> bool:
-        return line.start_y >= self.bottom_boundary - self.page_heuristics['start y']['lower bound']
-
-    def is_header_region(self) -> bool:
-        return self.top_boundary is None
-
-    def is_dominant_word_gap(self, current_word: StyledLine, next_word: StyledLine) -> bool:
-        word_separation = next_word.start_x - current_word.end_x
-        return self.page_heuristics['word gaps']['lower bound'] <= word_separation <= self.page_heuristics['word gaps']['upper bound']
-    
-    def within_body_boundaries(self, line: StyledLine, whole_document: bool | None = None) -> bool:
-        if whole_document:
-             for page in self.document_heuristics.all_pages:
-                 if page['start x']['most common'] < line.start_x <= page['start x']['upper bound']:
-                     return True
-        return self.page_heuristics['start x']['lower bound'] <= line.start_x <= self.page_heuristics['start x']['upper bound']
-
-    def is_indented_paragraph(self, line: StyledLine, whole_document: bool | None = None) -> bool:
-        if whole_document:
-             for page in self.document_heuristics.all_pages:
-                 if page['start x']['most common'] < line.start_x <= page['start x']['upper bound']:
-                     return True
-        return self.page_heuristics['start x']['most common'] < line.start_x <= self.page_heuristics['start x']['upper bound']
-
-    def is_continued_indented_paragraph(self, current_line: StyledLine, last_line: StyledLine):
-        return current_line.start_x == last_line.start_x
-
-    def is_body_paragraph(self, lines: list[StyledLine]):
-
-        gap_to_next_line = 0
-        i = 1
-        while gap_to_next_line == 0 and i <= len(lines) - 1: # For OCR or varying font compatibility
-            gap_to_next_line = lines[i].start_y - lines[0].start_y
-            i += 1
-
-        return gap_to_next_line <= self.page_heuristics['start y']['upper bound']  # Aligned header
-
-    def is_dominant_font(self, line: StyledLine) -> bool:
-        return self.page_heuristics['font size']['lower bound'] <= line.font_size <= self.page_heuristics['font size']['upper bound']
-
-    def is_title_font(self, line: StyledLine) -> bool:
-        return line.font_size > self.page_heuristics['font size']['upper bound']
-
-    def is_last_line(self, i, lines):
-        return i == len(lines) - 1
-
-    def ocr_is_title_font(self, i, lines) -> bool:
-
-        # Current line isn't being collected
-        whole_line, _ = ProcessedText.collect_line(i, lines, case="OCR Checking Title Font - Not Collected Yet")
-        font_size = pd.Series([line.font_size for line in whole_line]).mean()
-        
-        return font_size > self.page_heuristics['font size']['upper bound']
-    
-    def set_page_boundaries(self) -> None:
-
-        self.left_boundary = self.page_heuristics['start x']['most common']
-        self.bottom_boundary = self.page_heuristics['start y']['maximum']
-
-    def setup(self, lines: list[StyledLine]) -> None:
-
-        page_heuristics = TextHeuristics(ocr=self.ocr)
-
-        self.page_heuristics = page_heuristics.analyze(lines=lines)
-
-        if self.ocr and self.page_heuristics['font name']['most common'] != 'GlyphLessFont':
-            self.ocr = False
-            self.page_heuristics = page_heuristics.analyze(lines=lines)
-
-        self.document_heuristics.add_page(self.page_heuristics)
-        self.set_page_boundaries()
+                self.page.filtered_lines[i].text += "\n"
+        return self.page.filtered_lines
 
     @staticmethod
     def skip_line(i: int, lines: list[StyledLine], case: str, unhandled: bool | None=None) -> int:
@@ -333,176 +242,167 @@ class ProcessedText:
         current_line = [lines[i]]
         return current_line, i + 1
 
-    def filter_title_font(self, i, lines: list[StyledLine]):
+    def filter_title_font(self, i):
         current_line = []
-        if self.ocr:
-            if self.ocr_is_title_font(i, lines):
-                i = ProcessedText.skip_line(i, lines, case="Title Font")
+        if self.page.ocr:
+            if self.page.ocr_is_title_font(i):
+                i = FilterText.skip_line(i, self.page.lines, case="Title Font")
             else:
-                current_line, i = ProcessedText.collect_line(i, lines, case="OCR - Misrecognized Title Font")
+                current_line, i = FilterText.collect_line(i, self.page.lines, case="OCR - Misrecognized Title Font")
         else:
-            i = ProcessedText.skip_line(i, lines, case="Title Font")
+            i = FilterText.skip_line(i, self.page.lines, case="Title Font")
 
         return current_line, i
 
 
-    def filter_by_font(self, i, lines: list[StyledLine], current_word, filtered_lines):
+    def filter_by_font(self, i):
 
         current_line = []
-        if self.is_dominant_font(line=current_word):
+        if self.page.is_dominant_font(i):
             # if self.is_header_region():
-            #     i = ProcessedText.skip_line(i, lines, case=f"Outside Indent Bounds {self.page_heuristics['start x']} - Dominant Font Indented Line @ Header", unhandled=True)
+            #     i = FilterText.skip_line(i, lines, case=f"Outside Indent Bounds {self.page_heuristics['start x']} - Dominant Font Indented Line @ Header", unhandled=True)
             # elif self.is_footer_region(line=current_word):
-            #     i = ProcessedText.skip_line(i, lines, case=f"Outside Indent Bounds ({self.page_heuristics['start x']['lower bound']}-{self.page_heuristics['start x']['lower bound']})  - Dominant Font Indented Line @ Footer", unhandled=True)
+            #     i = FilterText.skip_line(i, lines, case=f"Outside Indent Bounds ({self.page_heuristics['start x']['lower bound']}-{self.page_heuristics['start x']['lower bound']})  - Dominant Font Indented Line @ Footer", unhandled=True)
             # else:
-            current_line, i = ProcessedText.collect_once(i, lines, case=f"Outside Indent Bounds - Indented Line is Dominant Font")
+            current_line, i = FilterText.collect_once(i, self.page.lines, case=f"Outside Indent Bounds - Indented Line is Dominant Font")
         else:
-            i = ProcessedText.skip_line(i, lines, case="Unhandled Uncommon Font", unhandled=True)
+            i = FilterText.skip_line(i, self.page.lines, case="Unhandled Uncommon Font", unhandled=True)
 
         return current_line, i
 
-    def filter_indented_lines(self, i, lines: list[StyledLine], current_word, filtered_lines):
+    def filter_indented_lines(self, i):
         current_line = []
-        starting_boundary = lines[i].start_y
-        while lines[i].start_y <= starting_boundary:
+        starting_boundary = self.page.lines[i].start_y
 
-            if self.is_continued_indented_paragraph(current_line=current_word, last_line=filtered_lines[-1]):
+        while self.page.lines[i].start_y <= starting_boundary:
 
-                if self.is_last_line(i, lines):
-                    current_line, i = ProcessedText.collect_once(i, lines, case="Last Line is Continued Indented Paragraph")
-                elif self.is_body_paragraph(lines=lines[i-1:]):
-                    current_line, i = ProcessedText.collect_line(i, lines, case="Indented Body Paragraph")
+            if self.page.is_continued_indented_paragraph(i):
+
+                if self.page.is_last_line(i):
+                    current_line, i = FilterText.collect_once(i, self.page.lines, case="Last Line is Continued Indented Paragraph")
+                elif self.page.is_body_paragraph(i):
+                    current_line, i = FilterText.collect_line(i, self.page.lines, case="Indented Body Paragraph")
                 else:
-                    i = ProcessedText.skip_line(i, lines, case="Unhandled Indented Line", unhandled=True)
+                    i = FilterText.skip_line(i, self.page.lines, case="Unhandled Indented Line", unhandled=True)
 
-            elif self.is_indented_paragraph(line=current_word):
-                if self.is_title_font(line=current_word):
-                    current_line, i = self.filter_title_font(i, lines)
+            elif self.page.is_indented_paragraph(i):
+                if self.page.is_title_font(i):
+                    current_line, i = self.filter_title_font(i)
                 else:
-                    current_line, i = ProcessedText.collect_line(i, lines, case="Indented Paragraph")
+                    current_line, i = FilterText.collect_line(i, self.page.lines, case="Indented Paragraph")
 
-            elif self.ocr:
-                if self.is_footer_region(line=current_word):
-                    i = ProcessedText.skip_line(i, lines, case="Indented Line @ Footer")
-                elif self.is_dominant_word_gap(current_word=lines[i], next_word=lines[i + 1]):
-                    current_line, i = ProcessedText.collect_line(i, lines, case="OCR - Indented Line Following Dominant Word Gap")
+            elif self.page.ocr:
+                if self.page.is_footer_region(i):
+                    i = FilterText.skip_line(i, self.page.lines, case="Indented Line @ Footer")
+                elif self.page.is_dominant_word_gap(i):
+                    current_line, i = FilterText.collect_line(i, self.page.lines, case="OCR - Indented Line Following Dominant Word Gap")
                 else:
-                    i = ProcessedText.skip_line(i, lines, case="Unhandled Indented Line", unhandled=True)
-
-            # elif self.is_dominant_font(line=current_word):
-            #     if self.is_header_region():
-            #         i = ProcessedText.skip_line(i, lines, case=f"Outside Indent Bounds {self.page_heuristics['start x']} - Dominant Font Indented Line @ Header", unhandled=True)
-            #     elif self.is_footer_region(line=current_word):
-            #         i = ProcessedText.skip_line(i, lines, case=f"Outside Indent Bounds ({self.page_heuristics['start x']['lower bound']}-{self.page_heuristics['start x']['lower bound']})  - Dominant Font Indented Line @ Footer", unhandled=True)
-            #     else:
-            #         current_line, i = ProcessedText.collect_once(i, lines, case=f"Outside Indent Bounds - Indented Line is Dominant Font")
+                    i = FilterText.skip_line(i, self.page.lines, case="Unhandled Indented Line", unhandled=True)
 
             else:
-                if self.is_indented_paragraph(line=current_word, whole_document=True):
-                    current_line, i = ProcessedText.collect_line(i, lines, case="Whole Document - Indented Paragraph")
+                if self.page.is_indented_paragraph(i, whole_document=True):
+                    current_line, i = FilterText.collect_line(i, self.page.lines, case="Whole Document - Indented Paragraph")
                 else:
-                    i = ProcessedText.skip_line(i, lines, case="Unhandled Indented Line", unhandled=True)
-                # current_line, i = ProcessedText.collect_once(i, lines)
+                    i = FilterText.skip_line(i, self.page.lines, case="Unhandled Indented Line", unhandled=True)
+                # current_line, i = FilterText.collect_once(i, lines)
             break
 
         return current_line, i
 
-    def filter_by_boundaries(self, lines):
+    def filter_by_boundaries(self):
 
         filtered_lines: list[StyledLine] = []
         current_line: list[StyledLine] = []
 
-        self.setup(lines)
-
         i = 0
-        while i < len(lines):
+        while i < len(self.page.lines):
 
-            current_word: StyledLine = lines[i]
+            current_word: StyledLine = self.page.lines[i]
             line_y_boundary = current_word.start_y
 
-            if self.is_header_region():
+            if self.page.is_header_region():
 
-                if self.is_before_left_margin(line=current_word):  # Header
-                    if self.within_body_boundaries(line=current_word):  # OCR inaccuracy
-                        current_line, i = ProcessedText.collect_line(i, lines, case="OCR - Misrecognized Body Paragraph as Indented")
+                if self.page.is_before_left_margin(i):  # Header
+                    if self.page.within_body_boundaries(i):  # OCR inaccuracy
+                        current_line, i = FilterText.collect_line(i, self.page.lines, case="OCR - Misrecognized Body Paragraph as Indented")
                     else:
-                        i = ProcessedText.skip_line(i, lines, case="Non-aligned Header")
+                        i = FilterText.skip_line(i, self.page.lines, case="Non-aligned Header")
 
-                if self.is_at_left_margin(line=current_word):  # Body start
+                if self.page.is_at_left_margin(i):  # Body start
 
-                    if self.is_body_paragraph(lines=lines[i:]):
-                        self.top_boundary = current_word.start_y
-                        current_line, i = ProcessedText.collect_line(i, lines, case="First Body Paragraph")
+                    if self.page.is_body_paragraph(i):
+                        self.page.top_boundary = current_word.start_y
+                        current_line, i = FilterText.collect_line(i, self.page.lines, case="First Body Paragraph")
 
                     else: # Aligned header
-                        i = ProcessedText.skip_line(i, lines, case="Aligned Header")
+                        i = FilterText.skip_line(i, self.page.lines, case="Aligned Header")
 
-                elif self.is_after_left_margin(line=current_word):  # Edge case: Indented main body
+                elif self.page.is_after_left_margin(i):  # Edge case: Indented main body
 
-                    if self.within_body_boundaries(line=current_word, whole_document=True):
-                        if self.is_title_font(line=current_word):
-                            current_line, i = self.filter_title_font(i, lines)
+                    if self.page.within_body_boundaries(i, whole_document=True):
+                        if self.page.is_title_font(i):
+                            current_line, i = self.filter_title_font(i)
                         else:
-                            current_line, i = ProcessedText.collect_line(i, lines, case="Indented Main Body")
+                            current_line, i = FilterText.collect_line(i, self.page.lines, case="Indented Main Body")
                     else:
-                        i = ProcessedText.skip_line(i, lines, case="Right-side Header")
+                        i = FilterText.skip_line(i, self.page.lines, case="Right-side Header")
 
                 else:
-                    if self.is_at_left_margin(line=current_word, whole_document=True):  # Body start
-                        if self.is_body_paragraph(lines=lines[i:]):
-                            self.top_boundary = current_word.start_y
-                            current_line, i = ProcessedText.collect_line(i, lines, case="First Body Paragraph")
+                    if self.page.is_at_left_margin(i, whole_document=True):  # Body start
+                        if self.page.is_body_paragraph(i):
+                            self.page.top_boundary = current_word.start_y
+                            current_line, i = FilterText.collect_line(i, self.page.lines, case="First Body Paragraph")
                     else:
-                        i = ProcessedText.skip_line(i, lines, case="Unhandled Header", unhandled=True)
+                        i = FilterText.skip_line(i, self.page.lines, case="Unhandled Header", unhandled=True)
 
-            elif self.is_footer_region(line=current_word):  # Very bottom
+            elif self.page.is_footer_region(i):  # Very bottom
 
-                if self.is_at_left_margin(line=current_word):  # Main body
-                    if self.is_last_line(i, lines): # No real footer
-                        current_line, i = self.filter_by_font(i, lines, current_word, filtered_lines)
-                    elif self.is_body_paragraph(lines=lines[i:]):
-                        current_line, i = ProcessedText.collect_line(i, lines, case="Body Paragraph @ Footer")
+                if self.page.is_at_left_margin(i):  # Main body
+                    if self.page.is_last_line(i): # No real footer
+                        current_line, i = self.filter_by_font(i)
+                    elif self.page.is_body_paragraph(i):
+                        current_line, i = FilterText.collect_line(i, self.page.lines, case="Body Paragraph @ Footer")
                     else:
-                        i = ProcessedText.skip_line(i, lines, case="Unhandled Footer", unhandled=True)
-                elif self.is_before_left_margin(line=current_word):
-                    if self.within_body_boundaries(line=current_word):  # OCR inaccuracy
-                        current_line, i = ProcessedText.collect_line(i, lines, case="OCR - Misrecognized Body Paragraph as Outdented")
+                        i = FilterText.skip_line(i, self.page.lines, case="Unhandled Footer", unhandled=True)
+                elif self.page.is_before_left_margin(i):
+                    if self.page.within_body_boundaries(i):  # OCR inaccuracy
+                        current_line, i = FilterText.collect_line(i, self.page.lines, case="OCR - Misrecognized Body Paragraph as Outdented")
                     else:
-                        i = ProcessedText.skip_line(i, lines, case="Left-side footer")
+                        i = FilterText.skip_line(i, self.page.lines, case="Left-side footer")
 
-                elif self.is_after_left_margin(current_word):
-                    current_line, i = self.filter_indented_lines(i, lines, current_word, filtered_lines)
+                elif self.page.is_after_left_margin(i):
+                    current_line, i = self.filter_indented_lines(i)
                 else:
-                    i = ProcessedText.skip_line(i, lines, case="Unhandled Footer", unhandled=True)
+                    i = FilterText.skip_line(i, self.page.lines, case="Unhandled Footer", unhandled=True)
 
-            elif self.is_at_left_margin(line=current_word):  # Main body
+            elif self.page.is_at_left_margin(i):  # Main body
 
-                if self.is_title_font(line=current_word):
-                    current_line, i = self.filter_title_font(i, lines)
+                if self.page.is_title_font(i):
+                    current_line, i = self.filter_title_font(i)
                 else:
-                    if self.is_dominant_font(line=current_word):
-                        current_line, i = ProcessedText.collect_line(i, lines, case="Main Body")
+                    if self.page.is_dominant_font(i):
+                        current_line, i = FilterText.collect_line(i, self.page.lines, case="Main Body")
                     else:
-                        i = ProcessedText.skip_line(i, lines, case="Aligned title")
+                        i = FilterText.skip_line(i, self.page.lines, case="Aligned title")
 
-            elif lines[i].start_y < filtered_lines[-1].start_y:
+            elif self.page.is_in_order(i) is False:
 
-                i = ProcessedText.skip_line(i, lines, case="Title outside regular read-order")
+                i = FilterText.skip_line(i, self.page.lines, case="Text outside regular read-order")
 
-            elif self.is_after_left_margin(current_word):  # Indented block
+            elif self.page.is_after_left_margin(i):  # Indented block
 
-                if self.is_last_line(i, lines) and lines[i].start_y == line_y_boundary:
-                    current_line, i = ProcessedText.collect_once(i, lines, case="Last Line is Continued Indent")
+                if self.page.is_last_line(i) and self.page.lines[i].start_y == line_y_boundary:
+                    current_line, i = FilterText.collect_once(i, self.page.lines, case="Last Line is Continued Indent")
 
-                elif i < len(lines) - 1:
+                elif i < len(self.page.lines) - 1:
 
-                    current_line, i = self.filter_indented_lines(i, lines, current_word, filtered_lines)
+                    current_line, i = self.filter_indented_lines(i)
 
-            elif self.is_before_left_margin(line=current_word):  # Left-side footer
-                if self.within_body_boundaries(line=current_word): # OCR inaccuracy
-                    current_line, i = ProcessedText.collect_line(i, lines, case="OCR - Misrecognized Body Paragraph as Outdented")
+            elif self.page.is_before_left_margin(i):  # Left-side footer
+                if self.page.within_body_boundaries(i): # OCR inaccuracy
+                    current_line, i = FilterText.collect_line(i, self.page.lines, case="OCR - Misrecognized Body Paragraph as Outdented")
                 else:
-                    i = ProcessedText.skip_line(i, lines, case="Left-side footer")
+                    i = FilterText.skip_line(i, self.page.lines, case="Left-side footer")
 
             else:
                 i += 1
@@ -510,7 +410,7 @@ class ProcessedText:
 
             if len(current_line) > 0:
 
-                filtered_lines.append(StyledLine(text=' '.join(line.text for line in current_line if line.text.strip()),
+                self.page.filtered_lines.append(StyledLine(text=' '.join(line.text for line in current_line if line.text.strip()),
                                                  font_size=pd.Series([line.font_size for line in current_line]).mean(),
                                                  font_name=current_word.font_name,
                                                  start_x=current_word.start_x,
@@ -521,6 +421,135 @@ class ProcessedText:
         return filtered_lines
 
 
+class Page:
+    def __init__(self, document_heuristics):
+        self.page_heuristics = None
+        self.document_heuristics = document_heuristics
+        self.ocr = None
+        self.lines = None
+        self.filtered_lines = []
+        self.bottom_boundary = None
+        self.top_boundary = None
+        self.left_boundary = None
+
+    def set_lines(self, lines):
+        self.lines = lines
+
+    def set_ocr(self):
+        self.ocr = self.check_ocr()
+
+    def check_ocr(self):
+        if len(self.lines) == 0:
+            return False
+
+        words = 1
+        phrases = 1
+
+        for i, line in enumerate(self.lines):
+
+            if line.text.strip() is None:
+                continue
+            elif " " not in line.text.strip():
+                words += 1
+            else:
+                phrases += 1
+
+        if words / phrases > 0.95:
+            return True
+        else:
+            return False
+
+    def is_at_left_margin(self, i, whole_document: bool | None = None) -> bool:
+        if whole_document:
+            for page in self.document_heuristics.all_pages:
+                if self.lines[i].start_x == page['start x']['most common']:
+                    return True
+        return self.lines[i].start_x == self.left_boundary
+
+    def is_after_left_margin(self, i) -> bool:
+        return self.lines[i].start_x > self.left_boundary
+
+    def is_before_left_margin(self, i) -> bool:
+        return self.lines[i].start_x < self.left_boundary
+
+    def is_footer_region(self, i) -> bool:
+        return self.lines[i].start_y >= self.bottom_boundary - self.page_heuristics['start y']['lower bound']
+
+    def is_header_region(self) -> bool:
+        return self.top_boundary is None
+
+    def is_dominant_word_gap(self, i) -> bool:
+        word_separation = self.lines[i + 1].start_x - self.lines[i].end_x
+        return self.page_heuristics['word gaps']['lower bound'] <= word_separation <= self.page_heuristics['word gaps'][
+            'upper bound']
+
+    def within_body_boundaries(self, i, whole_document: bool | None = None) -> bool:
+        if whole_document:
+            for page in self.document_heuristics.all_pages:
+                if page['start x']['most common'] < self.lines[i].start_x <= page['start x']['upper bound']:
+                    return True
+        return self.page_heuristics['start x']['lower bound'] <= self.lines[i].start_x <= self.page_heuristics['start x'][
+            'upper bound']
+
+    def is_indented_paragraph(self, i, whole_document: bool | None = None) -> bool:
+        if whole_document:
+            for page in self.document_heuristics.all_pages:
+                if page['start x']['most common'] < self.lines[i].start_x <= page['start x']['upper bound']:
+                    return True
+        return self.page_heuristics['start x']['most common'] < self.lines[i].start_x <= self.page_heuristics['start x'][
+            'upper bound']
+
+    def is_continued_indented_paragraph(self, i):
+        return self.lines[i].start_x == self.filtered_lines[-1].start_x
+
+    def is_body_paragraph(self, i):
+
+        gap_to_next_line = 0
+        while gap_to_next_line == 0 and i < len(self.lines) - 1:  # For OCR or varying font compatibility
+            gap_to_next_line = self.lines[i + 1].start_y - self.lines[i].start_y
+            i += 1
+
+        return gap_to_next_line <= self.page_heuristics['start y']['upper bound']  # Aligned header
+
+    def is_dominant_font(self, i) -> bool:
+        return self.page_heuristics['font size']['lower bound'] <= self.lines[i].font_size <= self.page_heuristics['font size'][
+            'upper bound']
+
+    def is_title_font(self, i) -> bool:
+        return self.lines[i].font_size > self.page_heuristics['font size']['upper bound']
+
+    def is_last_line(self, i):
+        return i == len(self.lines) - 1
+
+    def is_in_order(self, i):
+        return self.lines[i].start_y > self.filtered_lines[-1].start_y
+
+    def ocr_is_title_font(self, i) -> bool:
+
+        # Current line isn't being collected
+        whole_line, _ = FilterText.collect_line(i, self.lines, case="OCR Checking Title Font - Not Collected Yet")
+        font_size = pd.Series([line.font_size for line in whole_line]).mean()
+
+        return font_size > self.page_heuristics['font size']['upper bound']
+
+    def set_page_boundaries(self) -> None:
+
+        self.left_boundary = self.page_heuristics['start x']['most common']
+        self.bottom_boundary = self.page_heuristics['start y']['maximum']
+
+    def setup(self) -> None:
+
+        self.set_ocr()
+        page_heuristics = TextHeuristics(ocr=self.ocr)
+
+        self.page_heuristics = page_heuristics.analyze(lines=self.lines)
+
+        if self.ocr and self.page_heuristics['font name']['most common'] != 'GlyphLessFont':
+            self.ocr = False
+            self.page_heuristics = page_heuristics.analyze(lines=self.lines)
+
+        self.document_heuristics.add_page(self.page_heuristics)
+        self.set_page_boundaries()
 
 
 class TextHeuristics:
@@ -678,29 +707,6 @@ class DocumentAnalysis:
             logging.exception(f"Error reading styles from PDF blocks: {e}")
             raise
 
-    @staticmethod
-    def check_ocr(lines: list[StyledLine]) -> bool:
-
-        if len(lines) == 0:
-            return False
-
-        words = 1
-        phrases = 1
-
-        for i, line in enumerate(lines):
-
-            if line.text.strip() is None:
-                continue
-            elif " " not in line.text.strip():
-                words += 1
-            else:
-                phrases += 1
-
-        if words / phrases > 0.95:
-            return True
-        else:
-            return False
-
 class DocumentHeuristics:
     def __init__(self):
         self.document = None
@@ -814,7 +820,7 @@ def main():
 
     parser = argparse.ArgumentParser(description="Process a PDF file.")
 
-    default_path = "./docs/test_OCRpdf"
+    default_path = "./docs/test_OCR.pdf"
     parser.add_argument("--input-path", nargs="?", default=default_path, help="Path to the PDF file")
     parser.add_argument("--page-start", type=int, nargs="?", help="Page to start reading")
     parser.add_argument("--page-end", type=int, nargs="?", help="Page to end reading")
@@ -840,19 +846,19 @@ def main():
             document_heuristics = DocumentHeuristics()
             for page_blocks in pdf_reader.iter_pages(sort=False):
 
-                lines_with_styling = list(DocumentAnalysis.iter_pdf_styling_from_blocks(page_blocks=page_blocks))
+                page = Page(document_heuristics)
 
-                ocr = False
-                if DocumentAnalysis.check_ocr(lines=lines_with_styling):
-                    ocr = True
+                lines = list(DocumentAnalysis.iter_pdf_styling_from_blocks(page_blocks=page_blocks))
+                page.set_lines(lines)
 
-                processed_text = ProcessedText(document_heuristics, ocr)
+                page.setup()
+                filter_text = FilterText(page)
 
-                lines_with_styling = processed_text.filter_by_boundaries(lines=lines_with_styling)
-                lines_without_numbers = ProcessedText.clean_page_numbers(lines=lines_with_styling)
-                cleaned_text, hanging_open = processed_text.clean_parentheses(lines=lines_without_numbers, hanging_open=hanging_open)
-                in_paragraphs = processed_text.add_paragraph_breaks(lines=cleaned_text)
-                page_text = ProcessedText.join_broken_sentences(lines=in_paragraphs)
+                page.filtered_lines = filter_text.filter_by_boundaries()
+                page.filtered_lines = filter_text.clean_page_numbers()
+                page.filtered_lines, hanging_open = filter_text.clean_parentheses(hanging_open=hanging_open)
+                page.filtered_lines = filter_text.add_paragraph_breaks()
+                page_text = filter_text.join_broken_sentences()
 
                 output_writer.write(mode="a", text=f'{page_text}\n\n')
 
