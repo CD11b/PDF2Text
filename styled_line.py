@@ -2,6 +2,8 @@ from dataclasses import dataclass
 
 @dataclass
 class StyledLine:
+    """Represents a single styled line of text from a PDF."""
+
     text: str
     font_size: float
     font_name: str
