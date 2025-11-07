@@ -616,14 +616,18 @@ class TextHeuristics:
 
     def compute_word_gaps(self, lines):
 
-        gaps = (
-            next_start - prev_end
-            for _, group in pd.DataFrame(lines).groupby("start_y")
-            for prev_end, next_start in zip(group["end_x"], group["start_x"][1:])
-            if next_start - prev_end > 0
-        )
 
-        return self.compute_bounds(data=sorted(gaps))
+        gaps = []
+
+        for _, group in groupby(lines, key=lambda line: line.start_y):
+            group_lines = sorted(group, key=lambda line: line.start_x)
+
+            for i in range(len(group_lines) - 1):
+                gap = group_lines[i + 1].start_x - group_lines[i].end_x
+                if gap > 0:
+                    gaps.append(gap)
+
+        return self.compute_bounds(gaps) if gaps else (0, 0)
 
     def compute_line_gaps(self, start_y_counter: Counter) -> tuple[Any, Any]:
         values = sorted(start_y_counter)
