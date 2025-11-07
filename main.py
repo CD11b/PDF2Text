@@ -122,26 +122,79 @@ class FilterText:
 
         return before_open, after_close
 
-    def clean_bracket(self, text, open_bracket, close_bracket, hanging_open):
+
+    def handle_hanging_bracket(self, text, open_bracket, close_bracket):
 
         before_open, after_close = self.partition_by_brackets(text, open_bracket, close_bracket)
 
-        if hanging_open:
-            logging.debug(f"Cleaning [CASE: Hanging Open Bracket Closed on First Line]: line={text}")
-            cleaned_text = after_close.lstrip()
-            hanging_open = None
+        cleaned_text = after_close.lstrip()
+        hanging_open = None
+
+        logging.debug(f"Resolved hanging bracket: text={cleaned_text}")
+        return cleaned_text, hanging_open
+
+    def handle_hanging_close(self, before_open, after_close, close_bracket):
+
+        before_typo, _, after_typo = before_open.partition(close_bracket)
+        before_open = before_typo + after_typo
+        _, _, after_close = after_close.partition(close_bracket)
+
+        return ''.join([before_open.rstrip(), after_close])
+
+    def handle_opening_bracket(self, text, open_b, close_b, lines_iter):
+
+        hanging_open = None
+
+        if close_b in text:
+            logging.critical(f"Found open and close brackets in line: {text}")
+            cleaned_text = self.clean_bracket(text, open_b, close_b)
+
+        elif lines_iter.peek() and close_b in lines_iter.peek().text:
+            next_line = next(lines_iter)
+            combined = text + " " + next_line.text
+            logging.critical(f"Found open and close brackets across consecutive lines: {text}, {next_line}")
+            cleaned_text = self.clean_bracket(combined, open_b, close_b)
+
         else:
-            if close_bracket in before_open:  # Author typo: hanging close
-                before_typo, _, after_typo = before_open.partition(close_bracket)
-                before_open = before_typo + after_typo
-                _, _, after_close = after_close.partition(close_bracket)
-                logging.warning(f"Cleaning [CASE: Author typo - Hanging Close]: line={text}")
-                cleaned_text = ''.join([before_open.rstrip(), after_close])
-            else:
-                logging.debug(f"Cleaning [CASE: Brackets Closed on Same Line]: line={text}")
-                cleaned_text = ''.join([before_open.rstrip(), after_close])
+            cleaned_text, hanging_open = self.handle_multiline_bracket(text, lines_iter, open_b, close_b)
 
         return cleaned_text, hanging_open
+
+    def handle_multiline_bracket(self, text, lines_iter, open_b, close_b):
+        buffer_lines = [text]
+        found_close = False
+
+        for lookahead in lines_iter:
+            buffer_lines.append(lookahead.text)
+            if close_b in lookahead.text:
+                found_close = True
+                break
+
+        if found_close:
+            logging.critical(f"Found open and close brackets across multiple lines: {text} ... {buffer_lines[-1]}")
+            block_text = "\n".join(buffer_lines)
+            cleaned_text = self.clean_bracket(block_text, open_b, close_b)
+            hanging_open = None
+        else:
+            logging.critical(f"Found hanging open bracket: {text}")
+            hanging_open = open_b
+            cleaned_text = text.partition(open_b)[0].rstrip()
+
+        return cleaned_text, hanging_open
+
+    def clean_bracket(self, text, open_bracket, close_bracket):
+
+        before_open, after_close = self.partition_by_brackets(text, open_bracket, close_bracket)
+
+        if close_bracket in before_open:  # Author typo: hanging close
+            logging.warning(f"Cleaning [CASE: Author typo - Hanging Close]: line={text}")
+            cleaned_text = self.handle_hanging_close(before_open, after_close, close_bracket)
+
+        else:
+            logging.debug(f"Cleaning [CASE: Brackets Closed on Same Line]: line={text}")
+            cleaned_text = ''.join([before_open.rstrip(), after_close])
+
+        return cleaned_text
 
     def clean_brackets(self, filtered_lines, hanging_open: str | None = None) -> tuple[list[StyledLine], str | None]:
 
@@ -154,38 +207,12 @@ class FilterText:
             for open_b, close_b in self.prioritized_pairs(hanging_open):
                 line_cleaned = False
                 while not line_cleaned:
-                    if open_b in text and close_b in text:
-                        logging.critical(f"Found open and close brackets in line: {line}")
-                        cleaned_text, hanging_open = self.clean_bracket(text, open_b, close_b, hanging_open)
-
-                    elif open_b in text and lines_iter.peek() and close_b in lines_iter.peek().text:
-                        next_line = next(lines_iter)
-                        combined = text + " " + next_line.text
-                        logging.critical(f"Found open and close brackets across consecutive lines: {line}, {next_line}")
-                        cleaned_text, hanging_open = self.clean_bracket(combined, open_b, close_b, hanging_open)
-
-                    elif hanging_open and close_b in text:
+                    if hanging_open and close_b in text:
                         logging.critical(f"Found closing bracket of hanging open: {line}")
-                        cleaned_text, hanging_open = self.clean_bracket(text, open_b, close_b, hanging_open)
+                        cleaned_text, hanging_open = self.handle_hanging_bracket(text, open_b, close_b)
 
                     elif open_b in text:
-                        buffer_lines = [text]
-                        found_close = False
-
-                        for lookahead in lines_iter:
-                            buffer_lines.append(lookahead.text)
-                            if close_b in lookahead.text:
-                                found_close = True
-                                break
-
-                        if found_close:
-                            logging.critical(f"Found open and close brackets across multiple lines: {line} ... {buffer_lines[-1]}")
-                            block_text = "\n".join(buffer_lines)
-                            cleaned_text, hanging_open = self.clean_bracket(block_text, open_b, close_b, hanging_open)
-                        else:
-                            logging.critical(f"Found hanging open bracket: {line}")
-                            hanging_open = open_b
-                            cleaned_text = text.partition(open_b)[0].rstrip()
+                        cleaned_text, hanging_open = self.handle_opening_bracket(text, open_b, close_b, lines_iter)
 
                     else:
                         cleaned_text = text
