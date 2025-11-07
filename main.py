@@ -48,9 +48,7 @@ class Iterator:
         return item
 
     def peek(self):
-        if not self._has_peek:
-            raise StopIteration("No more items")
-        return self._peeked
+        return self._peeked if self._has_peek else None
 
     def has_next(self):
         return self._has_peek
@@ -109,112 +107,113 @@ class FilterText:
 
     def prioritized_pairs(self, hanging_open=None):
 
-        pairs = {'(': ')', '[': ']', '{': '}'}
+        pairs = {'(': ')', '[': ']', '{': '}', '<': '>'}
 
         if hanging_open:
             yield hanging_open, pairs[hanging_open]
-        for k, v in pairs.items():
-            if k != hanging_open:
-                yield k, v
+        for open_bracket, close_bracket in pairs.items():
+            if open_bracket != hanging_open:
+                yield open_bracket, close_bracket
 
-    def has_parentheses(self, filtered_lines, i: int, key: str) -> int:
+    def partition_by_brackets(self, text, open_bracket, close_bracket):
 
-        return filtered_lines[i].text.count(key)
+        before_open, _, _ = text.partition(open_bracket)
+        _, _, after_close = text.partition(close_bracket)
 
-    def clean_parentheses(self, filtered_lines, hanging_open: str | None=None) -> tuple[list[StyledLine], str | None]:
+        return before_open, after_close
 
-        lines = filtered_lines
-        i = 0
-        while i < len(lines):
+    def clean_bracket(self, text, open_bracket, close_bracket, hanging_open):
 
-            line_cleaned = False
-            while True:
+        before_open, after_close = self.partition_by_brackets(text, open_bracket, close_bracket)
 
-                for key, value in self.prioritized_pairs(hanging_open):
+        if hanging_open:
+            logging.debug(f"Cleaning [CASE: Hanging Open Bracket Closed on First Line]: line={text}")
+            cleaned_text = after_close.lstrip()
+            hanging_open = None
+        else:
+            if close_bracket in before_open:  # Author typo: hanging close
+                before_typo, _, after_typo = before_open.partition(close_bracket)
+                before_open = before_typo + after_typo
+                _, _, after_close = after_close.partition(close_bracket)
+                logging.warning(f"Cleaning [CASE: Author typo - Hanging Close]: line={text}")
+                cleaned_text = ''.join([before_open.rstrip(), after_close])
+            else:
+                logging.debug(f"Cleaning [CASE: Brackets Closed on Same Line]: line={text}")
+                cleaned_text = ''.join([before_open.rstrip(), after_close])
 
-                    if hanging_open or key in lines[i].text:
-                        opens_in = i
-                        closes_in = None
-                        j = i
+        return cleaned_text, hanging_open
 
-                        while j < len(lines):
-                            if value in lines[j].text:
-                                closes_in = j
+    def clean_brackets(self, filtered_lines, hanging_open: str | None = None) -> tuple[list[StyledLine], str | None]:
+
+        result = []
+        lines_iter = Iterator(filtered_lines)
+
+        for line in lines_iter:
+
+            text = line.text
+            for open_b, close_b in self.prioritized_pairs(hanging_open):
+                line_cleaned = False
+                while not line_cleaned:
+                    if open_b in text and close_b in text:
+                        logging.critical(f"Found open and close brackets in line: {line}")
+                        cleaned_text, hanging_open = self.clean_bracket(text, open_b, close_b, hanging_open)
+
+                    elif open_b in text and lines_iter.peek() and close_b in lines_iter.peek().text:
+                        next_line = next(lines_iter)
+                        combined = text + " " + next_line.text
+                        logging.critical(f"Found open and close brackets across consecutive lines: {line}, {next_line}")
+                        cleaned_text, hanging_open = self.clean_bracket(combined, open_b, close_b, hanging_open)
+
+                    elif hanging_open and close_b in text:
+                        logging.critical(f"Found closing bracket of hanging open: {line}")
+                        cleaned_text, hanging_open = self.clean_bracket(text, open_b, close_b, hanging_open)
+
+                    elif open_b in text:
+                        buffer_lines = [text]
+                        found_close = False
+
+                        for lookahead in lines_iter:
+                            buffer_lines.append(lookahead.text)
+                            if close_b in lookahead.text:
+                                found_close = True
                                 break
-                            j += 1
 
-                        if closes_in is not None:
-                            diff = closes_in - opens_in
-                            before_open, _, _ = lines[opens_in].text.partition(key)
-                            _, _, after_close = lines[closes_in].text.partition(value)
-
-                            if diff == 0:
-                                if hanging_open:
-                                    logging.debug(f"Cleaning i={opens_in}, [CASE: Hanging Open Bracket Closed on First Line]: line={lines[opens_in]}")
-                                    lines[opens_in].text = after_close.lstrip()
-                                    hanging_open = None
-                                else:
-
-                                    if value in before_open: # Author typo: hanging close
-                                        before_typo, _, after_typo = before_open.partition(value)
-                                        before_open = before_typo + after_typo
-                                        _, _, after_close = after_close.partition(value)
-                                        logging.warning(f"Cleaning i={opens_in}, [CASE: Author typo - Hanging Close]: line={lines[opens_in]}")
-                                        lines[opens_in].text = ''.join([before_open.rstrip(), after_close])
-                                    else:
-                                        logging.debug(f"Cleaning i={opens_in}, [CASE: Parentheses Closed on Same Line]: line={lines[opens_in]}")
-                                        lines[opens_in].text = ''.join([before_open.rstrip(), after_close])
-                            elif diff > 0:
-
-                                if hanging_open:
-                                    logging.debug(f"Cleaning i={closes_in}, [CASE: Hanging Open Bracket Closed After Multiple Lines]: line={lines[closes_in]}")
-                                    lines[closes_in].text = after_close.lstrip()
-                                    hanging_open = None
-                                    opens_in -= 1
-                                else:
-                                    logging.debug(f"Cleaning i={opens_in}, [CASE: Parentheses Closed After Multiple Lines]: line={lines[opens_in]}")
-                                    lines[opens_in].text = ''.join([before_open.rstrip(), after_close])
-                                    logging.debug(f"Cleaned: line={lines[opens_in]}")
-                                    logging.debug(f"Removing i={closes_in}, [CASE: Removing Multi-Line Parentheses]: line={lines[closes_in]}")
-                                    lines.pop(closes_in)
-
-                            for k in range(closes_in - 1, opens_in, -1):
-                                logging.debug(f"Removing i={k}, [CASE: Removing Multi-Line Parentheses]: line={lines[k]}")
-                                lines.pop(k)
-
-                            if self.has_parentheses(filtered_lines, i, key):
-                                line_cleaned = True
-                                break
-                            else:
-                                line_cleaned = False
-
+                        if found_close:
+                            logging.critical(f"Found open and close brackets across multiple lines: {line} ... {buffer_lines[-1]}")
+                            block_text = "\n".join(buffer_lines)
+                            cleaned_text, hanging_open = self.clean_bracket(block_text, open_b, close_b, hanging_open)
                         else:
-                            if self.page.ocr and j - i > 2:
-                                logging.warning("OCR - Likely recognized 'C' as open parentheses")
-                                break
+                            logging.critical(f"Found hanging open bracket: {line}")
+                            hanging_open = open_b
+                            cleaned_text = text.partition(open_b)[0].rstrip()
 
-                            hanging_open = key
-                            before_open, _, _ = lines[opens_in].text.partition(key)
-                            lines[opens_in].text = before_open.rstrip()
-                            for k in range(j - 1, opens_in, -1):
-                                lines.pop(k)
-                            line_cleaned = False
-                            break
+                    else:
+                        cleaned_text = text
 
-                if not line_cleaned:
-                    break
-            i += 1
-        return lines, hanging_open
+                    if open_b not in cleaned_text:
+                        line_cleaned = True
+                    else:
+                        text = cleaned_text
+
+                text = cleaned_text
+
+            cleaned_line = line.with_text(cleaned_text)
+            result.append(cleaned_line)
+
+        return result, hanging_open
 
     def add_paragraph_breaks(self, filtered_lines):
 
         result = []
-        groups_iter = Iterator(filtered_lines)
+        lines_iter = Iterator(filtered_lines)
 
-        for line_group in groups_iter:
-            result.append(line_group)
-            if not self.page.is_body_paragraph(line_group, groups_iter):
-                result[-1].text += "\n"
+        for line in lines_iter:
+            text = line.text
+            if not self.page.is_body_paragraph(line, lines_iter):
+                new_line = line.with_text(text + "\n")
+                result.append(new_line)
+            else:
+                result.append(line)
 
         return result
 
@@ -492,11 +491,11 @@ class Page:
         return next_y - current_y
 
     def is_body_paragraph(self, line_group, next_group):
-        if type(next_group) is Iterator:
-            try:
-                next_group = next_group.peek()
-            except StopIteration:
-                return False
+        if isinstance(next_group, Iterator):
+            next_group = next_group.peek()
+
+        if next_group is None:
+            return False
 
         gap = self.get_vertical_gap(line_group, next_group)
         return gap <= self.page_heuristics['start y']['upper bound']
@@ -687,7 +686,7 @@ def main():
 
     parser = argparse.ArgumentParser(description="Process a PDF file.")
 
-    default_path = "./docs/test_OCR.pdf"
+    default_path = "./docs/butler.pdf"
     parser.add_argument("--input-path", nargs="?", default=default_path, help="Path to the PDF file")
     parser.add_argument("--page-start", type=int, nargs="?", help="Page to start reading")
     parser.add_argument("--page-end", type=int, nargs="?", help="Page to end reading")
@@ -723,7 +722,7 @@ def main():
 
                 page.filtered_lines = filter_text.filter_by_boundaries()
                 page.filtered_lines = filter_text.clean_page_numbers(page.filtered_lines)
-                page.filtered_lines, hanging_open = filter_text.clean_parentheses(hanging_open=hanging_open, filtered_lines=page.filtered_lines)
+                page.filtered_lines, hanging_open = filter_text.clean_brackets(hanging_open=hanging_open, filtered_lines=page.filtered_lines)
                 page.filtered_lines = filter_text.add_paragraph_breaks(filtered_lines=page.filtered_lines)
                 page_text = filter_text.join_broken_sentences(filtered_lines=page.filtered_lines)
 
