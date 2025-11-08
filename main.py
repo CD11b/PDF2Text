@@ -567,6 +567,10 @@ class TextHeuristics:
 
     def __init__(self, ocr, override_threshold: Optional[float] = None) -> None:
         self.ocr = ocr
+        if override_threshold is not None:
+            self.threshold = override_threshold
+        else:
+            self.threshold = self._OCR_THRESHOLD if ocr else self._NORMAL_THRESHOLD
 
     @staticmethod
     def get_styling_counter(lines: list, attribute: str) -> Counter:
