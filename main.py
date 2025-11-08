@@ -567,19 +567,11 @@ class TextHeuristics:
     @staticmethod
     def get_styling_counter(lines: list, attribute: str) -> Counter:
 
-        try:
-            counter = Counter()
-            for line in lines:
-                attr_value = getattr(line, attribute)
-                counter[attr_value] += len(line.text)
-            return counter
-
-        except AttributeError:
-            logging.exception(f"Invalid styling attribute: {attribute}")
-            raise
-        except Exception as e:
-            logging.exception(f"Error getting style counter for {attribute}: {e}")
-            raise
+        counter = Counter()
+        for line in lines:
+            attr_value = getattr(line, attribute)
+            counter[attr_value] += len(line.text)
+        return counter
 
     @staticmethod
     def most_common_value(counter: Counter):
