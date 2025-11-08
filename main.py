@@ -586,65 +586,68 @@ class TextHeuristics:
 
         return counter.most_common(1)[0][0] if counter else None
 
-    def compute_bounds(self, data, threshold = None) -> tuple[float, float]:
+    def compute_bounds(self, data: Counter, threshold: Optional[float] = None) -> tuple[float, float]:
 
         if threshold is None:
             threshold = self.threshold
 
-        series = pd.Series(data)
-        mean = series.mean()
-        std = series.std()
+        values = np.array(list(data.keys()))
+        weights = np.array(list(data.values()))
 
-        if std == 0 or pd.isna(std):
-            return series.min(), series.max()
+        mean = np.average(values, weights=weights)
+        variance = np.average((values - mean) ** 2, weights=weights)
+        std = np.sqrt(variance)
 
-        z_scores = (series - mean) / std
-        inlier_series = series[z_scores.abs() <= threshold]
+        if std == 0 or np.isnan(std):
+            return values.min(), values.max()
 
-        if inlier_series.empty:
-            return series.min(), series.max()
+        z_scores = np.abs((values - mean) / std)
+        inliers = values[z_scores <= threshold]
 
-        return inlier_series.min(), inlier_series.max()
+        if len(inliers) == 0:
+            return values.min(), values.max()
 
-    def compute_word_gaps(self, lines):
+        return float(inliers.min()), float(inliers.max())
 
-        gaps = []
+    def compute_word_gaps(self, lines: list[StyledLine]) -> tuple[float, float]:
 
+        counter = Counter()
         for _, group in groupby(lines, key=lambda line: line.start_y):
             group_lines = sorted(group, key=lambda line: line.start_x)
 
             for i in range(len(group_lines) - 1):
                 gap = group_lines[i + 1].start_x - group_lines[i].end_x
                 if gap > 0:
-                    gaps.append(gap)
+                    counter[gap] += 1
 
-        return self.compute_bounds(gaps) if gaps else (0, 0)
+        return self.compute_bounds(counter)
 
-    def compute_line_gaps(self, start_y_counter: Counter) -> tuple[Any, Any]:
+    def compute_line_gaps(self, start_y_counter: Counter) -> tuple[float, float]:
+
+        if len(start_y_counter) < 2:
+            logging.warning("Only one line detected on page. Line gaps may be misleading.")
+            return 0.0, 0.0
+
+        counter = Counter()
         values = sorted(start_y_counter)
-        differences = (
-            abs(y2 - y1)
-            for y1, y2 in zip(values, values[1:])
-            for _ in range(start_y_counter[y1])
-        )
-        return self.compute_bounds(differences)
 
-    def compute_indent_gaps(self, lines: list) -> tuple[Any, Any]:
+        for y1, y2 in zip(values, values[1:]):
+            gap = abs(y2 - y1)
+            counter[gap] += start_y_counter[y1]
 
-        indents = [
-            group["start_x"].min()
-            for _, group in pd.DataFrame(lines).groupby("start_y")
-        ]
+        return self.compute_bounds(counter)
 
-        return self.compute_bounds(indents, threshold=2)
+    def compute_indent_gaps(self, lines: list) -> tuple[float, float]:
 
+        counter = Counter()
 
-    def set_threshold(self) -> None:
+        for _, group in groupby(lines, key=lambda line: line.start_y):
 
-        if self.ocr:
-            self.threshold = 3.0
-        else:
-            self.threshold = 1.0
+            group_lines = sorted(group, key=lambda line: line.start_x)
+            indent = group_lines[0].start_x
+            counter[indent] += 1
+
+        return self.compute_bounds(counter, threshold=self._INDENT_THRESHOLD)
 
     def analyze(self, lines: list) -> Heuristics:
 
@@ -655,17 +658,13 @@ class TextHeuristics:
 
         most_common = {k: self.most_common_value(v) for k, v in counters.items()}
 
-        self.set_threshold()
-
-        font_sizes = [size for size, freq in counters['font_size'].items() for _ in range(freq)]
-        font_bounds = self.compute_bounds(font_sizes)
+        font_bounds = self.compute_bounds(counters['font_size'])
 
         line_gaps = self.compute_line_gaps(counters['start_y'])
 
         indent_bounds = self.compute_indent_gaps(lines=lines)
 
-        edge_gaps = [edge for edge, freq in counters['end_x'].items() for _ in range(freq)]
-        edge_bounds = self.compute_bounds(edge_gaps)
+        edge_bounds = self.compute_bounds(counters['end_x'])
 
         if self.ocr:
             word_gaps = self.compute_word_gaps(lines=lines)
