@@ -13,6 +13,7 @@ from pdf_reader import PDFReader
 from output_writer import OutputWriter
 from document_analysis import DocumentAnalysis
 from styled_line import StyledLine
+from heuristics import Bounds, Heuristics
 
 os.environ["TESSDATA_PREFIX"] = "./training"
 
@@ -55,6 +56,11 @@ class Iterator:
 
 
 class FilterText:
+
+    BROKEN_WORD_PATTERN = re.compile(r'\w-\s*$')
+    HYPHEN_END_PATTERN = re.compile(r'-\s*$')
+    PAGE_NUMBER_PATTERN = re.compile(r'\s*\d+\s*')
+
     def __init__(self, page):
         self.page = page
 
@@ -62,16 +68,10 @@ class FilterText:
 
         logging.debug(f"Cleaning page numbers")
 
-        try:
-            PAGE_NUMBER_PATTERN = re.compile(r'\s*\d+\s*')
+        return [
+            line for line in filtered_lines if not self.PAGE_NUMBER_PATTERN.fullmatch(line.text)
+        ]
 
-            return [
-                line for line in filtered_lines if not PAGE_NUMBER_PATTERN.fullmatch(line.text)
-            ]
-
-        except Exception as e:
-            logging.exception(f"Error cleaning page numbers: {e}")
-            raise
 
     def join_broken_sentences(self, filtered_lines) -> str:
 
@@ -79,18 +79,15 @@ class FilterText:
 
         def merge_broken_lines(lines):
 
-            BROKEN_WORD_PATTERN = re.compile(r'\w-\s*$')
-            HYPHEN_END_PATTERN = re.compile(r'-\s*$')
-
             line_iter = iter(lines)
 
             for line in line_iter:
                 text = line.text
 
-                while BROKEN_WORD_PATTERN.search(text):
+                while self.BROKEN_WORD_PATTERN.search(text):
                     try:
                         next_line = next(line_iter)
-                        text = HYPHEN_END_PATTERN.sub('', text) + next_line.text.lstrip()
+                        text = self.HYPHEN_END_PATTERN.sub('', text) + next_line.text.lstrip()
                     except StopIteration:
                         break
 
@@ -146,13 +143,13 @@ class FilterText:
         hanging_open = None
 
         if close_b in text:
-            logging.critical(f"Found open and close brackets in line: {text}")
+            logging.debug(f"Found open and close brackets in line: {text}")
             cleaned_text = self.clean_bracket(text, open_b, close_b)
 
         elif lines_iter.peek() and close_b in lines_iter.peek().text:
             next_line = next(lines_iter)
             combined = text + " " + next_line.text
-            logging.critical(f"Found open and close brackets across consecutive lines: {text}, {next_line}")
+            logging.debug(f"Found open and close brackets across consecutive lines: {text}, {next_line}")
             cleaned_text = self.clean_bracket(combined, open_b, close_b)
 
         else:
@@ -171,12 +168,12 @@ class FilterText:
                 break
 
         if found_close:
-            logging.critical(f"Found open and close brackets across multiple lines: {text} ... {buffer_lines[-1]}")
+            logging.debug(f"Found open and close brackets across multiple lines: {text} ... {buffer_lines[-1]}")
             block_text = "\n".join(buffer_lines)
             cleaned_text = self.clean_bracket(block_text, open_b, close_b)
             hanging_open = None
         else:
-            logging.critical(f"Found hanging open bracket: {text}")
+            logging.debug(f"Found hanging open bracket: {text}")
             hanging_open = open_b
             cleaned_text = text.partition(open_b)[0].rstrip()
 
@@ -208,7 +205,7 @@ class FilterText:
                 line_cleaned = False
                 while not line_cleaned:
                     if hanging_open and close_b in text:
-                        logging.critical(f"Found closing bracket of hanging open: {line}")
+                        logging.debug(f"Found closing bracket of hanging open: {line}")
                         cleaned_text, hanging_open = self.handle_hanging_bracket(text, open_b, close_b)
 
                     elif open_b in text:
@@ -314,7 +311,7 @@ class FilterText:
         elif self.page.ocr:
             if self.page.is_footer_region(line_group):
                 FilterText.skip_group(line_group, case="Indented Line @ Footer")
-            elif self.page.is_dominant_word_gap(line_group):
+            elif self.page.is_continuous_line(line_group):
                 FilterText.collect_group(line_group, result, case="OCR - Indented Line Following Dominant Word Gap")
             else:
                 FilterText.skip_group(line_group, case="OCR - Unhandled Indented Line", unhandled=True)
@@ -335,7 +332,7 @@ class FilterText:
             if self.page.is_header_region():
 
                 if self.page.is_before_left_margin(line_group):  # Header
-                    if self.page.within_body_boundaries(line_group):  # OCR inaccuracy
+                    if self.page.is_within_body_boundaries(line_group):  # OCR inaccuracy
                         FilterText.collect_group(line_group, result, case="OCR - Misrecognized Body Paragraph as Indented")
                     else:
                         FilterText.skip_group(line_group, case="Non-aligned Header")
@@ -351,7 +348,7 @@ class FilterText:
 
                 elif self.page.is_after_left_margin(line_group):  # Edge case: Indented main body
 
-                    if self.page.within_body_boundaries(line_group, whole_document=True):
+                    if self.page.is_within_body_boundaries(line_group, whole_document=True):
                         if self.page.is_title_font(line_group):
                             self.filter_title_font(line_group, result)
                         else:
@@ -379,7 +376,7 @@ class FilterText:
                     else:
                         FilterText.skip_group(line_group, case="Unhandled Footer", unhandled=True)
                 elif self.page.is_before_left_margin(line_group):
-                    if self.page.within_body_boundaries(line_group):  # OCR inaccuracy
+                    if self.page.is_within_body_boundaries(line_group):  # OCR inaccuracy
                         FilterText.collect_group(line_group, result, case="OCR - Misrecognized Body Paragraph as Outdented")
                     else:
                         FilterText.skip_group(line_group, case="Left-side footer")
@@ -411,7 +408,7 @@ class FilterText:
                     self.filter_indented_lines(line_group, groups_iter, result)
 
             elif self.page.is_before_left_margin(line_group):  # Left-side footer
-                if self.page.within_body_boundaries(line_group): # OCR inaccuracy
+                if self.page.is_within_body_boundaries(line_group): # OCR inaccuracy
                     FilterText.collect_group(line_group, result, case="OCR - Misrecognized Body Paragraph as Outdented")
                 else:
                     FilterText.skip_group(line_group, case="Left-side footer")
@@ -429,7 +426,6 @@ class Page:
         self.ocr = None
         self.lines = None
         self.line_groups = None
-        self.filtered_lines = []
         self.bottom_boundary = None
         self.top_boundary = None
         self.left_boundary = None
@@ -471,7 +467,7 @@ class Page:
     def is_at_left_margin(self, line_group, whole_document: bool | None = None) -> bool:
         if whole_document:
             for page in self.document_heuristics.all_pages:
-                if line_group[0].start_x == page['start x']['most common']:
+                if line_group[0].start_x == page.start_x.most_common:
                     return True
         return line_group[0].start_x == self.left_boundary
 
@@ -482,31 +478,28 @@ class Page:
         return line_group[0].start_x < self.left_boundary
 
     def is_footer_region(self, line_group) -> bool:
-        return line_group[0].start_y >= self.bottom_boundary - self.page_heuristics['start y']['lower bound']
+        return line_group[0].start_y >= self.bottom_boundary - self.page_heuristics.start_y.lower_bound
 
     def is_header_region(self) -> bool:
         return self.top_boundary is None
 
-    def is_dominant_word_gap(self, line_group, groups_iter) -> bool:
+    def is_continuous_line(self, line_group, groups_iter) -> bool:
         vertical_gap = groups_iter.peek()[0].start_y - line_group[0].start_y
-        return self.page_heuristics['word gaps']['lower bound'] <= vertical_gap <= self.page_heuristics['word gaps'][
-            'upper bound']
+        return self.page_heuristics.word_gaps.lower_bound <= vertical_gap <= self.page_heuristics.word_gaps.upper_bound
 
-    def within_body_boundaries(self, line_group, whole_document: bool | None = None) -> bool:
+    def is_within_body_boundaries(self, line_group, whole_document: bool | None = None) -> bool:
         if whole_document:
             for page in self.document_heuristics.all_pages:
-                if page['start x']['most common'] < line_group[0].start_x <= page['start x']['upper bound']:
+                if page.start_x.most_common < line_group[0].start_x <= page.start_x.upper_bound:
                     return True
-        return self.page_heuristics['start x']['lower bound'] <= line_group[0].start_x <= self.page_heuristics['start x'][
-            'upper bound']
+        return self.page_heuristics.start_x.lower_bound <= line_group[0].start_x <= self.page_heuristics.start_x.upper_bound
 
     def is_indented_paragraph(self, line_group, whole_document: bool | None = None) -> bool:
         if whole_document:
             for page in self.document_heuristics.all_pages:
-                if page['start x']['most common'] < line_group[0].start_x <= page['start x']['upper bound']:
+                if page.start_x.most_common < line_group[0].start_x <= page.start_x.upper_bound:
                     return True
-        return self.page_heuristics['start x']['most common'] < line_group[0].start_x <= self.page_heuristics['start x'][
-            'upper bound']
+        return self.page_heuristics.start_x.most_common < line_group[0].start_x <= self.page_heuristics.start_x.upper_bound
 
     def is_continued_indented_paragraph(self, line_group, filtered_lines):
         return line_group[0].start_x == filtered_lines[-1].start_x
@@ -525,14 +518,13 @@ class Page:
             return False
 
         gap = self.get_vertical_gap(line_group, next_group)
-        return gap <= self.page_heuristics['start y']['upper bound']
+        return gap <= self.page_heuristics.start_y.upper_bound
 
     def is_dominant_font(self, line_group) -> bool:
-        return self.page_heuristics['font size']['lower bound'] <= line_group[0].font_size <= self.page_heuristics['font size'][
-            'upper bound']
+        return self.page_heuristics.font_size.lower_bound <= line_group[0].font_size <= self.page_heuristics.font_size.upper_bound
 
     def is_title_font(self, line_group) -> bool:
-        return line_group[0].font_size > self.page_heuristics['font size']['upper bound']
+        return line_group[0].font_size > self.page_heuristics.font_size.upper_bound
 
     def is_last_line(self, line_group) -> bool:
         return line_group is self.line_groups[-1]
@@ -544,12 +536,12 @@ class Page:
 
         font_size = pd.Series([line.font_size for line in line_group]).mean()
 
-        return font_size > self.page_heuristics['font size']['upper bound']
+        return font_size > self.page_heuristics.font_size.upper_bound
 
     def set_page_boundaries(self) -> None:
 
-        self.left_boundary = self.page_heuristics['start x']['most common']
-        self.bottom_boundary = self.page_heuristics['start y']['maximum']
+        self.left_boundary = self.page_heuristics.start_x.most_common
+        self.bottom_boundary = self.page_heuristics.start_y.maximum
 
     def setup(self) -> None:
 
@@ -558,7 +550,7 @@ class Page:
 
         self.page_heuristics = page_heuristics.analyze(lines=self.lines)
 
-        if self.ocr and self.page_heuristics['font name']['most common'] != 'GlyphLessFont':
+        if self.ocr and self.page_heuristics.font_name.most_common != 'GlyphLessFont':
             self.ocr = False
             self.page_heuristics = page_heuristics.analyze(lines=self.lines)
 
@@ -616,7 +608,6 @@ class TextHeuristics:
 
     def compute_word_gaps(self, lines):
 
-
         gaps = []
 
         for _, group in groupby(lines, key=lambda line: line.start_y):
@@ -655,7 +646,7 @@ class TextHeuristics:
         else:
             self.threshold = 1.0
 
-    def analyze(self, lines: list) -> dict:
+    def analyze(self, lines: list) -> Heuristics:
 
         counters = {
             attr: self.get_styling_counter(lines, attr)
@@ -681,14 +672,39 @@ class TextHeuristics:
         else:
             word_gaps = [None, None]
 
+        return Heuristics(
+            start_x=Bounds(
+                most_common=most_common['start_x'],
+                minimum=min(counters['start_x']),
+                maximum=max(counters['start_x']),
+                lower_bound=indent_bounds[0],
+                upper_bound=indent_bounds[1]
+            ),
+            start_y=Bounds(
+                most_common=most_common['start_y'],
+                minimum=min(counters['start_y']),
+                maximum=max(counters['start_y']),
+                lower_bound=line_gaps[0],
+                upper_bound=line_gaps[1]
+            ),
+            end_x=Bounds(
+                most_common=most_common['end_x'],
+                minimum=min(counters['end_x']),
+                maximum=max(counters['end_x']),
+                lower_bound=edge_bounds[0],
+                upper_bound=edge_bounds[1]
+            ),
+            word_gaps=word_gaps,
+            font_size=Bounds(
+                most_common=most_common['font_size'],
+                minimum=min(counters['font_size']),
+                maximum=max(counters['font_size']),
+                lower_bound=font_bounds[0],
+                upper_bound=font_bounds[1]
+            ),
+            font_name=most_common['font_name']
+        )
 
-
-        return {'start x': {'most common': most_common['start_x'], 'minimum': min(counters['start_x']), 'maximum': max(counters['start_x']), 'lower bound': indent_bounds[0], 'upper bound': indent_bounds[1]},
-                'start y': {'most common': most_common['start_y'], 'minimum': min(counters['start_y']), 'maximum': max(counters['start_y']), 'lower bound': line_gaps[0], 'upper bound': line_gaps[1]},
-                'end x': {'most common': most_common['end_x'], 'minimum': min(counters['end_x']), 'maximum': max(counters['end_x']), 'lower bound': edge_bounds[0], 'upper bound': edge_bounds[1]},
-                'word gaps': {'lower bound': word_gaps[0], 'upper bound': word_gaps[1]},
-                'font size': {'most common': most_common['font_size'], 'lower bound': font_bounds[0], 'upper bound': font_bounds[1]},
-                'font name': {'most common': most_common['font_name']}}
 
 class DocumentHeuristics:
     def __init__(self):
