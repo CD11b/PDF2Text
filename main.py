@@ -4,6 +4,7 @@ import unicodedata
 import logging
 import argparse
 from itertools import tee, groupby
+from statistics import mean
 
 from pdf_reader import PDFReader
 from output_writer import OutputWriter
@@ -233,11 +234,8 @@ class FilterText:
     @staticmethod
     def merge_line(line_group):
 
-        font_sizes = [line.font_size for line in line_group]
-        avg_font_size = sum(font_sizes) / len(font_sizes)
-
         return StyledLine(text=' '.join(line.text for line in line_group if line.text.strip()),
-                          font_size=avg_font_size,
+                          font_size=mean((line.font_size for line in line_group)),
                           font_name=line_group[0].font_name,
                           start_x=line_group[0].start_x,
                           start_y=line_group[0].start_y,
