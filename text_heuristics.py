@@ -1,6 +1,7 @@
+from __future__ import annotations
 import numpy as np
 from collections import Counter
-from typing import Optional
+from typing import Optional, Any
 from itertools import groupby
 import logging
 
@@ -10,33 +11,37 @@ from heuristics import Bounds, Heuristics
 logger = logging.getLogger(__name__)
 
 class TextHeuristics:
+    """Computes statistical heuristics for lines of styled text."""
 
-    _NORMAL_THRESHOLD = 1.0
-    _OCR_THRESHOLD = 3.0
-    _INDENT_THRESHOLD = 2.0
+    _NORMAL_THRESHOLD: float = 1.0
+    _OCR_THRESHOLD: float = 3.0
+    _INDENT_THRESHOLD: float = 2.0
 
-    def __init__(self, ocr, override_threshold: Optional[float] = None) -> None:
-        self.ocr = ocr
+    def __init__(self, ocr: bool, override_threshold: Optional[float] = None) -> None:
+        self.ocr: bool = ocr
         if override_threshold is not None:
-            self.threshold = override_threshold
+            self.threshold: float = override_threshold
         else:
             self.threshold = self._OCR_THRESHOLD if ocr else self._NORMAL_THRESHOLD
 
     @staticmethod
-    def get_styling_counter(lines: list, attribute: str) -> Counter:
+    def get_styling_counter(lines: list[StyledLine], attribute: str) -> Counter[Any]:
+        """Count occurrences of a given attribute across lines, weighted by text length."""
 
-        counter = Counter()
+        counter: Counter[Any] = Counter()
         for line in lines:
             attr_value = getattr(line, attribute)
             counter[attr_value] += len(line.text)
         return counter
 
     @staticmethod
-    def most_common_value(counter: Counter):
+    def most_common_value(counter: Counter[Any]) -> Optional[Any]:
+        """Return the most common key in a Counter, or None if empty."""
 
         return counter.most_common(1)[0][0] if counter else None
 
-    def compute_bounds(self, data: Counter, threshold: Optional[float] = None) -> tuple[float, float]:
+    def compute_bounds(self, data: Counter[float], threshold: Optional[float] = None) -> tuple[float, float]:
+        """Compute statistical bounds for a numeric counter."""
 
         if threshold is None:
             threshold = self.threshold
@@ -60,8 +65,9 @@ class TextHeuristics:
         return float(inliers.min()), float(inliers.max())
 
     def compute_word_gaps(self, lines: list[StyledLine]) -> tuple[float, float]:
+        """Compute typical horizontal gaps between words on the same line."""
 
-        counter = Counter()
+        counter: Counter[float] = Counter()
         for _, group in groupby(lines, key=lambda line: line.start_y):
             group_lines = sorted(group, key=lambda line: line.start_x)
 
@@ -72,13 +78,14 @@ class TextHeuristics:
 
         return self.compute_bounds(counter)
 
-    def compute_line_gaps(self, start_y_counter: Counter) -> tuple[float, float]:
+    def compute_line_gaps(self, start_y_counter: Counter[float]) -> tuple[float, float]:
+        """Compute vertical gaps between consecutive lines."""
 
         if len(start_y_counter) < 2:
             logger.warning("Only one line detected on page. Line gaps may be misleading.")
             return 0.0, 0.0
 
-        counter = Counter()
+        counter: Counter[float] = Counter()
         values = sorted(start_y_counter)
 
         for y1, y2 in zip(values, values[1:]):
@@ -87,9 +94,10 @@ class TextHeuristics:
 
         return self.compute_bounds(counter)
 
-    def compute_indent_gaps(self, lines: list) -> tuple[float, float]:
+    def compute_indent_gaps(self, lines: list[StyledLine]) -> tuple[float, float]:
+        """Compute typical indentation values from the first line in each text group."""
 
-        counter = Counter()
+        counter: Counter[float] = Counter()
 
         for _, group in groupby(lines, key=lambda line: line.start_y):
 
@@ -99,29 +107,30 @@ class TextHeuristics:
 
         return self.compute_bounds(counter, threshold=self._INDENT_THRESHOLD)
 
-    def analyze(self, lines: list) -> Heuristics:
+    def analyze(self, lines: list[StyledLine]) -> Heuristics:
+        """Perform full heuristic analysis of styled lines."""
 
         logger.debug("Analyzing text heuristics.")
 
-        counters = {
+        counters: dict[str, Counter[Any]] = {
             attr: self.get_styling_counter(lines, attr)
             for attr in ['font_size', 'font_name', 'start_x', 'start_y', 'end_x']
         }
 
-        most_common = {k: self.most_common_value(v) for k, v in counters.items()}
+        most_common: dict[str, Any] = {
+            k: self.most_common_value(v) for k, v in counters.items()
+        }
 
         font_bounds = self.compute_bounds(counters['font_size'])
-
         line_gaps = self.compute_line_gaps(counters['start_y'])
-
         indent_bounds = self.compute_indent_gaps(lines=lines)
-
         edge_bounds = self.compute_bounds(counters['end_x'])
 
+        word_gaps: tuple[Optional[float], Optional[float]]
         if self.ocr:
             word_gaps = self.compute_word_gaps(lines=lines)
         else:
-            word_gaps = [None, None]
+            word_gaps = (None, None)
 
         return Heuristics(
             start_x=Bounds(
