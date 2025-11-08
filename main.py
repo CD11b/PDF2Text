@@ -6,26 +6,17 @@ from collections import Counter
 import logging
 import pandas as pd
 import argparse
-import sys
 from itertools import tee, groupby
 
 from pdf_reader import PDFReader
 from output_writer import OutputWriter
 from document_analysis import DocumentAnalysis
 from styled_line import StyledLine
-from heuristics import Bounds, Heuristics
+from logger_config import setup_logging
 
 os.environ["TESSDATA_PREFIX"] = "./training"
 
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-    handlers=[
-        logging.StreamHandler(sys.stdout),  # Log to console
-        logging.FileHandler("pdf2text.log", mode='w', encoding='utf-8')  # Log to file
-    ]
-)
 
 class Iterator:
 
@@ -744,7 +735,9 @@ def main():
     pdf_path = args.input_path
     page_start = args.page_start
     page_end = args.page_end
-    logging.getLogger().setLevel(args.log_level.upper())
+
+    setup_logging(log_level=args.log_level)
+    # logger = logging.getLogger(__name__)
 
     if os.path.exists(pdf_path) and os.path.isfile(pdf_path):
         with PDFReader(pdf_path, page_start, page_end) as pdf_reader:

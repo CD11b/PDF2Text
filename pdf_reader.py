@@ -5,6 +5,7 @@ import logging
 
 from document_analysis import DocumentAnalysis
 
+logger = logging.getLogger(__name__)
 
 class PDFReader:
     def __init__(self, pdf_path: str, page_start: Optional[int] = None, page_end: Optional[int] = None) -> None:
@@ -22,7 +23,7 @@ class PDFReader:
             self.close()
 
         if exc_type:
-            logging.error(f"An exception occurred: {exc_val}")
+            logger.error(f"An exception occurred: {exc_val}")
 
         # re-raise exceptions if they occurred
         return False
@@ -38,7 +39,7 @@ class PDFReader:
             start, end = 0, page_info  # Default range from 0 to page_count
 
         for i in range(start, end):
-            logging.info(f"[---- Reading page {i} ----]")
+            logger.info(f"[---- Reading page {i} ----]")
             yield DocumentAnalysis.get_page_blocks_from_dict(
                 pdf=self.pdf, page_number=i, sort=sort
             )
@@ -54,7 +55,7 @@ class PDFReader:
         """Open the PDF file and return a pymupdf.Document."""
         if self.pdf is None:
             self.pdf = pymupdf.open(str(self.pdf_path))
-            logging.debug(f"Opened PDF: {self.pdf_path}")
+            logger.debug(f"Opened PDF: {self.pdf_path}")
             return self.pdf
         return None
 
@@ -63,8 +64,8 @@ class PDFReader:
         if self.pdf:
             try:
                 self.pdf.close()
-                logging.debug(f"Closed PDF: {self.pdf_path}")
+                logger.debug(f"Closed PDF: {self.pdf_path}")
             except Exception as e:
-                logging.error(f"Error closing PDF: {e}")
+                logger.error(f"Error closing PDF: {e}")
             finally:
                 self.pdf = None

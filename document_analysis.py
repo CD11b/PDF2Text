@@ -5,6 +5,7 @@ import pymupdf
 
 from styled_line import StyledLine
 
+logger = logging.getLogger(__name__)
 
 class DocumentAnalysis:
     """Utility class for extracting and iterating over styled PDF text blocks."""
@@ -61,5 +62,5 @@ class DocumentAnalysis:
                                              end_x=float(span["bbox"][2]))
 
         except Exception as e:
-            logging.exception(f"Error reading styles from PDF blocks: {e}")
+            logger.exception(f"Error reading styles from PDF blocks: {e}")
             raise
