@@ -611,11 +611,11 @@ def main():
                 page.setup()
                 filter_text = FilterText(page)
 
-                page.filtered_lines = filter_text.filter_by_boundaries()
-                page.filtered_lines = filter_text.clean_page_numbers(page.filtered_lines)
-                page.filtered_lines, hanging_open = filter_text.clean_brackets(hanging_open=hanging_open, filtered_lines=page.filtered_lines)
-                page.filtered_lines = filter_text.add_paragraph_breaks(filtered_lines=page.filtered_lines)
-                page_text = filter_text.join_broken_sentences(filtered_lines=page.filtered_lines)
+                filtered_lines = filter_text.filter_by_boundaries()
+                filtered_lines = filter_text.clean_page_numbers(filtered_lines)
+                filtered_lines, hanging_open = filter_text.clean_brackets(hanging_open=hanging_open, filtered_lines=filtered_lines)
+                filtered_lines = filter_text.add_paragraph_breaks(filtered_lines=filtered_lines)
+                page_text = filter_text.join_broken_sentences(filtered_lines=filtered_lines)
 
                 output_writer.write(mode="a", text=f'{page_text}\n\n')
 
