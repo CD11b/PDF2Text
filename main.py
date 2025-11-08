@@ -550,7 +550,7 @@ class Page:
 
         self.page_heuristics = page_heuristics.analyze(lines=self.lines)
 
-        if self.ocr and self.page_heuristics.font_name.most_common != 'GlyphLessFont':
+        if self.ocr and self.page_heuristics.font_name != 'GlyphLessFont':
             self.ocr = False
             self.page_heuristics = page_heuristics.analyze(lines=self.lines)
 
