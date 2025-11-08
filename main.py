@@ -417,8 +417,8 @@ class PageLayout:
 
     def is_at_left_margin(self, line_group, whole_document: bool | None = None) -> bool:
         if whole_document:
-            for page in self.document.all_pages:
-                if line_group[0].start_x == page.start_x.most_common:
+            for heuristic in self.document.get_all_left_margins():
+                if line_group[0].start_x == heuristic:
                     return True
         return line_group[0].start_x == self.left_boundary
 
@@ -439,18 +439,22 @@ class PageLayout:
         return self.page.heuristics.word_gaps.lower_bound <= vertical_gap <= self.page.heuristics.word_gaps.upper_bound
 
     def is_within_body_boundaries(self, line_group, whole_document: bool | None = None) -> bool:
+
+        line_start = line_group[0].start_x
         if whole_document:
-            for page in self.document.all_pages:
-                if page.start_x.most_common < line_group[0].start_x <= page.start_x.upper_bound:
-                    return True
-        return self.page.heuristics.start_x.lower_bound <= line_group[0].start_x <= self.page.heuristics.start_x.upper_bound
+            for lower_bound, upper_bound in self.document.get_all_indents():
+                return lower_bound <= line_start <= upper_bound
+
+        return self.page.heuristics.start_x.lower_bound <= line_start <= self.page.heuristics.start_x.upper_bound
 
     def is_indented_paragraph(self, line_group, whole_document: bool | None = None) -> bool:
+
+        line_start = line_group[0].start_x
         if whole_document:
-            for page in self.document.all_pages:
-                if page.start_x.most_common < line_group[0].start_x <= page.start_x.upper_bound:
-                    return True
-        return self.page.heuristics.start_x.most_common < line_group[0].start_x <= self.page.heuristics.start_x.upper_bound
+            for most_common, upper_bound in self.document.get_all_indents():
+                return most_common < line_start <= upper_bound
+
+        return self.page.heuristics.start_x.most_common < line_start <= self.page.heuristics.start_x.upper_bound
 
     def is_continued_indented_paragraph(self, line_group, filtered_lines):
         return line_group[0].start_x == filtered_lines[-1].start_x
@@ -537,29 +541,48 @@ class DocumentHeuristics:
         self.document = None
         self.all_pages = []
 
+        self._document_left_margins = None
+        self._document_body_boundaries = None
+        self._document_indents = None
+
+    def invalidate_cache(self):
+        self._document_left_margins = None
+        self._document_body_boundaries = None
+        self._document_indents = None
+
     def add_page(self, heuristics: Heuristics):
         self.all_pages.append(heuristics)
+        self.invalidate_cache()
 
-    def compute_document_heuristics(self):
-        all_keys = set().union(*(page.keys() for page in self.all_pages))
-
-        self.document = {
-            key: {
-                subkey: list({
-                    page[key][subkey]
-                    for page in self.all_pages
-                    if key in page and subkey in page[key]
-                })
-                for subkey in next(page[key].keys() for page in self.all_pages if key in page)
+    def get_all_left_margins(self) -> set[float]:
+        if self._document_left_margins is None:
+            self._document_left_margins = {
+                page.start_x.most_common
+                for page in self.all_pages
             }
-            for key in all_keys
-        }
+        return self._document_left_margins
+
+    def get_all_indents(self) -> set[float]:
+        if self._document_indents is None:
+            self._document_indents = {
+                (page.start_x.most_common, page.start_x.upper_bound)
+                for page in self.all_pages
+            }
+        return self._document_indents
+
+    def get_all_body_boundaries(self) -> set[float]:
+        if self._document_body_boundaries is None:
+            self._document_body_boundaries = {
+                (page.start_x.lower_bound, page.start_x.upper_bound)
+                for page in self.all_pages
+            }
+        return self._document_body_boundaries
 
 def main():
 
     parser = argparse.ArgumentParser(description="Process a PDF file.")
 
-    default_path = "./docs/test_OCR.pdf"
+    default_path = "./docs/butler.pdf"
     parser.add_argument("--input-path", nargs="?", default=default_path, help="Path to the PDF file")
     parser.add_argument("--page-start", type=int, nargs="?", help="Page to start reading")
     parser.add_argument("--page-end", type=int, nargs="?", help="Page to end reading")
