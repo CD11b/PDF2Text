@@ -2,7 +2,6 @@ import os
 import re
 import unicodedata
 import logging
-import pandas as pd
 import argparse
 from itertools import tee, groupby
 
@@ -234,8 +233,11 @@ class FilterText:
     @staticmethod
     def merge_line(line_group):
 
+        font_sizes = [line.font_size for line in line_group]
+        avg_font_size = sum(font_sizes) / len(font_sizes)
+
         return StyledLine(text=' '.join(line.text for line in line_group if line.text.strip()),
-                          font_size=pd.Series([line.font_size for line in line_group]).mean(),
+                          font_size=avg_font_size,
                           font_name=line_group[0].font_name,
                           start_x=line_group[0].start_x,
                           start_y=line_group[0].start_y,
