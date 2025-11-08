@@ -560,8 +560,12 @@ class Page:
 
 
 class TextHeuristics:
-    def __init__(self, ocr) -> None:
-        self.threshold = None
+
+    _NORMAL_THRESHOLD = 1.0
+    _OCR_THRESHOLD = 3.0
+    _INDENT_THRESHOLD = 2.0
+
+    def __init__(self, ocr, override_threshold: Optional[float] = None) -> None:
         self.ocr = ocr
 
     @staticmethod
