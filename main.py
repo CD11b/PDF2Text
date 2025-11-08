@@ -17,7 +17,7 @@ os.environ["TESSDATA_PREFIX"] = "./training"
 
 
 
-class Iterator:
+class PeekableIterator:
 
     def __init__(self, iterable):
         self.iterator, self.peek_iterator = tee(iterable)
@@ -186,7 +186,7 @@ class FilterText:
     def clean_brackets(self, filtered_lines, hanging_open: str | None = None) -> tuple[list[StyledLine], str | None]:
 
         result = []
-        lines_iter = Iterator(filtered_lines)
+        lines_iter = PeekableIterator(filtered_lines)
 
         for line in lines_iter:
 
@@ -219,7 +219,7 @@ class FilterText:
     def add_paragraph_breaks(self, filtered_lines):
 
         result = []
-        lines_iter = Iterator(filtered_lines)
+        lines_iter = PeekableIterator(filtered_lines)
 
         for line in lines_iter:
             text = line.text
@@ -315,7 +315,7 @@ class FilterText:
     def filter_by_boundaries(self):
 
         result = []
-        groups_iter = Iterator(self.page.line_groups)
+        groups_iter = PeekableIterator(self.page.line_groups)
 
         for line_group in groups_iter:
 
@@ -501,7 +501,7 @@ class Page:
         return next_y - current_y
 
     def is_body_paragraph(self, line_group, next_group):
-        if isinstance(next_group, Iterator):
+        if isinstance(next_group, PeekableIterator):
             next_group = next_group.peek()
 
         if next_group is None:
