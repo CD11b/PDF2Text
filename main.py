@@ -425,26 +425,85 @@ class Page:
     def set_ocr(self):
         self.ocr = self.check_ocr()
 
-    def check_ocr(self):
-        if len(self.lines) == 0:
+    def is_continuous_line(self, line_group, groups_iter) -> bool:
+        vertical_gap = groups_iter.peek()[0].start_y - line_group[0].start_y
+        return self.page.heuristics.word_gaps.lower_bound <= vertical_gap <= self.page.heuristics.word_gaps.upper_bound
+
+    def is_within_body_boundaries(self, line_group, whole_document: bool | None = None) -> bool:
+        if whole_document:
+            for page in self.document.all_pages:
+                if page.start_x.most_common < line_group[0].start_x <= page.start_x.upper_bound:
+                    return True
+        return self.page.heuristics.start_x.lower_bound <= line_group[0].start_x <= self.page.heuristics.start_x.upper_bound
+
+    def is_indented_paragraph(self, line_group, whole_document: bool | None = None) -> bool:
+        if whole_document:
+            for page in self.document.all_pages:
+                if page.start_x.most_common < line_group[0].start_x <= page.start_x.upper_bound:
+                    return True
+        return self.page.heuristics.start_x.most_common < line_group[0].start_x <= self.page.heuristics.start_x.upper_bound
+
+    def is_continued_indented_paragraph(self, line_group, filtered_lines):
+        return line_group[0].start_x == filtered_lines[-1].start_x
+
+    def get_vertical_gap(self, current: StyledLine | list[StyledLine],
+                         next_item: StyledLine | list[StyledLine]) -> float:
+        current_y = current.start_y if isinstance(current, StyledLine) else current[0].start_y
+        next_y = next_item.start_y if isinstance(next_item, StyledLine) else next_item[0].start_y
+        return next_y - current_y
+
+    def is_body_paragraph(self, line_group, next_group):
+        if isinstance(next_group, PeekableIterator):
+            next_group = next_group.peek()
+
+        if next_group is None:
+            return False
+
+        gap = self.get_vertical_gap(line_group, next_group)
+        return gap <= self.page.heuristics.start_y.upper_bound
+
+    def is_dominant_font(self, line_group) -> bool:
+        return self.page.heuristics.font_size.lower_bound <= line_group[0].font_size <= self.page.heuristics.font_size.upper_bound
+
+    def is_title_font(self, line_group) -> bool:
+        return line_group[0].font_size > self.page.heuristics.font_size.upper_bound
+
+    def is_last_line(self, line_group) -> bool:
+        return line_group is self.page.line_groups[-1]
+
+    def is_in_order(self, line_group, filtered_lines):
+        return line_group[0].start_y > filtered_lines[-1].start_y
+
+    def ocr_is_title_font(self, line_group) -> bool:
+
+        font_size = mean((line.font_size for line in line_group))
+
+        return font_size > self.page.heuristics.font_size.upper_bound
+
+
+class PageAnalyzer:
+
+    @staticmethod
+    def detect_ocr(lines):
+        if len(lines) == 0:
             return False
 
         words = 1
         phrases = 1
 
-        for i, line in enumerate(self.lines):
-
-            if line.text.strip() is None:
+        for line in lines:
+            text = line.text.strip()
+            if not text:
                 continue
-            elif " " not in line.text.strip():
+            elif " " not in text:
                 words += 1
             else:
                 phrases += 1
 
-        if words / phrases > 0.95:
-            return True
-        else:
+        total = words + phrases
+        if total == 0:
             return False
+        return (words / total) > 0.95
 
     def group_lines_by_y_position(self) -> None:
         """Group consecutive lines that share the same Y position."""
