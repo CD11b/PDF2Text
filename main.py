@@ -526,7 +526,7 @@ class Page:
 
     def ocr_is_title_font(self, line_group) -> bool:
 
-        font_size = pd.Series([line.font_size for line in line_group]).mean()
+        font_size = mean((line.font_size for line in line_group))
 
         return font_size > self.page_heuristics.font_size.upper_bound
 
