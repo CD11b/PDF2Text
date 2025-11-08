@@ -3,7 +3,7 @@ from typing import Generator, List, Dict, Any
 import logging
 import pymupdf
 
-from styled_line import StyledLine
+from models import StyledLine
 
 logger = logging.getLogger(__name__)
 

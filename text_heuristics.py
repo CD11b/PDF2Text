@@ -5,8 +5,7 @@ from typing import Optional, Any
 from itertools import groupby
 import logging
 
-from styled_line import StyledLine
-from heuristics import Bounds, Heuristics
+from models import StyledLine, Bounds, Heuristics
 
 logger = logging.getLogger(__name__)
 

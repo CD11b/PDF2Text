@@ -6,10 +6,9 @@ import argparse
 from itertools import tee, groupby
 from statistics import mean
 
-from pdf_reader import PDFReader
-from output_writer import OutputWriter
+from IO import PDFReader, OutputWriter
+from models import StyledLine
 from document_analysis import DocumentAnalysis
-from styled_line import StyledLine
 from logger_config import setup_logging
 from text_heuristics import TextHeuristics
 
