@@ -509,10 +509,7 @@ class PageAnalyzer:
             else:
                 phrases += 1
 
-        total = words + phrases
-        if total == 0:
-            return False
-        return (words / total) > 0.95
+        return (words / words + phrases) > 0.95
 
 
     @staticmethod
