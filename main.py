@@ -42,25 +42,23 @@ class PeekableIterator:
         return self._has_peek
 
 
-class FilterText:
+class CleanText:
 
     BROKEN_WORD_PATTERN = re.compile(r'\w-\s*$')
     HYPHEN_END_PATTERN = re.compile(r'-\s*$')
     PAGE_NUMBER_PATTERN = re.compile(r'\s*\d+\s*')
 
-    def __init__(self, page, document):
-        self.page = page
-        self.layout = PageLayout(page, document)
-
-    def clean_page_numbers(self, filtered_lines) -> list:
+    @staticmethod
+    def clean_page_numbers(filtered_lines) -> list:
 
         logging.debug(f"Cleaning page numbers")
 
         return [
-            line for line in filtered_lines if not self.PAGE_NUMBER_PATTERN.fullmatch(line.text)
+            line for line in filtered_lines if not CleanText.PAGE_NUMBER_PATTERN.fullmatch(line.text)
         ]
 
-    def join_broken_sentences(self, filtered_lines) -> str:
+    @staticmethod
+    def join_broken_sentences(filtered_lines) -> str:
 
         logging.debug(f"Joining broken sentences.")
 
@@ -71,10 +69,10 @@ class FilterText:
             for line in line_iter:
                 text = line.text
 
-                while self.BROKEN_WORD_PATTERN.search(text):
+                while CleanText.BROKEN_WORD_PATTERN.search(text):
                     try:
                         next_line = next(line_iter)
-                        text = self.HYPHEN_END_PATTERN.sub('', text) + next_line.text.lstrip()
+                        text = CleanText.HYPHEN_END_PATTERN.sub('', text) + next_line.text.lstrip()
                     except StopIteration:
                         break
 
@@ -82,14 +80,16 @@ class FilterText:
 
         return " ".join(merge_broken_lines(filtered_lines))
 
-    def normalize_unicode(self, text):
+    @staticmethod
+    def normalize_unicode(text):
         compatability_mapped = unicodedata.normalize('NFKC', text)
         decomposed = unicodedata.normalize('NFD', compatability_mapped)
 
         # Step 2: Remove combining marks
         return ''.join(c for c in decomposed if not unicodedata.combining(c))
 
-    def prioritized_pairs(self, hanging_open=None):
+    @staticmethod
+    def prioritized_pairs(hanging_open=None):
 
         pairs = {'(': ')', '[': ']', '{': '}', '<': '>'}
 
@@ -99,17 +99,18 @@ class FilterText:
             if open_bracket != hanging_open:
                 yield open_bracket, close_bracket
 
-    def partition_by_brackets(self, text, open_bracket, close_bracket):
+    @staticmethod
+    def partition_by_brackets(text, open_bracket, close_bracket):
 
         before_open, _, _ = text.partition(open_bracket)
         _, _, after_close = text.partition(close_bracket)
 
         return before_open, after_close
 
+    @staticmethod
+    def handle_hanging_bracket(text, open_bracket, close_bracket):
 
-    def handle_hanging_bracket(self, text, open_bracket, close_bracket):
-
-        before_open, after_close = self.partition_by_brackets(text, open_bracket, close_bracket)
+        before_open, after_close = CleanText.partition_by_brackets(text, open_bracket, close_bracket)
 
         cleaned_text = after_close.lstrip()
         hanging_open = None
@@ -117,7 +118,8 @@ class FilterText:
         logging.debug(f"Resolved hanging bracket: text={cleaned_text}")
         return cleaned_text, hanging_open
 
-    def handle_hanging_close(self, before_open, after_close, close_bracket):
+    @staticmethod
+    def handle_hanging_close(before_open, after_close, close_bracket):
 
         before_typo, _, after_typo = before_open.partition(close_bracket)
         before_open = before_typo + after_typo
@@ -125,26 +127,28 @@ class FilterText:
 
         return ''.join([before_open.rstrip(), after_close])
 
-    def handle_opening_bracket(self, text, open_b, close_b, lines_iter):
+    @staticmethod
+    def handle_opening_bracket(text, open_b, close_b, lines_iter):
 
         hanging_open = None
 
         if close_b in text:
             logging.debug(f"Found open and close brackets in line: {text}")
-            cleaned_text = self.clean_bracket(text, open_b, close_b)
+            cleaned_text = CleanText.clean_bracket(text, open_b, close_b)
 
         elif lines_iter.peek() and close_b in lines_iter.peek().text:
             next_line = next(lines_iter)
             combined = text + " " + next_line.text
             logging.debug(f"Found open and close brackets across consecutive lines: {text}, {next_line}")
-            cleaned_text = self.clean_bracket(combined, open_b, close_b)
+            cleaned_text = CleanText.clean_bracket(combined, open_b, close_b)
 
         else:
-            cleaned_text, hanging_open = self.handle_multiline_bracket(text, lines_iter, open_b, close_b)
+            cleaned_text, hanging_open = CleanText.handle_multiline_bracket(text, lines_iter, open_b, close_b)
 
         return cleaned_text, hanging_open
 
-    def handle_multiline_bracket(self, text, lines_iter, open_b, close_b):
+    @staticmethod
+    def handle_multiline_bracket(text, lines_iter, open_b, close_b):
         buffer_lines = [text]
         found_close = False
 
@@ -157,7 +161,7 @@ class FilterText:
         if found_close:
             logging.debug(f"Found open and close brackets across multiple lines: {text} ... {buffer_lines[-1]}")
             block_text = "\n".join(buffer_lines)
-            cleaned_text = self.clean_bracket(block_text, open_b, close_b)
+            cleaned_text = CleanText.clean_bracket(block_text, open_b, close_b)
             hanging_open = None
         else:
             logging.debug(f"Found hanging open bracket: {text}")
@@ -166,13 +170,14 @@ class FilterText:
 
         return cleaned_text, hanging_open
 
-    def clean_bracket(self, text, open_bracket, close_bracket):
+    @staticmethod
+    def clean_bracket(text, open_bracket, close_bracket):
 
-        before_open, after_close = self.partition_by_brackets(text, open_bracket, close_bracket)
+        before_open, after_close = CleanText.partition_by_brackets(text, open_bracket, close_bracket)
 
         if close_bracket in before_open:  # Author typo: hanging close
             logging.warning(f"Cleaning [CASE: Author typo - Hanging Close]: line={text}")
-            cleaned_text = self.handle_hanging_close(before_open, after_close, close_bracket)
+            cleaned_text = CleanText.handle_hanging_close(before_open, after_close, close_bracket)
 
         else:
             logging.debug(f"Cleaning [CASE: Brackets Closed on Same Line]: line={text}")
@@ -180,7 +185,8 @@ class FilterText:
 
         return cleaned_text
 
-    def clean_brackets(self, filtered_lines, hanging_open: str | None = None) -> tuple[list[StyledLine], str | None]:
+    @staticmethod
+    def clean_brackets(filtered_lines, hanging_open: str | None = None) -> tuple[list[StyledLine], str | None]:
 
         result = []
         lines_iter = PeekableIterator(filtered_lines)
@@ -188,15 +194,15 @@ class FilterText:
         for line in lines_iter:
 
             text = line.text
-            for open_b, close_b in self.prioritized_pairs(hanging_open):
+            for open_b, close_b in CleanText.prioritized_pairs(hanging_open):
                 line_cleaned = False
                 while not line_cleaned:
                     if hanging_open and close_b in text:
                         logging.debug(f"Found closing bracket of hanging open: {line}")
-                        cleaned_text, hanging_open = self.handle_hanging_bracket(text, open_b, close_b)
+                        cleaned_text, hanging_open = CleanText.handle_hanging_bracket(text, open_b, close_b)
 
                     elif open_b in text:
-                        cleaned_text, hanging_open = self.handle_opening_bracket(text, open_b, close_b, lines_iter)
+                        cleaned_text, hanging_open = CleanText.handle_opening_bracket(text, open_b, close_b, lines_iter)
 
                     else:
                         cleaned_text = text
@@ -212,6 +218,12 @@ class FilterText:
             result.append(cleaned_line)
 
         return result, hanging_open
+
+class FilterText:
+
+    def __init__(self, page, document):
+        self.page = page
+        self.layout = PageLayout(page, document)
 
     def add_paragraph_breaks(self, filtered_lines):
 
@@ -618,7 +630,7 @@ def main():
 
     parser = argparse.ArgumentParser(description="Process a PDF file.")
 
-    default_path = "./docs/Rosa and Flores - 2017 - Unsettling race and language Toward a raciolinguistic perspective.pdf"
+    default_path = "./docs/test_OCR.pdf"
     parser.add_argument("--input-path", nargs="?", default=default_path, help="Path to the PDF file")
     parser.add_argument("--page-start", type=int, nargs="?", help="Page to start reading")
     parser.add_argument("--page-end", type=int, nargs="?", help="Page to end reading")
@@ -652,11 +664,12 @@ def main():
                 filter_text = FilterText(page=x, document=document_heuristics)
 
                 filtered_lines = filter_text.filter_by_boundaries()
-                filtered_lines = filter_text.clean_page_numbers(filtered_lines)
-                filtered_lines, hanging_open = filter_text.clean_brackets(hanging_open=hanging_open, filtered_lines=filtered_lines)
+                filtered_lines = CleanText.clean_page_numbers(filtered_lines)
+                filtered_lines, hanging_open = CleanText.clean_brackets(hanging_open=hanging_open, filtered_lines=filtered_lines)
                 filtered_lines = filter_text.add_paragraph_breaks(filtered_lines=filtered_lines)
-                page_text = filter_text.join_broken_sentences(filtered_lines=filtered_lines)
+                page_text = CleanText.join_broken_sentences(filtered_lines=filtered_lines)
 
+                page_text = CleanText.normalize_unicode(page_text)
                 output_writer.write(mode="a", text=f'{page_text}\n\n')
 
 if __name__ == '__main__':
