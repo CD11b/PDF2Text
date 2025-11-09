@@ -380,7 +380,11 @@ class FilterText:
                     if self.layout.is_dominant_font(line_group):
                         FilterText.collect_group(line_group, result, case="Main Body")
                     else:
-                        FilterText.skip_group(line_group, case="Aligned title")
+                        if self.layout.is_dominant_font(line_group, whole_document=True):
+                            FilterText.skip_group(line_group, case="Aligned title")
+                            # FilterText.collect_group(line_group, result, case="Main Body")
+                        else:
+                            FilterText.skip_group(line_group, case="Aligned title")
 
             elif not self.layout.is_in_order(line_group, result):
                 FilterText.skip_group(line_group, case="Text outside regular read-order")
@@ -416,17 +420,30 @@ class PageLayout:
         self.top_boundary = top_boundary
 
     def is_at_left_margin(self, line_group, whole_document: bool | None = None) -> bool:
+        line_start = line_group[0].start_x
         if whole_document:
             for heuristic in self.document.get_all_left_margins():
-                if line_group[0].start_x == heuristic:
+                if line_start == heuristic:
                     return True
-        return line_group[0].start_x == self.left_boundary
+        return line_start == self.left_boundary
 
-    def is_after_left_margin(self, line_group) -> bool:
-        return line_group[0].start_x > self.left_boundary
+    def is_after_left_margin(self, line_group, whole_document: bool | None = None) -> bool:
 
-    def is_before_left_margin(self, line_group) -> bool:
-        return line_group[0].start_x < self.left_boundary
+        line_start = line_group[0].start_x
+        if whole_document:
+            for heuristic in self.document.get_all_left_margins():
+                if line_start > heuristic:
+                    return True
+        return line_start > self.left_boundary
+
+    def is_before_left_margin(self, line_group, whole_document: bool | None = None) -> bool:
+
+        line_start = line_group[0].start_x
+        if whole_document:
+            for heuristic in self.document.get_all_left_margins():
+                if line_start < heuristic:
+                    return True
+        return line_start < self.left_boundary
 
     def is_footer_region(self, line_group) -> bool:
         return line_group[0].start_y >= self.bottom_boundary - self.page.heuristics.start_y.lower_bound
@@ -442,8 +459,9 @@ class PageLayout:
 
         line_start = line_group[0].start_x
         if whole_document:
-            for lower_bound, upper_bound in self.document.get_all_indents():
-                return lower_bound <= line_start <= upper_bound
+            for lower_bound, upper_bound in self.document.get_all_body_boundaries():
+                if lower_bound <= line_start <= upper_bound:
+                    return True
 
         return self.page.heuristics.start_x.lower_bound <= line_start <= self.page.heuristics.start_x.upper_bound
 
@@ -452,7 +470,8 @@ class PageLayout:
         line_start = line_group[0].start_x
         if whole_document:
             for most_common, upper_bound in self.document.get_all_indents():
-                return most_common < line_start <= upper_bound
+                if most_common < line_start <= upper_bound:
+                    return True
 
         return self.page.heuristics.start_x.most_common < line_start <= self.page.heuristics.start_x.upper_bound
 
@@ -475,8 +494,15 @@ class PageLayout:
         gap = self.get_vertical_gap(line_group, next_group)
         return gap <= self.page.heuristics.start_y.upper_bound
 
-    def is_dominant_font(self, line_group) -> bool:
-        return self.page.heuristics.font_size.lower_bound <= line_group[0].font_size <= self.page.heuristics.font_size.upper_bound
+    def is_dominant_font(self, line_group, whole_document: bool | None = None) -> bool:
+
+        line_font_size = line_group[0].font_size
+        if whole_document:
+            for lower_bound, upper_bound in self.document.get_all_font_sizes():
+                if lower_bound < line_font_size <= upper_bound:
+                    return True
+
+        return self.page.heuristics.font_size.lower_bound <= line_font_size <= self.page.heuristics.font_size.upper_bound
 
     def is_title_font(self, line_group) -> bool:
         return line_group[0].font_size > self.page.heuristics.font_size.upper_bound
@@ -544,11 +570,13 @@ class DocumentHeuristics:
         self._document_left_margins = None
         self._document_body_boundaries = None
         self._document_indents = None
+        self._document_font_sizes = None
 
     def invalidate_cache(self):
         self._document_left_margins = None
         self._document_body_boundaries = None
         self._document_indents = None
+        self._document_font_sizes = None
 
     def add_page(self, heuristics: Heuristics):
         self.all_pages.append(heuristics)
@@ -578,11 +606,19 @@ class DocumentHeuristics:
             }
         return self._document_body_boundaries
 
+    def get_all_font_sizes(self) -> set[float]:
+        if self._document_font_sizes is None:
+            self._document_font_sizes = {
+                (page.font_size.lower_bound, page.font_size.upper_bound)
+                for page in self.all_pages
+            }
+        return self._document_font_sizes
+
 def main():
 
     parser = argparse.ArgumentParser(description="Process a PDF file.")
 
-    default_path = "./docs/butler.pdf"
+    default_path = "./docs/Rosa and Flores - 2017 - Unsettling race and language Toward a raciolinguistic perspective.pdf"
     parser.add_argument("--input-path", nargs="?", default=default_path, help="Path to the PDF file")
     parser.add_argument("--page-start", type=int, nargs="?", help="Page to start reading")
     parser.add_argument("--page-end", type=int, nargs="?", help="Page to end reading")
