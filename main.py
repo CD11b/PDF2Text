@@ -322,8 +322,13 @@ class FilterText:
 
     def filter_by_boundaries(self):
 
-        result = []
-        groups_iter = PeekableIterator(self.page.line_groups)
+            if not self.layout.is_new_paragraph(line_group, result):
+                # if self.layout.is_continued_paragraph(line_group, groups_iter):
+                FilterText.collect_group(line_group, result, case="Body Paragraph")
+            elif self.layout.is_dense_line(line_group):
+                FilterText.collect_group(line_group, result, case="Dense line")
+            else:
+                FilterText.skip_group(line_group, case="Aligned Footer")
 
         for line_group in groups_iter:
 
@@ -459,6 +464,9 @@ class PageLayout:
                 if line_start < heuristic:
                     return True
         return line_start < self.left_boundary
+
+    def is_dense_line(self, line_group) -> bool:
+        return line_group[0].character_density >= self.page.heuristics.character_density.lower_bound
 
     def is_footer_region(self, line_group) -> bool:
 
