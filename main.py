@@ -431,6 +431,9 @@ class PageLayout:
     def set_top_boundary(self, top_boundary):
         self.top_boundary = top_boundary
 
+    def set_bottom_boundary(self, bottom_boundary):
+        self.bottom_boundary = bottom_boundary
+
     def is_at_left_margin(self, line_group, whole_document: bool | None = None) -> bool:
         line_start = line_group[0].start_x
         if whole_document:
@@ -458,7 +461,26 @@ class PageLayout:
         return line_start < self.left_boundary
 
     def is_footer_region(self, line_group) -> bool:
-        return line_group[0].start_y >= self.bottom_boundary - self.page.heuristics.start_y.lower_bound
+
+        line_start = line_group[0].start_y
+        midway_point = ((self.page.heuristics.start_y.maximum - self.page.heuristics.start_y.minimum) / 2 ) + self.page.heuristics.start_y.minimum
+        if line_start <= midway_point:
+            return False
+
+        elif self.bottom_boundary == self.page.heuristics.start_y.maximum:
+
+            if not line_start >= self.bottom_boundary - self.page.heuristics.start_y.upper_bound:
+                for bottom_boundary, lower_bound in self.document.get_all_bottom_boundaries():
+                    if line_start >= bottom_boundary - lower_bound:
+                        return True
+                return False
+            else:
+                return True
+
+        else:
+
+            return line_group[0].start_y >= self.bottom_boundary
+
 
     def is_header_region(self) -> bool:
         return self.top_boundary is None
@@ -583,12 +605,14 @@ class DocumentHeuristics:
         self._document_body_boundaries = None
         self._document_indents = None
         self._document_font_sizes = None
+        self._document_bottom_boundary = None
 
     def invalidate_cache(self):
         self._document_left_margins = None
         self._document_body_boundaries = None
         self._document_indents = None
         self._document_font_sizes = None
+        self._document_bottom_boundary = None
 
     def add_page(self, heuristics: Heuristics):
         self.all_pages.append(heuristics)
@@ -601,6 +625,14 @@ class DocumentHeuristics:
                 for page in self.all_pages
             }
         return self._document_left_margins
+
+    def get_all_bottom_boundaries(self) -> set[float]:
+        if self._document_bottom_boundary is None:
+            self._document_bottom_boundary = {
+                (page.start_y.maximum, page.start_y.lower_bound)
+                for page in self.all_pages
+            }
+        return self._document_bottom_boundary
 
     def get_all_indents(self) -> set[float]:
         if self._document_indents is None:
