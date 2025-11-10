@@ -228,12 +228,11 @@ class FilterText:
     def add_paragraph_breaks(self, filtered_lines):
 
         result = []
-        lines_iter = PeekableIterator(filtered_lines)
 
-        for line in lines_iter:
+        for i, line in enumerate(filtered_lines):
             text = line.text
-            if not self.layout.is_body_paragraph(line, lines_iter):
-                new_line = line.with_text(text + "\n")
+            if self.layout.is_new_paragraph(line, filtered_list=filtered_lines[:i]):
+                new_line = line.with_text("\n" + text)
                 result.append(new_line)
             else:
                 result.append(line)
@@ -244,6 +243,7 @@ class FilterText:
     def merge_line(line_group):
 
         return StyledLine(text=' '.join(line.text for line in line_group if line.text.strip()),
+                          character_density=sum((line.character_density for line in line_group)),
                           font_size=mean((line.font_size for line in line_group)),
                           font_name=line_group[0].font_name,
                           start_x=line_group[0].start_x,
@@ -285,18 +285,14 @@ class FilterText:
         else:
             FilterText.skip_group(line_group, case="Unhandled Uncommon Font", unhandled=True)
 
-
     def filter_indented_lines(self, line_group, groups_iter, result):
 
-
-        if self.layout.is_continued_indented_paragraph(line_group, result):
+        if len(result) > 0 and self.layout.is_continued_indented_paragraph(line_group, result):
 
             if self.layout.is_last_line(line_group):
                 FilterText.collect_group(line_group, result, case="Last Line is Continued Indented Paragraph")
-            elif self.layout.is_body_paragraph(line_group, groups_iter):
+            elif self.layout.is_body_paragraph(line_group, groups_iter, result):
                 FilterText.collect_group(line_group, result, case="Indented Body Paragraph")
-            elif self.layout.is_body_paragraph(result[-1], line_group):
-                FilterText.collect_group(line_group, result, case="Last line of Indented Body Paragraph")
             else:
                 FilterText.skip_group(line_group, case="Continued Indent - Unhandled Indented Line", unhandled=True)
 
@@ -320,7 +316,9 @@ class FilterText:
             else:
                 FilterText.skip_group(line_group, case="Unhandled Indented Line", unhandled=True)
 
-    def filter_by_boundaries(self):
+    def _handle_at_left_margin(self, line_group, groups_iter, result):
+
+        if self.layout.is_footer_region(line_group):
 
             if not self.layout.is_new_paragraph(line_group, result):
                 # if self.layout.is_continued_paragraph(line_group, groups_iter):
@@ -330,97 +328,83 @@ class FilterText:
             else:
                 FilterText.skip_group(line_group, case="Aligned Footer")
 
-        for line_group in groups_iter:
+        elif self.layout.is_body_paragraph(line_group, groups_iter, result):
+            FilterText.collect_group(line_group, result, case="Body Paragraph")
 
-            if self.layout.is_header_region():
+        elif self.layout.is_last_line(line_group):  # No real footer
+            self.filter_by_font(line_group, result)
+            # FilterText.collect_group(line_group, result, case="Last Line is Continued Indent")
 
-                if self.layout.is_before_left_margin(line_group):  # Header
-                    if self.layout.is_within_body_boundaries(line_group):  # OCR inaccuracy
-                        FilterText.collect_group(line_group, result, case="OCR - Misrecognized Body Paragraph as Indented")
-                    else:
-                        FilterText.skip_group(line_group, case="Non-aligned Header")
+        elif self.layout.is_title_font(line_group):
+            self.filter_title_font(line_group, result)
+        else:
+            # if self.layout.is_dominant_font(line_group):
+            #     FilterText.collect_group(line_group, result, case="Main Body")
+            # else:
+            FilterText.skip_group(line_group, case="Aligned title")
+                # FilterText.skip_group(line_group, case="Unhandled Footer", unhandled=True)
+                # FilterText.skip_group(line_group, case="Aligned Header")
 
-                elif self.layout.is_at_left_margin(line_group):  # Body start
+    def _handle_before_left_margin(self, line_group, result):
 
-                    if self.layout.is_body_paragraph(line_group, groups_iter):
-                        self.layout.set_top_boundary(line_group[0].start_y)
-                        FilterText.collect_group(line_group, result, case="First Body Paragraph")
+        if self.layout.is_within_body_boundaries(line_group):
+            if self.page.ocr:
+                FilterText.collect_group(line_group, result, case="OCR - Misrecognized Body Paragraph as Indented")
+        else:
+            # FilterText.skip_group(line_group, case="Non-aligned Header")
+            # FilterText.skip_group(line_group, case="Left-side footer")
+            FilterText.skip_group(line_group, case="Left-side")
 
-                    else: # Aligned header
-                        FilterText.skip_group(line_group, case="Aligned Header")
+    def _handle_after_left_margin(self, line_group, groups_iter, result):
 
-                elif self.layout.is_after_left_margin(line_group):  # Edge case: Indented main body
+        if self.layout.is_within_body_boundaries(line_group, whole_document=True):
+            if self.layout.is_title_font(line_group):
+                self.filter_title_font(line_group, result)
+            else:
+                self.filter_indented_lines(line_group, groups_iter, result)
+                # FilterText.collect_group(line_group, result, case="Indented Main Body")
+        else:
+            if self.layout.is_header_region(line_group):
+                self.layout.set_top_boundary(line_group[0].start_y)
 
-                    if self.layout.is_within_body_boundaries(line_group, whole_document=True):
-                        if self.layout.is_title_font(line_group):
-                            self.filter_title_font(line_group, result)
-                        else:
-                            FilterText.collect_group(line_group, result, case="Indented Main Body")
-                    else:
-                        FilterText.skip_group(line_group, case="Right-side Header")
+            elif self.layout.is_footer_region(line_group):
 
-                else:
-                    if self.layout.is_at_left_margin(line_group, whole_document=True):  # Body start
-                        if self.layout.is_body_paragraph(line_group, groups_iter):
-                            self.layout.set_top_boundary(line_group[0].start_y)
-                            FilterText.collect_group(line_group, result, case="First Body Paragraph")
-                    else:
-                        FilterText.skip_group(line_group, case="Unhandled Header", unhandled=True)
+                self.layout.set_bottom_boundary(line_group[0].start_y)
 
-            elif self.layout.is_footer_region(line_group):  # Very bottom
+            FilterText.skip_group(line_group, case="Right-side Header/Footer")
 
-                if self.layout.is_at_left_margin(line_group):  # Main body
-                    if self.layout.is_body_paragraph(line_group, groups_iter):
-                        FilterText.collect_group(line_group, result, case="Body Paragraph @ Footer")
-                    elif self.layout.is_body_paragraph(result[-1], line_group):
-                        FilterText.collect_group(line_group, result, case="Last line of Body Paragraph @ Footer")
-                    elif self.layout.is_last_line(line_group): # No real footer
-                        self.filter_by_font(line_group, result)
-                    else:
-                        FilterText.skip_group(line_group, case="Unhandled Footer", unhandled=True)
-                elif self.layout.is_before_left_margin(line_group):
-                    if self.layout.is_within_body_boundaries(line_group):  # OCR inaccuracy
-                        FilterText.collect_group(line_group, result, case="OCR - Misrecognized Body Paragraph as Outdented")
-                    else:
-                        FilterText.skip_group(line_group, case="Left-side footer")
 
-                elif self.layout.is_after_left_margin(line_group):
-                    self.filter_indented_lines(line_group, groups_iter, result)
-                else:
-                    FilterText.skip_group(line_group, case="Unhandled Footer", unhandled=True)
+    def _handle_left_margins(self, line_group, groups_iter, result):
+        if self.layout.is_before_left_margin(line_group):
+            self._handle_before_left_margin(line_group, result)
 
-            elif self.layout.is_at_left_margin(line_group):  # Main body
+        elif self.layout.is_at_left_margin(line_group):
 
-                if self.layout.is_title_font(line_group):
-                    self.filter_title_font(line_group, result)
-                else:
-                    if self.layout.is_dominant_font(line_group):
-                        FilterText.collect_group(line_group, result, case="Main Body")
-                    else:
-                        if self.layout.is_dominant_font(line_group, whole_document=True):
-                            FilterText.skip_group(line_group, case="Aligned title")
-                            # FilterText.collect_group(line_group, result, case="Main Body")
-                        else:
-                            FilterText.skip_group(line_group, case="Aligned title")
+            self._handle_at_left_margin(line_group, groups_iter, result)
 
-            elif not self.layout.is_in_order(line_group, result):
-                FilterText.skip_group(line_group, case="Text outside regular read-order")
+        elif self.layout.is_after_left_margin(line_group):  # Edge case: Indented main body
+            self._handle_after_left_margin(line_group, groups_iter, result)
 
-            elif self.layout.is_after_left_margin(line_group):  # Indented block
-
-                if self.layout.is_last_line(line_group):
-                    FilterText.collect_group(line_group, result, case="Last Line is Continued Indent")
-                else:
-                    self.filter_indented_lines(line_group, groups_iter, result)
-
-            elif self.layout.is_before_left_margin(line_group):  # Left-side footer
-                if self.layout.is_within_body_boundaries(line_group): # OCR inaccuracy
-                    FilterText.collect_group(line_group, result, case="OCR - Misrecognized Body Paragraph as Outdented")
-                else:
-                    FilterText.skip_group(line_group, case="Left-side footer")
+        else:
+            if self.layout.is_at_left_margin(line_group, whole_document=True):  # Body start
+                self._handle_at_left_margin(line_group, groups_iter, result)
 
             else:
-                FilterText.skip_group(line_group, case="Entirely Unhandled", unhandled=True)
+                FilterText.skip_group(line_group, case="Unhandled Header", unhandled=True)
+                FilterText.skip_group(line_group, case="Unhandled Footer", unhandled=True)
+
+    def filter_by_boundaries(self):
+
+        result = []
+        groups_iter = PeekableIterator(self.page.line_groups)
+
+        for line_group in groups_iter:
+
+            if len(result) > 0 and not self.layout.is_in_order(line_group, result):
+                FilterText.skip_group(line_group, case="Text outside regular read-order")
+
+            else:
+                self._handle_left_margins(line_group, groups_iter, result)
 
         return result
 
@@ -431,7 +415,7 @@ class PageLayout:
         self.document = document
         self.bottom_boundary = page.heuristics.start_y.maximum
         self.left_boundary = page.heuristics.start_x.most_common
-        self.top_boundary = None
+        self.top_boundary = page.heuristics.start_y.minimum
 
     def set_top_boundary(self, top_boundary):
         self.top_boundary = top_boundary
@@ -490,8 +474,24 @@ class PageLayout:
             return line_group[0].start_y >= self.bottom_boundary
 
 
-    def is_header_region(self) -> bool:
-        return self.top_boundary is None
+    def is_header_region(self, line_group) -> bool:
+
+
+        line_start = line_group[0].start_y
+
+        if self.top_boundary == self.page.heuristics.start_y.minimum:
+
+            if not line_start <= self.top_boundary + self.page.heuristics.start_y.upper_bound:
+                for top_boundary, lower_bound in self.document.get_all_top_boundaries():
+                    if line_start <= top_boundary + lower_bound:
+                        return True
+                return False
+            else:
+                return True
+
+        else:
+
+            return line_group[0].start_y <= self.top_boundary
 
     def is_continuous_line(self, line_group, groups_iter) -> bool:
         vertical_gap = groups_iter.peek()[0].start_y - line_group[0].start_y
@@ -526,15 +526,32 @@ class PageLayout:
         next_y = next_item.start_y if isinstance(next_item, StyledLine) else next_item[0].start_y
         return next_y - current_y
 
-    def is_body_paragraph(self, line_group, next_group):
-        if isinstance(next_group, PeekableIterator):
+    def is_body_paragraph(self, line_group, next_group = None, filtered_list = None):
+        if next_group and isinstance(next_group, PeekableIterator):
             next_group = next_group.peek()
 
-        if next_group is None:
+            if next_group:
+                gap = self.get_vertical_gap(line_group, next_group)
+                if gap <= self.page.heuristics.start_y.upper_bound:
+                    return True
+
+        if filtered_list and len(filtered_list) > 0:
+            last_group = filtered_list[-1]
+            gap = self.get_vertical_gap(last_group, line_group)
+            return gap <= self.page.heuristics.start_y.upper_bound
+
+        else:
             return False
 
-        gap = self.get_vertical_gap(line_group, next_group)
-        return gap <= self.page.heuristics.start_y.upper_bound
+    def is_new_paragraph(self, line_group, filtered_list):
+        if self.is_body_paragraph(line_group=line_group, filtered_list=filtered_list):
+            return False
+        else:
+            return True
+
+    def is_continued_paragraph(self, line_group, group_iter):
+        return self.is_body_paragraph(line_group=line_group, next_group=group_iter)
+
 
     def is_dominant_font(self, line_group, whole_document: bool | None = None) -> bool:
 
@@ -614,6 +631,7 @@ class DocumentHeuristics:
         self._document_indents = None
         self._document_font_sizes = None
         self._document_bottom_boundary = None
+        self._document_top_boundary = None
 
     def invalidate_cache(self):
         self._document_left_margins = None
@@ -621,6 +639,7 @@ class DocumentHeuristics:
         self._document_indents = None
         self._document_font_sizes = None
         self._document_bottom_boundary = None
+        self._document_top_boundary = None
 
     def add_page(self, heuristics: Heuristics):
         self.all_pages.append(heuristics)
@@ -641,6 +660,14 @@ class DocumentHeuristics:
                 for page in self.all_pages
             }
         return self._document_bottom_boundary
+
+    def get_all_top_boundaries(self) -> set[float]:
+        if self._document_top_boundary is None:
+            self._document_top_boundary = {
+                (page.start_y.minimum, page.start_y.lower_bound)
+                for page in self.all_pages
+            }
+        return self._document_top_boundary
 
     def get_all_indents(self) -> set[float]:
         if self._document_indents is None:
@@ -674,7 +701,7 @@ def main():
     parser.add_argument("--input-path", nargs="?", default=default_path, help="Path to the PDF file")
     parser.add_argument("--page-start", type=int, nargs="?", help="Page to start reading")
     parser.add_argument("--page-end", type=int, nargs="?", help="Page to end reading")
-    parser.add_argument("--log-level", default="INFO", choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"], help="Set the logging level")
+    parser.add_argument("--log-level", default="DEBUG", choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"], help="Set the logging level")
 
 
     args = parser.parse_args()
@@ -696,7 +723,7 @@ def main():
             hanging_open = None
 
             document_heuristics = DocumentHeuristics()
-            for page_blocks in pdf_reader.iter_pages(sort=False):
+            for page_blocks in pdf_reader.iter_pages(sort=True):
 
                 lines = list(DocumentAnalysis.iter_pdf_styling_from_blocks(page_blocks=page_blocks))
                 x = PageAnalyzer().analyze(lines)
