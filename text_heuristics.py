@@ -113,7 +113,7 @@ class TextHeuristics:
 
         counters: dict[str, Counter[Any]] = {
             attr: self.get_styling_counter(lines, attr)
-            for attr in ['font_size', 'font_name', 'start_x', 'start_y', 'end_x']
+            for attr in ['character_density', 'font_size', 'font_name', 'start_x', 'start_y', 'end_x']
         }
 
         most_common: dict[str, Any] = {
@@ -121,6 +121,7 @@ class TextHeuristics:
         }
 
         font_bounds = self.compute_bounds(counters['font_size'])
+        character_density_bounds = self.compute_bounds(counters['character_density'])
         line_gaps = self.compute_line_gaps(counters['start_y'])
         indent_bounds = self.compute_indent_gaps(lines=lines)
         edge_bounds = self.compute_bounds(counters['end_x'])
@@ -154,6 +155,13 @@ class TextHeuristics:
                 upper_bound=edge_bounds[1]
             ),
             word_gaps=word_gaps,
+            character_density=Bounds(
+                most_common=most_common['character_density'],
+                minimum=min(counters['character_density']),
+                maximum=max(counters['character_density']),
+                lower_bound=character_density_bounds[0],
+                upper_bound=character_density_bounds[1]
+            ),
             font_size=Bounds(
                 most_common=most_common['font_size'],
                 minimum=min(counters['font_size']),
