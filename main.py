@@ -268,23 +268,6 @@ class FilterText:
 
         result.append(whole_line)
 
-    def filter_title_font(self, line_group, result):
-        if self.page.ocr:
-            if self.layout.ocr_is_title_font(line_group):
-                FilterText.skip_group(line_group, case="Title Font")
-            else:
-                FilterText.collect_group(line_group, result, case="OCR - Misrecognized Title Font")
-        else:
-            FilterText.skip_group(line_group, case="Title Font")
-
-
-    def filter_by_font(self, line_group, result):
-
-        if self.layout.is_dominant_font(line_group):
-            FilterText.collect_group(line_group, result, case=f"Outside Indent Bounds - Indented Line is Dominant Font")
-        else:
-            FilterText.skip_group(line_group, case="Unhandled Uncommon Font", unhandled=True)
-
     def filter_indented_lines(self, line_group, groups_iter, result):
 
         if len(result) > 0 and self.layout.is_continued_indented_paragraph(line_group, result):
@@ -297,10 +280,10 @@ class FilterText:
                 FilterText.skip_group(line_group, case="Continued Indent - Unhandled Indented Line", unhandled=True)
 
         elif self.layout.is_indented_paragraph(line_group):
-            if self.layout.is_title_font(line_group):
-                self.filter_title_font(line_group, result)
-            else:
+            if self.layout.is_dominant_font_size(line_group):
                 FilterText.collect_group(line_group, result, case="Indented Paragraph")
+            else:
+                FilterText.skip_group(line_group, case="Indented Line @ Footer")
 
         elif self.page.ocr:
             if self.layout.is_footer_region(line_group):
@@ -576,15 +559,27 @@ class PageLayout:
         return self.is_body_paragraph(line_group=line_group, next_group=group_iter)
 
 
-    def is_dominant_font(self, line_group, whole_document: bool | None = None) -> bool:
+    def is_dominant_font_size(self, line_group, whole_document: bool | None = None) -> bool:
 
-        line_font_size = line_group[0].font_size
+        line_font_size = mean((line.font_size for line in line_group))
         if whole_document:
-            for lower_bound, upper_bound in self.document.get_all_font_sizes():
-                if lower_bound < line_font_size <= upper_bound:
+            for most_common, lower_bound, upper_bound in self.document.get_all_font_sizes():
+                if line_font_size == most_common:
+                    return True
+                elif lower_bound <= line_font_size <= upper_bound:
                     return True
 
         return self.page.heuristics.font_size.lower_bound <= line_font_size <= self.page.heuristics.font_size.upper_bound
+
+
+    def is_dominant_font_name(self, line_font_name, whole_document: bool | None = None) -> bool:
+
+        if whole_document:
+            for most_common in self.document.get_all_font_names():
+                if line_font_name == most_common:
+                    return True
+
+        return line_font_name == self.page.heuristics.font_name
 
     def is_title_font(self, line_group) -> bool:
         return line_group[0].font_size > self.page.heuristics.font_size.upper_bound
@@ -594,13 +589,6 @@ class PageLayout:
 
     def is_in_order(self, line_group, filtered_lines):
         return line_group[0].start_y > filtered_lines[-1].start_y
-
-    def ocr_is_title_font(self, line_group) -> bool:
-
-        font_size = mean((line.font_size for line in line_group))
-
-        return font_size > self.page.heuristics.font_size.upper_bound
-
 
 class PageAnalyzer:
 
