@@ -398,6 +398,8 @@ class FilterText:
         result = []
         groups_iter = PeekableIterator(self.page.line_groups)
 
+        logging.debug(f"{self.page.heuristics}")
+
         for line_group in groups_iter:
 
             if len(result) > 0 and not self.layout.is_in_order(line_group, result):
