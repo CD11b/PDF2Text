@@ -502,16 +502,6 @@ class PageLayout:
         vertical_gap = groups_iter.peek()[0].start_y - line_group[0].start_y
         return self.page.heuristics.word_gaps[0] <= vertical_gap <= self.page.heuristics.word_gaps[1]
 
-    def is_within_body_boundaries(self, line_group, whole_document: bool | None = None) -> bool:
-
-        line_start = line_group[0].start_x
-        if whole_document:
-            for lower_bound, upper_bound in self.document.get_all_body_boundaries():
-                if lower_bound <= line_start <= upper_bound:
-                    return True
-
-        return self.page.heuristics.start_x.lower_bound <= line_start <= self.page.heuristics.start_x.upper_bound
-
     def is_indented_paragraph(self, line_group, whole_document: bool | None = None) -> bool:
 
         line_start = line_group[0].start_x
