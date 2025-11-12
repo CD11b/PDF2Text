@@ -492,7 +492,7 @@ class PageLayout:
 
     def is_continuous_line(self, line_group, groups_iter) -> bool:
         vertical_gap = groups_iter.peek()[0].start_y - line_group[0].start_y
-        return self.page.heuristics.word_gaps.lower_bound <= vertical_gap <= self.page.heuristics.word_gaps.upper_bound
+        return self.page.heuristics.word_gaps[0] <= vertical_gap <= self.page.heuristics.word_gaps[1]
 
     def is_within_body_boundaries(self, line_group, whole_document: bool | None = None) -> bool:
 
