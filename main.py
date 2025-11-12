@@ -377,7 +377,7 @@ class FilterText:
 
     def _handle_left_margins(self, line_group, groups_iter, result):
         if self.layout.is_before_left_margin(line_group):
-            self._handle_before_left_margin(line_group, result)
+            self._handle_before_left_margin(line_group, groups_iter, result)
 
         elif self.layout.is_at_left_margin(line_group):
 
@@ -479,7 +479,6 @@ class PageLayout:
 
 
     def is_header_region(self, line_group) -> bool:
-
 
         line_start = line_group[0].start_y
         midway_point = ((self.page.heuristics.start_y.maximum - self.page.heuristics.start_y.minimum) / 2 ) + self.page.heuristics.start_y.minimum
