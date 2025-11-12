@@ -391,8 +391,7 @@ class FilterText:
                 self._handle_at_left_margin(line_group, groups_iter, result)
 
             else:
-                FilterText.skip_group(line_group, case="Unhandled Header", unhandled=True)
-                FilterText.skip_group(line_group, case="Unhandled Footer", unhandled=True)
+                FilterText.skip_group(line_group, case="Unhandled Footer @ Left Margin", unhandled=True)
 
     def filter_by_boundaries(self):
 
@@ -659,6 +658,7 @@ class DocumentHeuristics:
         self._document_body_boundaries = None
         self._document_indents = None
         self._document_font_sizes = None
+        self._document_font_names = None
         self._document_bottom_boundary = None
         self._document_top_boundary = None
 
@@ -667,6 +667,7 @@ class DocumentHeuristics:
         self._document_body_boundaries = None
         self._document_indents = None
         self._document_font_sizes = None
+        self._document_font_names = None
         self._document_bottom_boundary = None
         self._document_top_boundary = None
 
@@ -721,6 +722,14 @@ class DocumentHeuristics:
                 for page in self.all_pages
             }
         return self._document_font_sizes
+
+    def get_all_font_names(self) -> set[float]:
+        if self._document_font_names is None:
+            self._document_font_names = {
+                page.font_name
+                for page in self.all_pages
+            }
+        return self._document_font_names
 
 def main():
 
