@@ -231,7 +231,7 @@ class FilterText:
 
         for i, line in enumerate(filtered_lines):
             text = line.text
-            if self.layout.is_new_paragraph(line, filtered_list=filtered_lines[:i]):
+            if self.layout.is_new_paragraph([line], filtered_list=filtered_lines[:i]):
                 new_line = line.with_text("\n" + text)
                 result.append(new_line)
             else:
@@ -554,14 +554,16 @@ class PageLayout:
             next_group = next_group.peek()
 
             if next_group:
-                gap = self.get_vertical_gap(line_group, next_group)
+                gap = line_group[0].start_y - next_group[0].start_y
                 if gap <= self.page.heuristics.start_y.upper_bound:
                     return True
 
-        if filtered_list and len(filtered_list) > 0:
-            last_group = filtered_list[-1]
-            gap = self.get_vertical_gap(last_group, line_group)
-            return gap <= self.page.heuristics.start_y.upper_bound
+        if filtered_list:
+            if len(filtered_list) > 0:
+                gap = line_group[0].start_y - filtered_list[-1].start_y
+                return gap <= self.page.heuristics.start_y.upper_bound
+            else:
+                return True
 
         else:
             return False
