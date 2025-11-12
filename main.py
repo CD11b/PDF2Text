@@ -718,7 +718,7 @@ class DocumentHeuristics:
     def get_all_font_sizes(self) -> set[float]:
         if self._document_font_sizes is None:
             self._document_font_sizes = {
-                (page.font_size.lower_bound, page.font_size.upper_bound)
+                (page.font_size.most_common, page.font_size.lower_bound, page.font_size.upper_bound)
                 for page in self.all_pages
             }
         return self._document_font_sizes
