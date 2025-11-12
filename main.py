@@ -526,11 +526,27 @@ class PageLayout:
     def is_continued_indented_paragraph(self, line_group, filtered_lines):
         return line_group[0].start_x == filtered_lines[-1].start_x
 
-    def get_vertical_gap(self, current: StyledLine | list[StyledLine],
-                         next_item: StyledLine | list[StyledLine]) -> float:
-        current_y = current.start_y if isinstance(current, StyledLine) else current[0].start_y
-        next_y = next_item.start_y if isinstance(next_item, StyledLine) else next_item[0].start_y
-        return next_y - current_y
+    def is_paragraph_block(self, line_group, next_group = None, filtered_list = None):
+
+        indent_size = self.page.heuristics.start_x.upper_bound - self.page.heuristics.start_x.most_common
+        line_start_x = line_group[0].start_x - indent_size
+
+        if next_group and isinstance(next_group, PeekableIterator):
+            next_group = next_group.peek()
+
+            if next_group:
+                if line_start_x <= next_group[0].start_x:
+                    return True
+
+        if filtered_list:
+            if len(filtered_list) > 0:
+                return line_start_x <= filtered_list[-1].start_x
+            else:
+                return True
+
+        else:
+            return False
+
 
     def is_body_paragraph(self, line_group, next_group = None, filtered_list = None):
         if next_group and isinstance(next_group, PeekableIterator):
@@ -555,7 +571,7 @@ class PageLayout:
         else:
             return True
 
-    def is_continued_paragraph(self, line_group, group_iter):
+    def is_continuous_paragraph(self, line_group, group_iter):
         return self.is_body_paragraph(line_group=line_group, next_group=group_iter)
 
 
