@@ -357,22 +357,14 @@ class FilterText:
 
     def _handle_after_left_margin(self, line_group, groups_iter, result):
 
-        if self.layout.is_within_body_boundaries(line_group, whole_document=True):
-            if self.layout.is_title_font(line_group):
-                self.filter_title_font(line_group, result)
-            else:
-                self.filter_indented_lines(line_group, groups_iter, result)
-                # FilterText.collect_group(line_group, result, case="Indented Main Body")
+        if self.layout.is_header_region(line_group):
+            self._handle_header_region(line_group, result)
+
+        elif self.layout.is_footer_region(line_group):
+            self._handle_footer_region(line_group, groups_iter, result)
+
         else:
-            if self.layout.is_header_region(line_group):
-                self.layout.set_top_boundary(line_group[0].start_y)
-
-            elif self.layout.is_footer_region(line_group):
-
-                self.layout.set_bottom_boundary(line_group[0].start_y)
-
-            FilterText.skip_group(line_group, case="Right-side Header/Footer")
-
+            self.filter_indented_lines(line_group, groups_iter, result)
 
     def _handle_left_margins(self, line_group, groups_iter, result):
         if self.layout.is_before_left_margin(line_group):
