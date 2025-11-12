@@ -106,6 +106,18 @@ class TextHeuristics:
 
         return self.compute_bounds(counter, threshold=self._INDENT_THRESHOLD)
 
+    def compute_character_density(self, lines: list[StyledLine]) -> tuple[float, float]:
+        """Compute typical character density of a line."""
+
+        counter: Counter[float] = Counter()
+        for _, group in groupby(lines, key=lambda line: line.start_y):
+            group_lines = sorted(group, key=lambda line: line.start_x)
+            density = sum((line.character_density for line in group_lines))
+            if density > 0:
+                counter[density] += 1
+
+        return self.compute_bounds(counter, threshold=self._DENSITY_THRESHOLD)
+
     def analyze(self, lines: list[StyledLine]) -> Heuristics:
         """Perform full heuristic analysis of styled lines."""
 
@@ -121,7 +133,7 @@ class TextHeuristics:
         }
 
         font_bounds = self.compute_bounds(counters['font_size'])
-        character_density_bounds = self.compute_bounds(counters['character_density'])
+        character_density_bounds = self.compute_character_density(lines=lines)
         line_gaps = self.compute_line_gaps(counters['start_y'])
         indent_bounds = self.compute_indent_gaps(lines=lines)
         edge_bounds = self.compute_bounds(counters['end_x'])

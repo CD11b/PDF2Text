@@ -453,7 +453,8 @@ class PageLayout:
         return line_start < self.left_boundary
 
     def is_dense_line(self, line_group) -> bool:
-        return line_group[0].character_density >= self.page.heuristics.character_density.lower_bound
+        line_character_density = sum((line.character_density for line in line_group))
+        return line_character_density >= self.page.heuristics.character_density.lower_bound
 
     def is_footer_region(self, line_group) -> bool:
 
