@@ -15,6 +15,7 @@ class TextHeuristics:
     _NORMAL_THRESHOLD: float = 1.0
     _OCR_THRESHOLD: float = 3.0
     _INDENT_THRESHOLD: float = 2.0
+    _DENSITY_THRESHOLD: float = 2.0
 
     def __init__(self, ocr: bool, override_threshold: Optional[float] = None) -> None:
         self.ocr: bool = ocr
