@@ -41,7 +41,7 @@ class TextHeuristics:
         return counter.most_common(1)[0][0] if counter else None
 
     def compute_bounds(self, data: Counter[float], threshold: Optional[float] = None) -> tuple[float, float]:
-        """Compute statistical bounds for a numeric counter."""
+        """Compute statistical bounds for a numeric counter using MAD."""
 
         if threshold is None:
             threshold = self.threshold
@@ -49,15 +49,23 @@ class TextHeuristics:
         values = np.array(list(data.keys()))
         weights = np.array(list(data.values()))
 
-        mean = np.average(values, weights=weights)
-        variance = np.average((values - mean) ** 2, weights=weights)
-        std = np.sqrt(variance)
+        # Weighted median
+        sorted_idx = np.argsort(values)
+        sorted_values = values[sorted_idx]
+        sorted_weights = weights[sorted_idx]
+        cumsum = np.cumsum(sorted_weights)
+        median = sorted_values[np.searchsorted(cumsum, cumsum[-1] / 2)]
 
-        if std == 0 or np.isnan(std):
+        # Median Absolute Deviation
+        deviations = np.abs(values - median)
+        mad = np.average(deviations, weights=weights)
+
+        if mad == 0 or np.isnan(mad):
             return values.min(), values.max()
 
-        z_scores = np.abs((values - mean) / std)
-        inliers = values[z_scores <= threshold]
+        # MAD filtering
+        mad_scores = np.abs((values - median) / (1.4826 * mad))
+        inliers = values[mad_scores <= threshold]
 
         if len(inliers) == 0:
             return values.min(), values.max()
