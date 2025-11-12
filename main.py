@@ -308,7 +308,10 @@ class FilterText:
             elif self.layout.is_continuous_line(line_group, groups_iter):
                 FilterText.collect_group(line_group, result, case="OCR - Indented Line Following Dominant Word Gap")
             else:
-                FilterText.skip_group(line_group, case="OCR - Unhandled Indented Line", unhandled=True)
+                if self.layout.is_continuous_paragraph(line_group, groups_iter):
+                    self._handle_continuous_paragraph(line_group, result)
+                else:
+                    FilterText.skip_group(line_group, case="OCR - Unhandled Indented Line", unhandled=True)
 
         else:
             if self.layout.is_indented_paragraph(line_group, whole_document=True):
@@ -316,43 +319,66 @@ class FilterText:
             else:
                 FilterText.skip_group(line_group, case="Unhandled Indented Line", unhandled=True)
 
+    def _handle_footer_region(self, line_group,groups_iter, result):
+
+        if not self.layout.is_new_paragraph(line_group, result):
+            if self.layout.is_paragraph_block(line_group, groups_iter, result):
+                FilterText.collect_group(line_group, result, case="Body Paragraph")
+            else:
+                x = self.layout.is_paragraph_block(line_group, groups_iter, result)
+                FilterText.skip_group(line_group, case="Unhandled footer", unhandled=True)
+
+        elif self.layout.is_dense_line(line_group):
+            FilterText.collect_group(line_group, result, case="Dense line @ Footer")
+        else:
+            FilterText.skip_group(line_group, case="Footer")
+
+    def _handle_header_region(self, line_group, result):
+        if not self.layout.is_new_paragraph(line_group, result):
+            FilterText.collect_group(line_group, result, case="Body Paragraph")
+        elif self.layout.is_dense_line(line_group):
+            FilterText.collect_group(line_group, result, case="Dense line @ Header")
+        else:
+            FilterText.skip_group(line_group, case="Header")
+
+    def _handle_new_paragraph(self, line_group, groups_iter, result):
+        if self.layout.is_header_region(line_group):
+            self._handle_header_region(line_group, result)
+        elif self.layout.is_continuous_paragraph(line_group, groups_iter):
+            self._handle_continuous_paragraph(line_group, result)
+        else:
+            FilterText.skip_group(line_group, case="Unhandled new paragraph", unhandled=True)
+
+    def _handle_continuous_paragraph(self, line_group, result):
+
+        if self.layout.is_dominant_font_size(line_group, whole_document=True):
+            FilterText.collect_group(line_group, result, case="New Paragraph")
+        else:
+            FilterText.skip_group(line_group, case="Multi-line Title")
+
     def _handle_at_left_margin(self, line_group, groups_iter, result):
 
         if self.layout.is_footer_region(line_group):
+            self._handle_footer_region(line_group, groups_iter, result)
 
-            if not self.layout.is_new_paragraph(line_group, result):
-                # if self.layout.is_continued_paragraph(line_group, groups_iter):
-                FilterText.collect_group(line_group, result, case="Body Paragraph")
-            elif self.layout.is_dense_line(line_group):
-                FilterText.collect_group(line_group, result, case="Dense line")
-            else:
-                FilterText.skip_group(line_group, case="Aligned Footer")
+        elif self.layout.is_new_paragraph(line_group, result):
+            self._handle_new_paragraph(line_group, groups_iter, result)
 
-        elif self.layout.is_body_paragraph(line_group, groups_iter, result):
-            FilterText.collect_group(line_group, result, case="Body Paragraph")
+        elif self.layout.is_continuous_paragraph(line_group, groups_iter):
+            self._handle_continuous_paragraph(line_group, result)
 
-        elif self.layout.is_last_line(line_group):  # No real footer
-            self.filter_by_font(line_group, result)
-            # FilterText.collect_group(line_group, result, case="Last Line is Continued Indent")
-
-        elif self.layout.is_title_font(line_group):
-            self.filter_title_font(line_group, result)
         else:
-            # if self.layout.is_dominant_font(line_group):
-            #     FilterText.collect_group(line_group, result, case="Main Body")
-            # else:
-            FilterText.skip_group(line_group, case="Aligned title")
-                # FilterText.skip_group(line_group, case="Unhandled Footer", unhandled=True)
-                # FilterText.skip_group(line_group, case="Aligned Header")
+            FilterText.collect_group(line_group, result, case="End of paragraph")
 
-    def _handle_before_left_margin(self, line_group, result):
+    def _handle_before_left_margin(self, line_group, groups_iter, result):
 
-        if self.layout.is_within_body_boundaries(line_group):
-            if self.page.ocr:
-                FilterText.collect_group(line_group, result, case="OCR - Misrecognized Body Paragraph as Indented")
+        if self.layout.is_header_region(line_group):
+            self._handle_header_region(line_group, result)
+
+        elif self.layout.is_footer_region(line_group):
+            FilterText.skip_group(line_group, case="Footer before left margin", unhandled=True)
+
         else:
-            # FilterText.skip_group(line_group, case="Non-aligned Header")
-            # FilterText.skip_group(line_group, case="Left-side footer")
             FilterText.skip_group(line_group, case="Left-side")
 
     def _handle_after_left_margin(self, line_group, groups_iter, result):
