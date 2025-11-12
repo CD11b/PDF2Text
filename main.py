@@ -472,6 +472,9 @@ class PageLayout:
 
 
         line_start = line_group[0].start_y
+        midway_point = ((self.page.heuristics.start_y.maximum - self.page.heuristics.start_y.minimum) / 2 ) + self.page.heuristics.start_y.minimum
+        if line_start >= midway_point:
+            return False
 
         if self.top_boundary == self.page.heuristics.start_y.minimum:
 
