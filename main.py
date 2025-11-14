@@ -605,9 +605,6 @@ class PageLayout:
 
         return line_font_name == self.page.heuristics.font_name
 
-    def is_title_font(self, line_group) -> bool:
-        return line_group[0].font_size > self.page.heuristics.font_size.upper_bound
-
     def is_last_line(self, line_group) -> bool:
         return line_group is self.column.line_groups[-1]
 
