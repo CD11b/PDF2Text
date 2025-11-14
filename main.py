@@ -401,7 +401,8 @@ class FilterText:
 
 
         logging.debug(f"Page: {self.page.heuristics}")
-
+        # if remove_references and self.layout.is_reference_page():
+        #     return []
 
         for column in self.page.columns:
 
@@ -613,6 +614,14 @@ class PageLayout:
             return True
         return line_group[0].start_y > filtered_lines[-1].start_y
 
+    def is_reference_page(self):
+        current_line_count = len(self.page.lines)
+        for page_line_count in self.document.get_all_line_counts():
+            if current_line_count > page_line_count * 2:
+                return True
+
+        return False
+
 class PageAnalyzer:
 
     @staticmethod
@@ -739,6 +748,7 @@ class DocumentData:
         self._document_font_names = None
         self._document_bottom_boundary = None
         self._document_top_boundary = None
+        self._document_line_counts = None
 
     def invalidate_cache(self):
         self._document_left_margins = None
@@ -748,6 +758,7 @@ class DocumentData:
         self._document_font_names = None
         self._document_bottom_boundary = None
         self._document_top_boundary = None
+        self._document_line_counts = None
 
     def add_page(self, page_data: PageData):
         self.all_pages.append(page_data)
@@ -812,6 +823,14 @@ class DocumentData:
             }
         return self._document_font_names
 
+    def get_all_line_counts(self) -> set[float]:
+        if self._document_line_counts is None:
+            self._document_line_counts = {
+                len(page.lines)
+                for page in self.all_pages
+            }
+        return self._document_line_counts
+
 def main():
 
     parser = argparse.ArgumentParser(description="Process a PDF file.")
@@ -821,13 +840,14 @@ def main():
     parser.add_argument("--page-start", type=int, nargs="?", help="Page to start reading")
     parser.add_argument("--page-end", type=int, nargs="?", help="Page to end reading")
     parser.add_argument("--log-level", default="DEBUG", choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"], help="Set the logging level")
-
+    parser.add_argument("--remove-references", action="store_true", help="Remove references from the document.")
 
     args = parser.parse_args()
 
     pdf_path = args.input_path
     page_start = args.page_start
     page_end = args.page_end
+    remove_references = args.remove_references
 
     setup_logging(log_level=args.log_level)
     # logger = logging.getLogger(__name__)
