@@ -746,94 +746,53 @@ class DocumentData:
         self.document = None
         self.all_pages = []
 
-        self._document_left_margins = None
-        self._document_body_boundaries = None
-        self._document_indents = None
-        self._document_font_sizes = None
-        self._document_font_names = None
-        self._document_bottom_boundary = None
-        self._document_top_boundary = None
-        self._document_line_counts = None
+        self._document_left_margins = set()
+        self._document_body_boundaries = set()
+        self._document_indents = set()
+        self._document_font_sizes = set()
+        self._document_font_names = set()
+        self._document_bottom_boundary = set()
+        self._document_top_boundary = set()
+        self._document_line_counts = set()
 
-    def invalidate_cache(self):
-        self._document_left_margins = None
-        self._document_body_boundaries = None
-        self._document_indents = None
-        self._document_font_sizes = None
-        self._document_font_names = None
-        self._document_bottom_boundary = None
-        self._document_top_boundary = None
-        self._document_line_counts = None
+    def update_cache(self, page_data):
+        for column in page_data.columns:
+            self._document_left_margins.add(column.heuristics.start_x.most_common)
+            self._document_indents.add((column.heuristics.start_x.most_common, column.heuristics.start_x.upper_bound))
+            self._document_body_boundaries.add((column.heuristics.start_x.lower_bound, column.heuristics.start_x.upper_bound))
+
+        self._document_bottom_boundary.add((page_data.heuristics.start_y.maximum, page_data.heuristics.start_y.lower_bound))
+        self._document_top_boundary.add((page_data.heuristics.start_y.minimum, page_data.heuristics.start_y.lower_bound))
+        self._document_font_sizes.add((page_data.heuristics.font_size.most_common, page_data.heuristics.font_size.lower_bound, page_data.heuristics.font_size.upper_bound))
+        self._document_font_names.add(page_data.heuristics.font_name)
+        self._document_line_counts.add(len(page_data.lines))
 
     def add_page(self, page_data: PageData):
         self.all_pages.append(page_data)
-        self.invalidate_cache()
+        self.update_cache(page_data)
 
     def get_all_left_margins(self) -> set[float]:
-        if self._document_left_margins is None:
-            self._document_left_margins = {
-                column.heuristics.start_x.most_common
-                for page in self.all_pages
-                for column in page.columns
-            }
         return self._document_left_margins
 
-    def get_all_bottom_boundaries(self) -> set[float]:
-        if self._document_bottom_boundary is None:
-            self._document_bottom_boundary = {
-                (page.heuristics.start_y.maximum, page.heuristics.start_y.lower_bound)
-                for page in self.all_pages
-            }
+    def get_all_bottom_boundaries(self) -> set[tuple[float, float]]:
         return self._document_bottom_boundary
 
-    def get_all_top_boundaries(self) -> set[float]:
-        if self._document_top_boundary is None:
-            self._document_top_boundary = {
-                (page.heuristics.start_y.minimum, page.heuristics.start_y.lower_bound)
-                for page in self.all_pages
-            }
+    def get_all_top_boundaries(self) -> set[tuple[float, float]]:
         return self._document_top_boundary
 
-    def get_all_indents(self) -> set[float]:
-        if self._document_indents is None:
-            self._document_indents = {
-                (column.heuristics.start_x.most_common, column.heuristics.start_x.upper_bound)
-                for page in self.all_pages
-                for column in page.columns
-            }
+    def get_all_indents(self) -> set[tuple[float, float]]:
         return self._document_indents
 
-    def get_all_body_boundaries(self) -> set[float]:
-        if self._document_body_boundaries is None:
-            self._document_body_boundaries = {
-                (column.heuristics.start_x.lower_bound, column.heuristics.start_x.upper_bound)
-                for page in self.all_pages
-                for column in page.columns
-            }
+    def get_all_body_boundaries(self) -> set[tuple[float, float]]:
         return self._document_body_boundaries
 
-    def get_all_font_sizes(self) -> set[float]:
-        if self._document_font_sizes is None:
-            self._document_font_sizes = {
-                (page.heuristics.font_size.most_common, page.heuristics.font_size.lower_bound, page.heuristics.font_size.upper_bound)
-                for page in self.all_pages
-            }
+    def get_all_font_sizes(self) -> set[tuple[float, float, float]]:
         return self._document_font_sizes
 
-    def get_all_font_names(self) -> set[float]:
-        if self._document_font_names is None:
-            self._document_font_names = {
-                page.heuristics.font_name
-                for page in self.all_pages
-            }
+    def get_all_font_names(self) -> set[str]:
         return self._document_font_names
 
-    def get_all_line_counts(self) -> set[float]:
-        if self._document_line_counts is None:
-            self._document_line_counts = {
-                len(page.lines)
-                for page in self.all_pages
-            }
+    def get_all_line_counts(self) -> set[int]:
         return self._document_line_counts
 
 def main():
