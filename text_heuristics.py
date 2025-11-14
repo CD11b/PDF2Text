@@ -40,8 +40,10 @@ class TextHeuristics:
 
         return counter.most_common(1)[0][0] if counter else None
 
-    def compute_bounds(self, data: Counter[float], threshold: Optional[float] = None) -> tuple[float, float]:
+    def compute_bounds(self, data: Counter[float], threshold: Optional[float] = None) -> tuple[float, float] | None:
         """Compute statistical bounds for a numeric counter using MAD."""
+        if not data:
+            return None
 
         if threshold is None:
             threshold = self.threshold
@@ -61,14 +63,14 @@ class TextHeuristics:
         mad = np.average(deviations, weights=weights)
 
         if mad == 0 or np.isnan(mad):
-            return values.min(), values.max()
+            return float(values.min()), float(values.max())
 
         # MAD filtering
         mad_scores = np.abs((values - median) / (1.4826 * mad))
         inliers = values[mad_scores <= threshold]
 
         if len(inliers) == 0:
-            return values.min(), values.max()
+            return float(values.min()), float(values.max())
 
         return float(inliers.min()), float(inliers.max())
 
@@ -148,10 +150,7 @@ class TextHeuristics:
         edge_bounds = self.compute_bounds(counters['end_x'])
 
         word_gaps: tuple[Optional[float], Optional[float]]
-        if self.ocr:
-            word_gaps = self.compute_word_gaps(lines=lines)
-        else:
-            word_gaps = (None, None)
+        word_gaps = self.compute_word_gaps(lines=lines) if self.ocr else None
 
         return Heuristics(
             start_x=Bounds(

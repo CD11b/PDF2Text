@@ -5,9 +5,10 @@ import logging
 import argparse
 from itertools import tee, groupby
 from statistics import mean
+from collections import defaultdict
 
 from IO import PDFReader, OutputWriter
-from models import StyledLine, PageData, Heuristics
+from models import StyledLine, PageData, Heuristics, ColumnData
 from document_analysis import DocumentAnalysis
 from logger_config import setup_logging
 from text_heuristics import TextHeuristics
@@ -223,7 +224,8 @@ class FilterText:
 
     def __init__(self, page, document):
         self.page = page
-        self.layout = PageLayout(page, document)
+        self.document = document
+        self.layout = None
 
     def add_paragraph_breaks(self, filtered_lines):
 
@@ -396,27 +398,38 @@ class FilterText:
     def filter_by_boundaries(self):
 
         result = []
-        groups_iter = PeekableIterator(self.page.line_groups)
 
-        logging.debug(f"{self.page.heuristics}")
 
-        for line_group in groups_iter:
+        logging.debug(f"Page: {self.page.heuristics}")
 
-            if len(result) > 0 and not self.layout.is_in_order(line_group, result):
-                FilterText.skip_group(line_group, case="Text outside regular read-order")
 
-            else:
-                self._handle_left_margins(line_group, groups_iter, result)
+        for column in self.page.columns:
 
+            buffer = []
+            self.layout = PageLayout(self.page, column, self.document)
+            logging.debug(f"Column: {column.heuristics}")
+            groups_iter = PeekableIterator(column.line_groups)
+            for line_group in groups_iter:
+
+                    if not self.layout.is_in_order(line_group, buffer):
+                        FilterText.skip_group(line_group, case="Text outside regular read-order")
+
+                    else:
+                        self._handle_left_margins(line_group, groups_iter, buffer)
+
+            if buffer:
+                buffer[-1] = buffer[-1].with_text(buffer[-1].text + "\n\n")
+                result.extend(buffer)
         return result
 
 class PageLayout:
 
-    def __init__(self, page, document):
+    def __init__(self, page, column, document):
         self.page = page
+        self.column = column
         self.document = document
         self.bottom_boundary = page.heuristics.start_y.maximum
-        self.left_boundary = page.heuristics.start_x.most_common
+        self.left_boundary = column.heuristics.start_x.most_common
         self.top_boundary = page.heuristics.start_y.minimum
 
     def set_top_boundary(self, top_boundary):
@@ -499,8 +512,12 @@ class PageLayout:
             return line_group[0].start_y <= self.top_boundary
 
     def is_continuous_line(self, line_group, groups_iter) -> bool:
-        vertical_gap = groups_iter.peek()[0].start_y - line_group[0].start_y
-        return self.page.heuristics.word_gaps[0] <= vertical_gap <= self.page.heuristics.word_gaps[1]
+        next_group = groups_iter.peek()
+        if next_group is None:
+            return False
+
+        vertical_gap = next_group[0].start_y - line_group[0].start_y
+        return self.column.heuristics.word_gaps[0] <= vertical_gap <= self.column.heuristics.word_gaps[1]
 
     def is_indented_paragraph(self, line_group, whole_document: bool | None = None) -> bool:
 
@@ -510,14 +527,14 @@ class PageLayout:
                 if most_common < line_start <= upper_bound:
                     return True
 
-        return self.page.heuristics.start_x.most_common < line_start <= self.page.heuristics.start_x.upper_bound
+        return self.column.heuristics.start_x.most_common < line_start <= self.column.heuristics.start_x.upper_bound
 
     def is_continued_indented_paragraph(self, line_group, filtered_lines):
         return line_group[0].start_x == filtered_lines[-1].start_x
 
     def is_paragraph_block(self, line_group, next_group = None, filtered_list = None):
 
-        indent_size = self.page.heuristics.start_x.upper_bound - self.page.heuristics.start_x.most_common
+        indent_size = self.column.heuristics.start_x.upper_bound - self.column.heuristics.start_x.most_common
         line_start_x = line_group[0].start_x - indent_size
 
         if next_group and isinstance(next_group, PeekableIterator):
@@ -543,13 +560,13 @@ class PageLayout:
 
             if next_group:
                 gap = line_group[0].start_y - next_group[0].start_y
-                if gap <= self.page.heuristics.start_y.upper_bound:
+                if gap <= self.column.heuristics.start_y.upper_bound:
                     return True
 
         if filtered_list:
             if len(filtered_list) > 0:
                 gap = line_group[0].start_y - filtered_list[-1].start_y
-                return gap <= self.page.heuristics.start_y.upper_bound
+                return gap <= self.column.heuristics.start_y.upper_bound
             else:
                 return True
 
@@ -592,9 +609,11 @@ class PageLayout:
         return line_group[0].font_size > self.page.heuristics.font_size.upper_bound
 
     def is_last_line(self, line_group) -> bool:
-        return line_group is self.page.line_groups[-1]
+        return line_group is self.column.line_groups[-1]
 
     def is_in_order(self, line_group, filtered_lines):
+        if not filtered_lines:
+            return True
         return line_group[0].start_y > filtered_lines[-1].start_y
 
 class PageAnalyzer:
@@ -618,9 +637,69 @@ class PageAnalyzer:
 
         return (words / (words + phrases)) > 0.95
 
+    @staticmethod
+    def group_line_groups_by_y(line_groups):
+
+        groups = defaultdict(list)
+        for group in line_groups:
+            for line in group:
+                groups[line.start_y].append(line)
+
+        return groups
 
     @staticmethod
-    def group_lines_by_y(lines):
+    def compute_column_count(line_groups_by_y):
+
+        from collections import Counter
+
+        counter = Counter()
+
+        for group in line_groups_by_y.values():
+            density = 0
+            for line in group:
+                density += line.character_density
+            counter[len(group)] += density
+
+        number_columns = counter.most_common(1)[0][0]
+        return number_columns
+
+    @staticmethod
+    def compute_column_starts(line_groups_by_y, number_columns):
+
+        from collections import Counter
+
+        start_x_counter = Counter()
+        for group in line_groups_by_y.values():
+            for line in group:
+                start_x_counter[line.start_x] += line.character_density
+
+        start_x_columns = [column[0] for column in start_x_counter.most_common(number_columns)]
+
+        return start_x_columns
+
+    @staticmethod
+    def sort_line_columns(line_groups, start_x_columns):
+
+        sorted_columns = sorted(start_x_columns)
+
+        columned_groups = defaultdict(list)
+        for group in line_groups:
+            for line in group:
+
+                if line.start_x < min(start_x_columns):
+                    columned_groups[min(start_x_columns)].append(line)
+
+                for start_x in reversed(sorted_columns):
+                    if line.start_x >= start_x:
+                        columned_groups[start_x].append(line)
+                        break
+
+
+        return columned_groups
+
+    @staticmethod
+    def group_consecutive_lines_by_y(lines):
+
         """Group consecutive lines that share the same Y position."""
         return [list(group)
                 for _, group in groupby(lines, key=lambda line: line.start_y)
@@ -636,10 +715,22 @@ class PageAnalyzer:
             ocr = False
             heuristics = TextHeuristics(ocr).analyze(lines)
 
-        line_groups = self.group_lines_by_y(lines)
-        return PageData(lines, line_groups, heuristics, ocr)
+        line_groups = self.group_consecutive_lines_by_y(lines)
+        line_groups_by_y = self.group_line_groups_by_y(line_groups)
+        number_columns = self.compute_column_count(line_groups_by_y)
+        start_x_columns = self.compute_column_starts(line_groups_by_y, number_columns)
+        columned_groups = self.sort_line_columns(line_groups, start_x_columns)
 
-class DocumentHeuristics:
+        columns = []
+        for start_x in sorted(columned_groups.keys()):
+            column_lines = columned_groups[start_x]
+            column_heuristics = TextHeuristics(ocr).analyze(column_lines)
+            column_line_groups = self.group_consecutive_lines_by_y(column_lines)
+            columns.append(ColumnData(column_line_groups, column_heuristics))
+
+        return PageData(lines, heuristics, columns, ocr)
+
+class DocumentData:
     def __init__(self):
         self.document = None
         self.all_pages = []
@@ -661,22 +752,23 @@ class DocumentHeuristics:
         self._document_bottom_boundary = None
         self._document_top_boundary = None
 
-    def add_page(self, heuristics: Heuristics):
-        self.all_pages.append(heuristics)
+    def add_page(self, page_data: PageData):
+        self.all_pages.append(page_data)
         self.invalidate_cache()
 
     def get_all_left_margins(self) -> set[float]:
         if self._document_left_margins is None:
             self._document_left_margins = {
-                page.start_x.most_common
+                column.heuristics.start_x.most_common
                 for page in self.all_pages
+                for column in page.columns
             }
         return self._document_left_margins
 
     def get_all_bottom_boundaries(self) -> set[float]:
         if self._document_bottom_boundary is None:
             self._document_bottom_boundary = {
-                (page.start_y.maximum, page.start_y.lower_bound)
+                (page.heuristics.start_y.maximum, page.heuristics.start_y.lower_bound)
                 for page in self.all_pages
             }
         return self._document_bottom_boundary
@@ -684,7 +776,7 @@ class DocumentHeuristics:
     def get_all_top_boundaries(self) -> set[float]:
         if self._document_top_boundary is None:
             self._document_top_boundary = {
-                (page.start_y.minimum, page.start_y.lower_bound)
+                (page.heuristics.start_y.minimum, page.heuristics.start_y.lower_bound)
                 for page in self.all_pages
             }
         return self._document_top_boundary
@@ -692,23 +784,25 @@ class DocumentHeuristics:
     def get_all_indents(self) -> set[float]:
         if self._document_indents is None:
             self._document_indents = {
-                (page.start_x.most_common, page.start_x.upper_bound)
+                (column.heuristics.start_x.most_common, column.heuristics.start_x.upper_bound)
                 for page in self.all_pages
+                for column in page.columns
             }
         return self._document_indents
 
     def get_all_body_boundaries(self) -> set[float]:
         if self._document_body_boundaries is None:
             self._document_body_boundaries = {
-                (page.start_x.lower_bound, page.start_x.upper_bound)
+                (column.heuristics.start_x.lower_bound, column.heuristics.start_x.upper_bound)
                 for page in self.all_pages
+                for column in page.columns
             }
         return self._document_body_boundaries
 
     def get_all_font_sizes(self) -> set[float]:
         if self._document_font_sizes is None:
             self._document_font_sizes = {
-                (page.font_size.most_common, page.font_size.lower_bound, page.font_size.upper_bound)
+                (page.heuristics.font_size.most_common, page.heuristics.font_size.lower_bound, page.heuristics.font_size.upper_bound)
                 for page in self.all_pages
             }
         return self._document_font_sizes
@@ -750,13 +844,13 @@ def main():
             output_writer.write(mode="w")
             hanging_open = None
 
-            document_heuristics = DocumentHeuristics()
+            document_heuristics = DocumentData()
             for page_blocks in pdf_reader.iter_pages(sort=True):
 
                 lines = list(DocumentAnalysis.iter_pdf_styling_from_blocks(page_blocks=page_blocks))
-                x = PageAnalyzer().analyze(lines)
-                document_heuristics.add_page(x.heuristics)
-                filter_text = FilterText(page=x, document=document_heuristics)
+                page_data = PageAnalyzer().analyze(lines)
+                document_heuristics.add_page(page_data)
+                filter_text = FilterText(page=page_data, document=document_heuristics)
 
                 filtered_lines = filter_text.filter_by_boundaries()
                 filtered_lines = CleanText.clean_page_numbers(filtered_lines)

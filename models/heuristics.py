@@ -15,7 +15,7 @@ class Heuristics:
     start_x: Bounds
     start_y: Bounds
     end_x: Bounds
-    word_gaps: tuple[float | None, float | None]
+    word_gaps: tuple[float, float] | None
     character_density: Bounds
     font_size: Bounds
     font_name: str
