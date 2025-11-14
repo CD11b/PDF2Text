@@ -818,7 +818,7 @@ class DocumentData:
     def get_all_font_names(self) -> set[float]:
         if self._document_font_names is None:
             self._document_font_names = {
-                page.font_name
+                page.heuristics.font_name
                 for page in self.all_pages
             }
         return self._document_font_names
