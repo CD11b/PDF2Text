@@ -231,9 +231,9 @@ class FilterText:
 
         result = []
 
-        for i, line in enumerate(filtered_lines):
+        for line in filtered_lines:
             text = line.text
-            if self.layout.is_new_paragraph([line], filtered_list=filtered_lines[:i]):
+            if self.layout.is_new_paragraph([line], filtered_list=result):
                 new_line = line.with_text("\n" + text)
                 result.append(new_line)
             else:
