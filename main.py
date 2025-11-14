@@ -310,7 +310,6 @@ class FilterText:
             if self.layout.is_paragraph_block(line_group, groups_iter, result):
                 FilterText.collect_group(line_group, result, case="Body Paragraph")
             else:
-                x = self.layout.is_paragraph_block(line_group, groups_iter, result)
                 FilterText.skip_group(line_group, case="Unhandled footer", unhandled=True)
 
         elif self.layout.is_dense_line(line_group):
