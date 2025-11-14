@@ -687,13 +687,13 @@ class PageAnalyzer:
     def sort_line_columns(line_groups, start_x_columns):
 
         sorted_columns = sorted(start_x_columns)
-
+        first_column = min(start_x_columns)
         columned_groups = defaultdict(list)
         for group in line_groups:
             for line in group:
 
-                if line.start_x < min(start_x_columns):
-                    columned_groups[min(start_x_columns)].append(line)
+                if line.start_x < first_column:
+                    columned_groups[first_column].append(line)
 
                 for start_x in reversed(sorted_columns):
                     if line.start_x >= start_x:
