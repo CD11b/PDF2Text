@@ -48,6 +48,15 @@ class CleanText:
     BROKEN_WORD_PATTERN = re.compile(r'\w-\s*$')
     HYPHEN_END_PATTERN = re.compile(r'-\s*$')
     PAGE_NUMBER_PATTERN = re.compile(r'\s*\d+\s*')
+    COMMON_OCR_ERRORS = {
+        "ﬁ": "fi",
+        "ﬂ": "fl",
+        "“": "\"",
+        "”": "\"",
+        "‘": "'",
+        "’": "'",
+        "|": "I"
+    }
 
     @staticmethod
     def clean_page_numbers(filtered_lines) -> list:
@@ -88,6 +97,13 @@ class CleanText:
 
         # Step 2: Remove combining marks
         return ''.join(c for c in decomposed if not unicodedata.combining(c))
+
+    @staticmethod
+    def correct_ocr_errors(text):
+        for bad, good in CleanText.COMMON_OCR_ERRORS.items():
+            text = text.replace(bad, good)
+
+        return text
 
     @staticmethod
     def prioritized_pairs(hanging_open=None):
@@ -839,6 +855,8 @@ def main():
                 page_text = CleanText.join_broken_sentences(filtered_lines=filtered_lines)
 
                 page_text = CleanText.normalize_unicode(page_text)
+                if page_data.ocr:
+                    page_text = CleanText.correct_ocr_errors(page_text)
                 output_writer.write(mode="a", text=f'{page_text}\n\n')
 
 if __name__ == '__main__':
