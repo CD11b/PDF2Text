@@ -126,7 +126,7 @@ class BracketCleaner:
             self.hanging_open = None
         else:
             logging.debug(f"Found hanging open bracket: {text}")
-            self.hanging_open = self.current_close
+            self.hanging_open = self.current_open
             cleaned_text = text.partition(self.current_open)[0].rstrip()
 
         return cleaned_text
