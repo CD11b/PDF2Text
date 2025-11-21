@@ -484,6 +484,10 @@ class PageLayout:
     def is_before_left_margin(self, line_group, whole_document: bool | None = None) -> bool:
 
         line_start = line_group[0].start_x
+        if self.page.ocr:
+            if line_start >= self.page.heuristics.start_x.lower_bound:
+                return False
+
         if whole_document:
             for heuristic in self.document.get_all_left_margins():
                 if line_start < heuristic:
@@ -556,6 +560,9 @@ class PageLayout:
         return self.column.heuristics.start_x.most_common < line_start <= self.column.heuristics.start_x.upper_bound
 
     def is_continued_indented_paragraph(self, line_group, filtered_lines):
+        if self.page.ocr:
+            return abs(line_group[0].start_x - filtered_lines[-1].start_x) <= self.page.heuristics.word_gaps[1]
+
         return line_group[0].start_x == filtered_lines[-1].start_x
 
     def is_paragraph_block(self, line_group, next_group = None, filtered_list = None):
@@ -585,7 +592,7 @@ class PageLayout:
             next_group = next_group.peek()
 
             if next_group:
-                gap = line_group[0].start_y - next_group[0].start_y
+                gap = abs(line_group[0].start_y - next_group[0].start_y)
                 if gap <= self.column.heuristics.start_y.upper_bound:
                     return True
 
@@ -637,7 +644,7 @@ class PageLayout:
     def is_in_order(self, line_group, filtered_lines):
         if not filtered_lines:
             return True
-        return line_group[0].start_y > filtered_lines[-1].start_y
+        return line_group[0].start_y + self.page.heuristics.start_y.lower_bound > filtered_lines[-1].start_y
 
     def is_reference_page(self):
         current_line_count = len(self.page.lines)
