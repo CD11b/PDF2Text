@@ -357,7 +357,7 @@ class FilterText:
     def _handle_continuous_paragraph(self, line_group, result):
 
         if self.layout.is_dominant_font_size(line_group, whole_document=True):
-            FilterText.collect_group(line_group, result, case="New Paragraph")
+            FilterText.collect_group(line_group, result, case="Continued Paragraph")
         else:
             FilterText.skip_group(line_group, case="Multi-line Title")
 
