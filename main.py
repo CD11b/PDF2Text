@@ -461,6 +461,11 @@ class PageLayout:
 
     def is_at_left_margin(self, line_group, whole_document: bool | None = None) -> bool:
         line_start = line_group[0].start_x
+
+        if self.page.ocr:
+            if self.page.heuristics.start_x.lower_bound <= line_start <= self.left_boundary:
+                return True
+
         if whole_document:
             for heuristic in self.document.get_all_left_margins():
                 if line_start == heuristic:
