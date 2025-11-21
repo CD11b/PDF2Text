@@ -861,6 +861,9 @@ def main():
             for page_blocks in pdf_reader.iter_pages(sort=True):
 
                 lines = list(DocumentAnalysis.iter_pdf_styling_from_blocks(page_blocks=page_blocks))
+                if len(lines) == 0:
+                    continue
+
                 page_data = PageAnalyzer().analyze(lines)
                 document_heuristics.add_page(page_data)
                 filter_text = FilterText(page=page_data, document=document_heuristics)
