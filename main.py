@@ -311,7 +311,7 @@ class FilterText:
                 FilterText.skip_group(line_group, case="Indented Line @ Footer")
 
         elif self.page.ocr:
-            if self.layout.is_footer_region(line_group):
+            if self.layout.get_line_region(line_group) is VerticalRegion.FOOTER:
                 FilterText.skip_group(line_group, case="Indented Line @ Footer")
             elif self.layout.is_continuous_line(line_group, groups_iter):
                 FilterText.collect_group(line_group, result, case="OCR - Indented Line Following Dominant Word Gap")
@@ -349,7 +349,7 @@ class FilterText:
             FilterText.skip_group(line_group, case="Header")
 
     def _handle_new_paragraph(self, line_group, groups_iter, result):
-        if self.layout.is_header_region(line_group):
+        if self.layout.get_line_region(line_group) is VerticalRegion.HEADER:
             self._handle_header_region(line_group, result)
         elif self.layout.is_continuous_paragraph(line_group, groups_iter):
             self._handle_continuous_paragraph(line_group, result)
@@ -365,7 +365,7 @@ class FilterText:
 
     def _handle_at_left_margin(self, line_group, groups_iter, result):
 
-        if self.layout.is_footer_region(line_group):
+        if self.layout.get_line_region(line_group) is VerticalRegion.FOOTER:
             self._handle_footer_region(line_group, groups_iter, result)
 
         elif self.layout.is_new_paragraph(line_group, result):
@@ -379,10 +379,10 @@ class FilterText:
 
     def _handle_before_left_margin(self, line_group, groups_iter, result):
 
-        if self.layout.is_header_region(line_group):
+        if self.layout.get_line_region(line_group) is VerticalRegion.HEADER:
             self._handle_header_region(line_group, result)
 
-        elif self.layout.is_footer_region(line_group):
+        elif self.layout.get_line_region(line_group) is VerticalRegion.FOOTER:
             FilterText.skip_group(line_group, case="Footer before left margin", unhandled=True)
 
         else:
@@ -390,10 +390,10 @@ class FilterText:
 
     def _handle_after_left_margin(self, line_group, groups_iter, result):
 
-        if self.layout.is_header_region(line_group):
+        if self.layout.get_line_region(line_group) is VerticalRegion.HEADER:
             self._handle_header_region(line_group, result)
 
-        elif self.layout.is_footer_region(line_group):
+        elif self.layout.get_line_region(line_group) is VerticalRegion.FOOTER:
             self._handle_footer_region(line_group, groups_iter, result)
 
         else:
@@ -572,63 +572,48 @@ class LinePosition:
         else:
             return MarginPosition.AFTER
 
+class VerticalRegion(Enum):
+    HEADER = "header"
+    BODY = "body"
+    FOOTER = "footer"
+
 class LineRegion:
 
-    def __init__(self, page, column, document):
-        self.page = page
-        self.column = column
-        self.document = document
-        self.bottom_boundary = page.heuristics.start_y.maximum
-        self.left_boundary = column.heuristics.start_x.most_common
-        self.top_boundary = page.heuristics.start_y.minimum
+    def __init__(self, layout):
+        self.layout = layout
         self._cache = {}
 
     @memoize_group_method
-    def is_header_region(self, line_group) -> bool:
-
+    def classify_vertical_region(self, line_group) -> VerticalRegion:
         line_start = line_group[0].start_y
-        midway_point = ((
-                                    self.page.heuristics.start_y.maximum - self.page.heuristics.start_y.minimum) / 2) + self.page.heuristics.start_y.minimum
-        if line_start >= midway_point:
-            return False
+        midway = (self.layout.bottom_boundary - self.layout.top_boundary) / 2 + self.layout.top_boundary
 
-        if self.top_boundary == self.page.heuristics.start_y.minimum:
+        if line_start < midway:
+            if self.layout.top_boundary == self.layout.page.heuristics.start_y.minimum:
+                if line_start <= self.layout.top_boundary + self.layout.page.heuristics.start_y.upper_bound:
+                    return VerticalRegion.HEADER
 
-            if not line_start <= self.top_boundary + self.page.heuristics.start_y.upper_bound:
-                for top_boundary, lower_bound in self.document.get_all_top_boundaries():
+                for top_boundary, lower_bound in self.layout.document.get_all_top_boundaries():
                     if line_start <= top_boundary + lower_bound:
-                        return True
-                return False
+                        return VerticalRegion.HEADER
             else:
-                return True
+                if line_start <= self.layout.top_boundary:
+                    return VerticalRegion.HEADER
+
+            return VerticalRegion.BODY
 
         else:
-
-            return line_group[0].start_y <= self.top_boundary
-
-    @memoize_group_method
-    def is_footer_region(self, line_group) -> bool:
-
-        line_start = line_group[0].start_y
-        midway_point = ((
-                                    self.page.heuristics.start_y.maximum - self.page.heuristics.start_y.minimum) / 2) + self.page.heuristics.start_y.minimum
-        if line_start <= midway_point:
-            return False
-
-        elif self.bottom_boundary == self.page.heuristics.start_y.maximum:
-
-            if not line_start >= self.bottom_boundary - self.page.heuristics.start_y.upper_bound:
-                for bottom_boundary, lower_bound in self.document.get_all_bottom_boundaries():
+            if self.layout.bottom_boundary == self.layout.page.heuristics.start_y.maximum:
+                if line_start >= self.layout.bottom_boundary - self.layout.page.heuristics.start_y.upper_bound:
+                    return VerticalRegion.FOOTER
+                for bottom_boundary, lower_bound in self.layout.document.get_all_bottom_boundaries():
                     if line_start >= bottom_boundary - lower_bound:
-                        return True
-                return False
+                        return VerticalRegion.FOOTER
             else:
-                return True
+                if line_start >= self.layout.bottom_boundary:
+                    return VerticalRegion.FOOTER
 
-        else:
-
-            return line_group[0].start_y >= self.bottom_boundary
-
+            return VerticalRegion.BODY
 
 class PageLayout:
 
@@ -641,10 +626,15 @@ class PageLayout:
         self.top_boundary = page.heuristics.start_y.minimum
         self._cache = {}
         self.line_position = LinePosition(self)
+        self.line_region = LineRegion(self)
 
     @memoize_group_method
     def get_line_position(self, line_group) -> MarginPosition:
         return self.line_position.classify_left_margin(line_group)
+
+    @memoize_group_method
+    def get_line_region(self, line_group) -> VerticalRegion:
+        return self.line_region.classify_vertical_region(line_group)
 
     def set_top_boundary(self, top_boundary):
         self.top_boundary = top_boundary
