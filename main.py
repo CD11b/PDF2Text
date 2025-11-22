@@ -780,7 +780,6 @@ class PageAnalyzer:
 class DocumentData:
     def __init__(self):
         self.document = None
-        self.all_pages = []
 
         self._document_left_margins = set()
         self._document_body_boundaries = set()
@@ -804,7 +803,6 @@ class DocumentData:
         self._document_line_counts.add(len(page_data.lines))
 
     def add_page(self, page_data: PageData):
-        self.all_pages.append(page_data)
         self.update_cache(page_data)
 
     def get_all_left_margins(self) -> set[float]:
