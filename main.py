@@ -6,6 +6,7 @@ import argparse
 from itertools import tee, groupby
 from statistics import mean
 from collections import defaultdict
+from functools import wraps
 
 from IO import PDFReader, OutputWriter
 from models import StyledLine, PageData, Heuristics, ColumnData
@@ -443,6 +444,16 @@ class FilterText:
                 result.extend(buffer)
         return result
 
+
+def memoize_group_method(method):
+    @wraps(method)
+    def wrapper(self, line_group, *args, **kwargs):
+        key = (method.__name__, id(line_group), args, tuple(kwargs.items()))
+        if key not in self._cache:
+            self._cache[key] = method(self, line_group, *args, **kwargs)
+        return self._cache[key]
+    return wrapper
+
 class PageLayout:
 
     def __init__(self, page, column, document):
@@ -452,6 +463,7 @@ class PageLayout:
         self.bottom_boundary = page.heuristics.start_y.maximum
         self.left_boundary = column.heuristics.start_x.most_common
         self.top_boundary = page.heuristics.start_y.minimum
+        self._cache = {}
 
     def set_top_boundary(self, top_boundary):
         self.top_boundary = top_boundary
@@ -459,6 +471,7 @@ class PageLayout:
     def set_bottom_boundary(self, bottom_boundary):
         self.bottom_boundary = bottom_boundary
 
+    @memoize_group_method
     def is_at_left_margin(self, line_group, whole_document: bool | None = None) -> bool:
         line_start = line_group[0].start_x
 
@@ -467,20 +480,18 @@ class PageLayout:
                 return True
 
         if whole_document:
-            for heuristic in self.document.get_all_left_margins():
-                if line_start == heuristic:
-                    return True
+            return line_start in self.document.get_all_left_margins()
         return line_start == self.left_boundary
 
+    @memoize_group_method
     def is_after_left_margin(self, line_group, whole_document: bool | None = None) -> bool:
 
         line_start = line_group[0].start_x
         if whole_document:
-            for heuristic in self.document.get_all_left_margins():
-                if line_start > heuristic:
-                    return True
+            return line_start in self.document.get_all_left_margins()
         return line_start > self.left_boundary
 
+    @memoize_group_method
     def is_before_left_margin(self, line_group, whole_document: bool | None = None) -> bool:
 
         line_start = line_group[0].start_x
@@ -489,15 +500,15 @@ class PageLayout:
                 return False
 
         if whole_document:
-            for heuristic in self.document.get_all_left_margins():
-                if line_start < heuristic:
-                    return True
+            return line_start in self.document.get_all_left_margins()
         return line_start < self.left_boundary
 
+    @memoize_group_method
     def is_dense_line(self, line_group) -> bool:
         line_character_density = sum((line.character_density for line in line_group))
         return line_character_density >= self.page.heuristics.character_density.lower_bound
 
+    @memoize_group_method
     def is_footer_region(self, line_group) -> bool:
 
         line_start = line_group[0].start_y
@@ -519,7 +530,7 @@ class PageLayout:
 
             return line_group[0].start_y >= self.bottom_boundary
 
-
+    @memoize_group_method
     def is_header_region(self, line_group) -> bool:
 
         line_start = line_group[0].start_y
@@ -552,6 +563,7 @@ class PageLayout:
         indent_gap = next_group[-1].end_x - line_group[0].start_x
         return self.column.heuristics.word_gaps[0] <= indent_gap <= self.column.heuristics.word_gaps[1]
 
+    @memoize_group_method
     def is_indented_paragraph(self, line_group, whole_document: bool | None = None) -> bool:
 
         line_start = line_group[0].start_x
@@ -618,7 +630,7 @@ class PageLayout:
     def is_continuous_paragraph(self, line_group, group_iter):
         return self.is_body_paragraph(line_group=line_group, next_group=group_iter)
 
-
+    @memoize_group_method
     def is_dominant_font_size(self, line_group, whole_document: bool | None = None) -> bool:
 
         line_font_size = mean((line.font_size for line in line_group))
@@ -631,7 +643,7 @@ class PageLayout:
 
         return self.page.heuristics.font_size.lower_bound <= line_font_size <= self.page.heuristics.font_size.upper_bound
 
-
+    @memoize_group_method
     def is_dominant_font_name(self, line_font_name, whole_document: bool | None = None) -> bool:
 
         if whole_document:
@@ -641,6 +653,7 @@ class PageLayout:
 
         return line_font_name == self.page.heuristics.font_name
 
+    @memoize_group_method
     def is_last_line(self, line_group) -> bool:
         return line_group is self.column.line_groups[-1]
 
