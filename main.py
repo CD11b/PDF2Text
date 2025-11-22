@@ -454,8 +454,7 @@ def memoize_group_method(method):
         return self._cache[key]
     return wrapper
 
-class PageLayout:
-
+class ParagraphType:
     def __init__(self, page, column, document):
         self.page = page
         self.column = column
@@ -464,93 +463,6 @@ class PageLayout:
         self.left_boundary = column.heuristics.start_x.most_common
         self.top_boundary = page.heuristics.start_y.minimum
         self._cache = {}
-
-    def set_top_boundary(self, top_boundary):
-        self.top_boundary = top_boundary
-
-    def set_bottom_boundary(self, bottom_boundary):
-        self.bottom_boundary = bottom_boundary
-
-    @memoize_group_method
-    def is_at_left_margin(self, line_group, whole_document: bool | None = None) -> bool:
-        line_start = line_group[0].start_x
-
-        if self.page.ocr:
-            if self.page.heuristics.start_x.lower_bound <= line_start <= self.left_boundary:
-                return True
-
-        if whole_document:
-            return line_start in self.document.get_all_left_margins()
-        return line_start == self.left_boundary
-
-    @memoize_group_method
-    def is_after_left_margin(self, line_group, whole_document: bool | None = None) -> bool:
-
-        line_start = line_group[0].start_x
-        if whole_document:
-            return line_start in self.document.get_all_left_margins()
-        return line_start > self.left_boundary
-
-    @memoize_group_method
-    def is_before_left_margin(self, line_group, whole_document: bool | None = None) -> bool:
-
-        line_start = line_group[0].start_x
-        if self.page.ocr:
-            if line_start >= self.page.heuristics.start_x.lower_bound:
-                return False
-
-        if whole_document:
-            return line_start in self.document.get_all_left_margins()
-        return line_start < self.left_boundary
-
-    @memoize_group_method
-    def is_dense_line(self, line_group) -> bool:
-        line_character_density = sum((line.character_density for line in line_group))
-        return line_character_density >= self.page.heuristics.character_density.lower_bound
-
-    @memoize_group_method
-    def is_footer_region(self, line_group) -> bool:
-
-        line_start = line_group[0].start_y
-        midway_point = ((self.page.heuristics.start_y.maximum - self.page.heuristics.start_y.minimum) / 2 ) + self.page.heuristics.start_y.minimum
-        if line_start <= midway_point:
-            return False
-
-        elif self.bottom_boundary == self.page.heuristics.start_y.maximum:
-
-            if not line_start >= self.bottom_boundary - self.page.heuristics.start_y.upper_bound:
-                for bottom_boundary, lower_bound in self.document.get_all_bottom_boundaries():
-                    if line_start >= bottom_boundary - lower_bound:
-                        return True
-                return False
-            else:
-                return True
-
-        else:
-
-            return line_group[0].start_y >= self.bottom_boundary
-
-    @memoize_group_method
-    def is_header_region(self, line_group) -> bool:
-
-        line_start = line_group[0].start_y
-        midway_point = ((self.page.heuristics.start_y.maximum - self.page.heuristics.start_y.minimum) / 2 ) + self.page.heuristics.start_y.minimum
-        if line_start >= midway_point:
-            return False
-
-        if self.top_boundary == self.page.heuristics.start_y.minimum:
-
-            if not line_start <= self.top_boundary + self.page.heuristics.start_y.upper_bound:
-                for top_boundary, lower_bound in self.document.get_all_top_boundaries():
-                    if line_start <= top_boundary + lower_bound:
-                        return True
-                return False
-            else:
-                return True
-
-        else:
-
-            return line_group[0].start_y <= self.top_boundary
 
     def is_continuous_line(self, line_group, groups_iter) -> bool:
         next_group = groups_iter.peek()
@@ -601,7 +513,6 @@ class PageLayout:
         else:
             return False
 
-
     def is_body_paragraph(self, line_group, next_group = None, filtered_list = None):
         if next_group and isinstance(next_group, PeekableIterator):
             next_group = next_group.peek()
@@ -629,6 +540,129 @@ class PageLayout:
 
     def is_continuous_paragraph(self, line_group, group_iter):
         return self.is_body_paragraph(line_group=line_group, next_group=group_iter)
+
+class LinePosition:
+
+    def __init__(self, page, column, document):
+        self.page = page
+        self.column = column
+        self.document = document
+        self.bottom_boundary = page.heuristics.start_y.maximum
+        self.left_boundary = column.heuristics.start_x.most_common
+        self.top_boundary = page.heuristics.start_y.minimum
+        self._cache = {}
+
+    @memoize_group_method
+    def is_at_left_margin(self, line_group, whole_document: bool | None = None) -> bool:
+        line_start = line_group[0].start_x
+
+        if self.page.ocr:
+            if self.page.heuristics.start_x.lower_bound <= line_start <= self.left_boundary:
+                return True
+
+        if whole_document:
+            return line_start in self.document.get_all_left_margins()
+        return line_start == self.left_boundary
+
+    @memoize_group_method
+    def is_after_left_margin(self, line_group, whole_document: bool | None = None) -> bool:
+
+        line_start = line_group[0].start_x
+        if whole_document:
+            return line_start in self.document.get_all_left_margins()
+        return line_start > self.left_boundary
+
+    @memoize_group_method
+    def is_before_left_margin(self, line_group, whole_document: bool | None = None) -> bool:
+
+        line_start = line_group[0].start_x
+        if self.page.ocr:
+            if line_start >= self.page.heuristics.start_x.lower_bound:
+                return False
+
+        if whole_document:
+            return line_start in self.document.get_all_left_margins()
+        return line_start < self.left_boundary
+
+class LineRegion:
+
+    def __init__(self, page, column, document):
+        self.page = page
+        self.column = column
+        self.document = document
+        self.bottom_boundary = page.heuristics.start_y.maximum
+        self.left_boundary = column.heuristics.start_x.most_common
+        self.top_boundary = page.heuristics.start_y.minimum
+        self._cache = {}
+
+    @memoize_group_method
+    def is_header_region(self, line_group) -> bool:
+
+        line_start = line_group[0].start_y
+        midway_point = ((
+                                    self.page.heuristics.start_y.maximum - self.page.heuristics.start_y.minimum) / 2) + self.page.heuristics.start_y.minimum
+        if line_start >= midway_point:
+            return False
+
+        if self.top_boundary == self.page.heuristics.start_y.minimum:
+
+            if not line_start <= self.top_boundary + self.page.heuristics.start_y.upper_bound:
+                for top_boundary, lower_bound in self.document.get_all_top_boundaries():
+                    if line_start <= top_boundary + lower_bound:
+                        return True
+                return False
+            else:
+                return True
+
+        else:
+
+            return line_group[0].start_y <= self.top_boundary
+
+    @memoize_group_method
+    def is_footer_region(self, line_group) -> bool:
+
+        line_start = line_group[0].start_y
+        midway_point = ((
+                                    self.page.heuristics.start_y.maximum - self.page.heuristics.start_y.minimum) / 2) + self.page.heuristics.start_y.minimum
+        if line_start <= midway_point:
+            return False
+
+        elif self.bottom_boundary == self.page.heuristics.start_y.maximum:
+
+            if not line_start >= self.bottom_boundary - self.page.heuristics.start_y.upper_bound:
+                for bottom_boundary, lower_bound in self.document.get_all_bottom_boundaries():
+                    if line_start >= bottom_boundary - lower_bound:
+                        return True
+                return False
+            else:
+                return True
+
+        else:
+
+            return line_group[0].start_y >= self.bottom_boundary
+
+
+class PageLayout:
+
+    def __init__(self, page, column, document):
+        self.page = page
+        self.column = column
+        self.document = document
+        self.bottom_boundary = page.heuristics.start_y.maximum
+        self.left_boundary = column.heuristics.start_x.most_common
+        self.top_boundary = page.heuristics.start_y.minimum
+        self._cache = {}
+
+    def set_top_boundary(self, top_boundary):
+        self.top_boundary = top_boundary
+
+    def set_bottom_boundary(self, bottom_boundary):
+        self.bottom_boundary = bottom_boundary
+
+    @memoize_group_method
+    def is_dense_line(self, line_group) -> bool:
+        line_character_density = sum((line.character_density for line in line_group))
+        return line_character_density >= self.page.heuristics.character_density.lower_bound
 
     @memoize_group_method
     def is_dominant_font_size(self, line_group, whole_document: bool | None = None) -> bool:
