@@ -957,7 +957,7 @@ def main():
                 filtered_lines = cleaned_brackets.clean_brackets(filtered_lines)
                 hanging_open = cleaned_brackets.get_hanging_open()
 
-                filtered_lines = filter_text.add_paragraph_breaks(filtered_lines=filtered_lines)
+                # filtered_lines = filter_text.add_paragraph_breaks(filtered_lines=filtered_lines)
                 page_text = CleanText.join_broken_sentences(filtered_lines=filtered_lines)
 
                 page_text = CleanText.normalize_unicode(page_text)
