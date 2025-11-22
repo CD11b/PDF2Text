@@ -7,6 +7,7 @@ from itertools import tee, groupby
 from statistics import mean
 from collections import defaultdict
 from functools import wraps
+from enum import Enum
 
 from IO import PDFReader, OutputWriter
 from models import StyledLine, PageData, Heuristics, ColumnData
@@ -399,14 +400,16 @@ class FilterText:
             self.filter_indented_lines(line_group, groups_iter, result)
 
     def _handle_left_margins(self, line_group, groups_iter, result):
-        if self.layout.is_before_left_margin(line_group):
+        margin_position = self.layout.get_line_position(line_group)
+
+        if margin_position is MarginPosition.BEFORE:
             self._handle_before_left_margin(line_group, groups_iter, result)
 
-        elif self.layout.is_at_left_margin(line_group):
+        elif margin_position is MarginPosition.AT:
 
             self._handle_at_left_margin(line_group, groups_iter, result)
 
-        elif self.layout.is_after_left_margin(line_group):  # Edge case: Indented main body
+        elif margin_position is MarginPosition.AFTER:  # Edge case: Indented main body
             self._handle_after_left_margin(line_group, groups_iter, result)
 
         else:
@@ -541,48 +544,37 @@ class ParagraphType:
     def is_continuous_paragraph(self, line_group, group_iter):
         return self.is_body_paragraph(line_group=line_group, next_group=group_iter)
 
+
+class MarginPosition(Enum):
+    BEFORE = "before"
+    AT = "at"
+    AFTER = "after"
+
 class LinePosition:
 
-    def __init__(self, page, column, document):
-        self.page = page
-        self.column = column
-        self.document = document
-        self.bottom_boundary = page.heuristics.start_y.maximum
-        self.left_boundary = column.heuristics.start_x.most_common
-        self.top_boundary = page.heuristics.start_y.minimum
+    def __init__(self, layout):
+        self.layout = layout
+        self.lower_bound = self.layout.page.heuristics.start_x.lower_bound
+        self.left_boundary = self.layout.left_boundary
         self._cache = {}
 
     @memoize_group_method
-    def is_at_left_margin(self, line_group, whole_document: bool | None = None) -> bool:
+    def classify_left_margin(self, line_group) -> MarginPosition:
         line_start = line_group[0].start_x
 
-        if self.page.ocr:
-            if self.page.heuristics.start_x.lower_bound <= line_start <= self.left_boundary:
-                return True
+        if self.layout.page.ocr:
+            if self.lower_bound <= line_start <= self.left_boundary:
+                return MarginPosition.AT
 
-        if whole_document:
-            return line_start in self.document.get_all_left_margins()
-        return line_start == self.left_boundary
+        if line_start in self.layout.document.get_all_left_margins():
+            return MarginPosition.AT
 
-    @memoize_group_method
-    def is_after_left_margin(self, line_group, whole_document: bool | None = None) -> bool:
-
-        line_start = line_group[0].start_x
-        if whole_document:
-            return line_start in self.document.get_all_left_margins()
-        return line_start > self.left_boundary
-
-    @memoize_group_method
-    def is_before_left_margin(self, line_group, whole_document: bool | None = None) -> bool:
-
-        line_start = line_group[0].start_x
-        if self.page.ocr:
-            if line_start >= self.page.heuristics.start_x.lower_bound:
-                return False
-
-        if whole_document:
-            return line_start in self.document.get_all_left_margins()
-        return line_start < self.left_boundary
+        if line_start < self.left_boundary:
+            return MarginPosition.BEFORE
+        elif line_start == self.left_boundary:
+            return MarginPosition.AT
+        else:
+            return MarginPosition.AFTER
 
 class LineRegion:
 
@@ -652,6 +644,11 @@ class PageLayout:
         self.left_boundary = column.heuristics.start_x.most_common
         self.top_boundary = page.heuristics.start_y.minimum
         self._cache = {}
+        self.line_position = LinePosition(self)
+
+    @memoize_group_method
+    def get_line_position(self, line_group) -> MarginPosition:
+        return self.line_position.classify_left_margin(line_group)
 
     def set_top_boundary(self, top_boundary):
         self.top_boundary = top_boundary
