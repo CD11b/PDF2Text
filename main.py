@@ -546,8 +546,11 @@ class PageLayout:
         if next_group is None:
             return False
 
-        vertical_gap = next_group[0].start_y - line_group[0].start_y
-        return self.column.heuristics.word_gaps[0] <= vertical_gap <= self.column.heuristics.word_gaps[1]
+        if line_group[0].start_y != next_group[0].start_y:
+            return False
+
+        indent_gap = next_group[-1].end_x - line_group[0].start_x
+        return self.column.heuristics.word_gaps[0] <= indent_gap <= self.column.heuristics.word_gaps[1]
 
     def is_indented_paragraph(self, line_group, whole_document: bool | None = None) -> bool:
 
