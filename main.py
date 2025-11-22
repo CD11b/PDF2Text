@@ -453,92 +453,114 @@ def memoize_group_method(method):
         return self._cache[key]
     return wrapper
 
+
+class LineIndentation(Enum):
+    INDENTED = "indented"
+    NONE = "none"
+    INDENTED_BLOCK = "indented_block"
+    AMBIGUOUS = "ambiguous"
+
+class PositionInParagraph(Enum):
+    START = "start"
+    BODY = "body"
+    END = "end"
+    SINGLE_LINE = "single-line"
+
 class ParagraphType:
-    def __init__(self, page, column, document):
-        self.page = page
-        self.column = column
-        self.document = document
-        self.bottom_boundary = page.heuristics.start_y.maximum
-        self.left_boundary = column.heuristics.start_x.most_common
-        self.top_boundary = page.heuristics.start_y.minimum
+    def __init__(self, layout):
+        self.layout = layout
+        self.word_gap_upper_bound = self.layout.page.heuristics.word_gaps[1]
         self._cache = {}
 
-    def is_continuous_line(self, line_group, groups_iter) -> bool:
-        next_group = groups_iter.peek()
-        if next_group is None:
-            return False
-
-        if line_group[0].start_y != next_group[0].start_y:
-            return False
-
-        indent_gap = next_group[-1].end_x - line_group[0].start_x
-        return self.column.heuristics.word_gaps[0] <= indent_gap <= self.column.heuristics.word_gaps[1]
-
     @memoize_group_method
-    def is_indented_paragraph(self, line_group, whole_document: bool | None = None) -> bool:
+    def _at_left_margin(self, line_group):
 
-        line_start = line_group[0].start_x
-        if whole_document:
-            for most_common, upper_bound in self.document.get_all_indents():
-                if most_common < line_start <= upper_bound:
-                    return True
+        line_start_x = line_group[0].start_x
 
-        return self.column.heuristics.start_x.most_common < line_start <= self.column.heuristics.start_x.upper_bound
-
-    def is_continued_indented_paragraph(self, line_group, filtered_lines):
-        if self.page.ocr:
-            return abs(line_group[0].start_x - filtered_lines[-1].start_x) <= self.page.heuristics.word_gaps[1]
-
-        return line_group[0].start_x == filtered_lines[-1].start_x
-
-    def is_paragraph_block(self, line_group, next_group = None, filtered_list = None):
-
-        indent_size = self.column.heuristics.start_x.upper_bound - self.column.heuristics.start_x.most_common
-        line_start_x = line_group[0].start_x - indent_size
-
-        if next_group and isinstance(next_group, PeekableIterator):
-            next_group = next_group.peek()
-
-            if next_group:
-                if line_start_x <= next_group[0].start_x:
-                    return True
-
-        if filtered_list:
-            if len(filtered_list) > 0:
-                return line_start_x <= filtered_list[-1].start_x
-            else:
-                return True
-
-        else:
-            return False
-
-    def is_body_paragraph(self, line_group, next_group = None, filtered_list = None):
-        if next_group and isinstance(next_group, PeekableIterator):
-            next_group = next_group.peek()
-
-            if next_group:
-                gap = abs(line_group[0].start_y - next_group[0].start_y)
-                if gap <= self.column.heuristics.start_y.upper_bound:
-                    return True
-
-        if filtered_list:
-            if len(filtered_list) > 0:
-                gap = line_group[0].start_y - filtered_list[-1].start_y
-                return gap <= self.column.heuristics.start_y.upper_bound
-            else:
-                return True
-
-        else:
-            return False
-
-    def is_new_paragraph(self, line_group, filtered_list):
-        if self.is_body_paragraph(line_group=line_group, filtered_list=filtered_list):
-            return False
-        else:
+        if line_start_x == self.layout.left_boundary:
             return True
+        elif self.layout.page.ocr:
+            difference = abs(line_start_x - self.layout.left_boundary)
+            if difference <= self.word_gap_upper_bound:
+                return True
 
-    def is_continuous_paragraph(self, line_group, group_iter):
-        return self.is_body_paragraph(line_group=line_group, next_group=group_iter)
+        return False
+
+    def classify_indentation(self, line_group, group_iter, filtered_list):
+
+        line_start_x = line_group[0].start_x
+
+        if self._at_left_margin(line_group):
+            return LineIndentation.NONE
+
+        max_indent_size = self.layout.column.heuristics.start_x.upper_bound - self.layout.column.heuristics.start_x.most_common
+        adjusted_line_start_x = line_start_x - max_indent_size
+
+        if len(filtered_list) > 0:
+            previous_start_x = filtered_list[-1].start_x
+
+            if self.layout.page.ocr:
+                difference = abs(line_start_x - previous_start_x)
+                if difference <= self.word_gap_upper_bound:
+                    return LineIndentation.INDENTED_BLOCK
+
+            if adjusted_line_start_x <= previous_start_x:
+                return LineIndentation.INDENTED
+
+        next_group = group_iter.peek()
+        if next_group:
+            next_start_x = next_group[0].start_x
+
+            if line_start_x == next_start_x:
+                return LineIndentation.INDENTED_BLOCK
+            elif self.layout.page.ocr:
+                difference = abs(line_start_x - next_start_x)
+                if difference <= self.word_gap_upper_bound:
+                    return LineIndentation.INDENTED_BLOCK
+            elif adjusted_line_start_x <= next_start_x:
+                return LineIndentation.INDENTED
+
+        return LineIndentation.AMBIGUOUS
+
+    @staticmethod
+    def _is_close_to_last_line(line_start_y, filtered_list, start_y_upper_bound):
+        if len(filtered_list) > 0:
+            gap = abs(line_start_y - filtered_list[-1].start_y)
+            if gap <= start_y_upper_bound:
+                return True
+
+        return False
+
+    @staticmethod
+    def _is_close_to_next_line(line_start_y, group_iter, start_y_upper_bound):
+        next_group = group_iter.peek()
+        if next_group:
+            gap = abs(line_start_y - next_group[0].start_y)
+
+            if gap <= start_y_upper_bound:
+                return True
+
+        return False
+
+    def classify_position(self, line_group, group_iter, filtered_list):
+
+        line_start_y = line_group[0].start_y
+        start_y_upper_bound = self.layout.column.heuristics.start_y.upper_bound
+
+        close_to_last_line = self._is_close_to_last_line(line_start_y, filtered_list, start_y_upper_bound)
+        close_to_next_line = self._is_close_to_next_line(line_start_y, group_iter, start_y_upper_bound)
+
+        if close_to_last_line:
+            if close_to_next_line:
+                return PositionInParagraph.BODY
+            else:
+                return PositionInParagraph.END
+
+        elif close_to_next_line:
+            return PositionInParagraph.START
+
+        else:
+            return PositionInParagraph.SINGLE_LINE
 
 
 class MarginPosition(Enum):
@@ -627,6 +649,7 @@ class PageLayout:
         self._cache = {}
         self.line_position = LinePosition(self)
         self.line_region = LineRegion(self)
+        self.paragraph_type = ParagraphType(self)
 
     @memoize_group_method
     def get_line_position(self, line_group) -> MarginPosition:
@@ -635,6 +658,12 @@ class PageLayout:
     @memoize_group_method
     def get_line_region(self, line_group) -> VerticalRegion:
         return self.line_region.classify_vertical_region(line_group)
+
+    def get_position_in_paragraph(self, line_group, group_iter, filtered_list) -> PositionInParagraph:
+        return self.paragraph_type.classify_position(line_group, group_iter, filtered_list)
+
+    def get_line_indentation(self, line_group, group_iter, filtered_list) -> LineIndentation:
+        return self.paragraph_type.classify_indentation(line_group, group_iter, filtered_list)
 
     def set_top_boundary(self, top_boundary):
         self.top_boundary = top_boundary
@@ -673,6 +702,27 @@ class PageLayout:
     @memoize_group_method
     def is_last_line(self, line_group) -> bool:
         return line_group is self.column.line_groups[-1]
+
+    @memoize_group_method
+    def is_indented_paragraph(self, line_group) -> bool:
+
+        line_start = line_group[0].start_x
+        for most_common, upper_bound in self.document.get_all_indents():
+            if most_common < line_start <= upper_bound:
+                return True
+
+        return False
+
+    def is_continuous_line(self, line_group, groups_iter) -> bool:
+        next_group = groups_iter.peek()
+        if next_group is None:
+            return False
+
+        if line_group[0].start_y != next_group[0].start_y:
+            return False
+
+        indent_gap = next_group[-1].end_x - line_group[0].start_x
+        return self.column.heuristics.word_gaps[0] <= indent_gap <= self.column.heuristics.word_gaps[1]
 
     def is_in_order(self, line_group, filtered_lines):
         if not filtered_lines:
