@@ -729,10 +729,11 @@ class PageAnalyzer:
 
                 if line.start_x < first_column:
                     columned_groups[first_column].append(line)
+                    continue
 
-                for start_x in reversed(sorted_columns):
-                    if line.start_x >= start_x:
-                        columned_groups[start_x].append(line)
+                for column_start_x in reversed(sorted_columns):
+                    if line.start_x >= column_start_x:
+                        columned_groups[column_start_x].append(line)
                         break
 
 
