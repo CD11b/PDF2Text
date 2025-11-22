@@ -413,11 +413,7 @@ class FilterText:
             self._handle_after_left_margin(line_group, groups_iter, result)
 
         else:
-            if self.layout.is_at_left_margin(line_group, whole_document=True):  # Body start
-                self._handle_at_left_margin(line_group, groups_iter, result)
-
-            else:
-                FilterText.skip_group(line_group, case="Unhandled Footer @ Left Margin", unhandled=True)
+            FilterText.skip_group(line_group, case="Unhandled Footer @ Left Margin", unhandled=True)
 
     def filter_by_boundaries(self):
 
