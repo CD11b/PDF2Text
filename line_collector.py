@@ -11,36 +11,32 @@ class LineCollector:
     def __init__(self):
         self.result = []
 
-    def process(self, ctx: LineContext, decision: Decision):
-        """
-        Execute the decision on the line group.
+    def process(self, line_group, decision: Decision):
 
-        Args:
-            ctx: Line context with the line group
-            decision: What to do with the line
-        """
         if decision.action == Action.COLLECT:
-            self._collect_group(ctx.line_group, decision.reason)
+            self._collect_group(line_group, decision.reason, decision.handler_name)
         elif decision.action == Action.SKIP:
-            self._skip_group(ctx.line_group, decision.reason)
+            self._skip_group(line_group, decision.reason, decision.handler_name)
         elif decision.action == Action.UNHANDLED:
-            self._unhandled_group(ctx.line_group, decision.reason)
+            self._unhandled_group(line_group, decision.reason, decision.handler_name)
 
-    def _collect_group(self, line_group, reason: str):
+        return self.result
+
+    def _collect_group(self, line_group, reason: str, handler: str):
         """Merge and collect a line group."""
         merged = self._merge_line_group(line_group)
-        logging.debug(f"Collected [CASE: {reason}]: {merged}")
+        logging.debug(f"Collected [{handler} - CASE: {reason}]: {merged}")
         self.result.append(merged)
 
-    def _skip_group(self, line_group, reason: str):
+    def _skip_group(self, line_group, reason: str, handler: str):
         """Skip a line group."""
         merged = self._merge_line_group(line_group)
-        logging.info(f"Skipped [CASE: {reason}]: {merged}")
+        logging.info(f"Skipped [{handler} - CASE: {reason}]: {merged}")
 
-    def _unhandled_group(self, line_group, reason: str):
+    def _unhandled_group(self, line_group, reason: str, handler: str):
         """Skip an unhandled line group."""
         merged = self._merge_line_group(line_group)
-        logging.info(f"Skipped [CASE: {reason}]: {merged}")
+        logging.info(f"Skipped [{handler} - CASE: {reason}]: {merged}")
 
     @staticmethod
     def _merge_line_group(line_group):

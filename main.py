@@ -10,10 +10,11 @@ from functools import wraps
 from enum import Enum, auto
 
 from IO import PDFReader, OutputWriter
-from models import StyledLine, PageData, Heuristics, ColumnData
+from models import *
 from document_analysis import DocumentAnalysis
 from logger_config import setup_logging
 from text_heuristics import TextHeuristics
+from line_collector import LineCollector
 
 os.environ["TESSDATA_PREFIX"] = "./training"
 
@@ -249,6 +250,7 @@ class FilterText:
         self.page = page
         self.document = document
         self.layout = None
+        self.collector = LineCollector()
 
     def add_paragraph_breaks(self, filtered_lines):
 
@@ -269,7 +271,7 @@ class FilterText:
         if ctx.line_indentation is LineIndentation.INDENTED_BLOCK:
 
             if self.layout.is_last_line(ctx.line_group):
-                FilterText.collect_group(ctx.line_group, result, case="Last Line is Continued Indented Paragraph")
+                result.extend(self.collector.process(ctx.line_group, Decision(Action.COLLECT, "Last Line is Continued Indented Paragraph", "TEMP")))
             elif ctx.position_in_paragraph is not PositionInParagraph.SINGLE_LINE:
                 FilterText.collect_group(ctx.line_group, result, case="Indented Block")
             else:
@@ -312,8 +314,8 @@ class FilterText:
 
         if ctx.position_in_paragraph  is not PositionInParagraph.START:
             FilterText.collect_group(ctx.line_group, result, case="Body Paragraph")
-        elif ctx.is_dense:
-            FilterText.collect_group(ctx.line_group, result, case="Dense line @ Header")
+        elif ctx.density is Density.DENSE:
+            result.extend(self.collector.process(ctx.line_group, Decision(Action.COLLECT, "Dense line @ Header", "TEMP")))
         else:
             FilterText.skip_group(ctx.line_group, case="Header")
 
