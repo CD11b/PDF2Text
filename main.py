@@ -282,7 +282,7 @@ class FilterText:
                 FilterText.skip_group(ctx.line_group, case="Indented Line @ Footer")
 
         elif self.page.ocr:
-            if ctx.line_region is VerticalRegion.FOOTER:
+            if ctx.region is VerticalRegion.FOOTER:
                 FilterText.skip_group(ctx.line_group, case="Indented Line @ Footer")
             elif self.layout.is_continuous_line(ctx.line_group, groups_iter):
                 FilterText.collect_group(ctx.line_group, result, case="OCR - Indented Line Following Dominant Word Gap")
@@ -319,7 +319,7 @@ class FilterText:
 
     def _handle_new_paragraph(self, ctx, groups_iter, result):
 
-        if ctx.line_region is VerticalRegion.HEADER:
+        if ctx.region is VerticalRegion.HEADER:
             self._handle_header_region(ctx, groups_iter, result)
         elif ctx.position_in_paragraph is not PositionInParagraph.SINGLE_LINE:
             self._handle_continuous_paragraph(ctx, result)
@@ -335,7 +335,7 @@ class FilterText:
 
     def _handle_at_left_margin(self, ctx, groups_iter, result):
 
-        if ctx.line_region is VerticalRegion.FOOTER:
+        if ctx.region is VerticalRegion.FOOTER:
             self._handle_footer_region(ctx, groups_iter, result)
 
         elif ctx.position_in_paragraph is PositionInParagraph.START:
@@ -349,10 +349,10 @@ class FilterText:
 
     def _handle_before_left_margin(self, ctx, groups_iter, result):
 
-        if ctx.line_region is VerticalRegion.HEADER:
+        if ctx.region is VerticalRegion.HEADER:
             self._handle_header_region(ctx, groups_iter, result)
 
-        elif ctx.line_region is VerticalRegion.FOOTER:
+        elif ctx.region is VerticalRegion.FOOTER:
             FilterText.skip_group(ctx.line_group, case="Footer before left margin", unhandled=True)
 
         else:
@@ -360,10 +360,10 @@ class FilterText:
 
     def _handle_after_left_margin(self, ctx, groups_iter, result):
 
-        if ctx.line_region is VerticalRegion.HEADER:
+        if ctx.region is VerticalRegion.HEADER:
             self._handle_header_region(ctx, groups_iter, result)
 
-        elif ctx.line_region is VerticalRegion.FOOTER:
+        elif ctx.region is VerticalRegion.FOOTER:
             self._handle_footer_region(ctx, groups_iter, result)
 
         else:
