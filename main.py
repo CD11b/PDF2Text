@@ -7,7 +7,7 @@ from itertools import tee, groupby
 from statistics import mean
 from collections import defaultdict
 from functools import wraps
-from enum import Enum
+from enum import Enum, auto
 
 from IO import PDFReader, OutputWriter
 from models import StyledLine, PageData, Heuristics, ColumnData
@@ -455,16 +455,16 @@ def memoize_group_method(method):
 
 
 class LineIndentation(Enum):
-    INDENTED = "indented"
-    NONE = "none"
-    INDENTED_BLOCK = "indented_block"
-    AMBIGUOUS = "ambiguous"
+    INDENTED = auto()
+    NONE = auto()
+    INDENTED_BLOCK = auto()
+    AMBIGUOUS = auto()
 
 class PositionInParagraph(Enum):
-    START = "start"
-    BODY = "body"
-    END = "end"
-    SINGLE_LINE = "single-line"
+    START = auto()
+    BODY = auto()
+    END = auto()
+    SINGLE_LINE = auto()
 
 class ParagraphType:
     def __init__(self, layout):
@@ -564,9 +564,9 @@ class ParagraphType:
 
 
 class MarginPosition(Enum):
-    BEFORE = "before"
-    AT = "at"
-    AFTER = "after"
+    BEFORE = auto()
+    AT = auto()
+    AFTER = auto()
 
 class LinePosition:
 
@@ -595,9 +595,9 @@ class LinePosition:
             return MarginPosition.AFTER
 
 class VerticalRegion(Enum):
-    HEADER = "header"
-    BODY = "body"
-    FOOTER = "footer"
+    HEADER = auto()
+    BODY = auto()
+    FOOTER = auto()
 
 class LineRegion:
 
