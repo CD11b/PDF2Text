@@ -1,6 +1,6 @@
-from decision import Action, Decision
-from line_context import LineContext
-from context_types import *
+from .decision import Action, Decision
+from .line_context import LineContext
+from .context_types import *
 
 __all__ = ["Action",
            "Decision",
@@ -9,6 +9,6 @@ __all__ = ["Action",
            "PositionInParagraph",
            "MarginPosition",
            "VerticalRegion",
-           "LineDensity",
-           "LineFontName",
-           "LineFontSize"]
+           "Density",
+           "FontName",
+           "FontSize"]

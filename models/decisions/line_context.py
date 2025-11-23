@@ -8,9 +8,9 @@ class LineContext:
     indentation: LineIndentation
     region: VerticalRegion
     margin_position: MarginPosition
-    density: LineDensity
-    font_name: LineFontName
-    font_size: LineFontSize
+    density: Density
+    font_name: FontName
+    font_size: FontSize
 
     @classmethod
     def create(cls, layout, line_group, groups_iter, result):

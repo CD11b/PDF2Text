@@ -22,15 +22,15 @@ class VerticalRegion(Enum):
     BODY = auto()
     FOOTER = auto()
 
-class LineDensity(Enum):
+class Density(Enum):
     DENSE = auto()
     SPARSE = auto()
 
-class LineFontName(Enum):
+class FontName(Enum):
     MAIN = auto()
     OTHER = auto()
 
-class LineFontSize(Enum):
+class FontSize(Enum):
     MAIN = auto()
     LARGE = auto()
     SMALL = auto()

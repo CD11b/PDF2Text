@@ -586,6 +586,58 @@ class LineRegion:
 
             return VerticalRegion.BODY
 
+class LineDensity:
+
+    def __init__(self, layout):
+        self.layout = layout
+        self._cache = {}
+
+    @memoize_group_method
+    def classify_density(self, line_group) -> Density:
+        line_density = sum((line.character_density for line in line_group))
+        if line_density >= self.layout.page.heuristics.character_density.lower_bound:
+            return Density.DENSE
+        else:
+            return Density.SPARSE
+
+class LineFontName:
+
+    def __init__(self, layout):
+        self.layout = layout
+        self._cache = {}
+
+    @memoize_group_method
+    def classify_font_name(self, line_group) -> FontName:
+
+        for most_common in self.layout.document.get_all_font_names():
+            if line_group[0].font_name == most_common:
+                return FontName.MAIN
+
+        return FontName.OTHER
+
+class LineFontSize:
+
+    def __init__(self, layout):
+        self.layout = layout
+        self._cache = {}
+
+    @memoize_group_method
+    def classify_font_size(self, line_group) -> FontSize:
+
+        line_font_size = mean((line.font_size for line in line_group))
+
+        for most_common, lower_bound, upper_bound in self.layout.document.get_all_font_sizes():
+            if line_font_size == most_common:
+                return FontSize.MAIN
+            elif lower_bound <= line_font_size <= upper_bound:
+                return FontSize.MAIN
+
+        if line_font_size < self.layout.page.heuristics.font_size.lower_bound:
+            return FontSize.SMALL
+        else:
+            return FontSize.LARGE
+
+
 class PageLayout:
 
     def __init__(self, page, column, document):
@@ -600,6 +652,9 @@ class PageLayout:
         self.line_position = LinePosition(self)
         self.line_region = LineRegion(self)
         self.paragraph_type = ParagraphType(self)
+        self.line_density = LineDensity(self)
+        self.line_font_name = LineFontName(self)
+        self.line_font_size = LineFontSize(self)
 
     @memoize_group_method
     def get_line_position(self, line_group) -> MarginPosition:
@@ -608,6 +663,18 @@ class PageLayout:
     @memoize_group_method
     def get_line_region(self, line_group) -> VerticalRegion:
         return self.line_region.classify_vertical_region(line_group)
+
+    @memoize_group_method
+    def get_line_density(self, line_group) -> Density:
+        return self.line_density.classify_density(line_group)
+
+    @memoize_group_method
+    def get_font_name(self, line_group) -> FontName:
+        return self.line_font_name.classify_font_name(line_group)
+
+    @memoize_group_method
+    def get_font_size(self, line_group) -> FontSize:
+        return self.line_font_size.classify_font_size(line_group)
 
     def get_position_in_paragraph(self, line_group, group_iter, filtered_list) -> PositionInParagraph:
         return self.paragraph_type.classify_position(line_group, group_iter, filtered_list)
@@ -620,34 +687,6 @@ class PageLayout:
 
     def set_bottom_boundary(self, bottom_boundary):
         self.bottom_boundary = bottom_boundary
-
-    @memoize_group_method
-    def is_dense_line(self, line_group) -> bool:
-        line_character_density = sum((line.character_density for line in line_group))
-        return line_character_density >= self.page.heuristics.character_density.lower_bound
-
-    @memoize_group_method
-    def is_dominant_font_size(self, line_group, whole_document: bool | None = None) -> bool:
-
-        line_font_size = mean((line.font_size for line in line_group))
-        if whole_document:
-            for most_common, lower_bound, upper_bound in self.document.get_all_font_sizes():
-                if line_font_size == most_common:
-                    return True
-                elif lower_bound <= line_font_size <= upper_bound:
-                    return True
-
-        return self.page.heuristics.font_size.lower_bound <= line_font_size <= self.page.heuristics.font_size.upper_bound
-
-    @memoize_group_method
-    def is_dominant_font_name(self, line_font_name, whole_document: bool | None = None) -> bool:
-
-        if whole_document:
-            for most_common in self.document.get_all_font_names():
-                if line_font_name == most_common:
-                    return True
-
-        return line_font_name == self.page.heuristics.font_name
 
     @memoize_group_method
     def is_last_line(self, line_group) -> bool:
