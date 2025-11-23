@@ -18,6 +18,9 @@ from line_collector import LineCollector
 
 os.environ["TESSDATA_PREFIX"] = "./training"
 
+logger = logging.getLogger(__name__)
+
+
 class PeekableIterator:
 
     def __init__(self, iterable):
@@ -919,7 +922,6 @@ def main():
     remove_references = args.remove_references
 
     setup_logging(log_level=args.log_level)
-    # logger = logging.getLogger(__name__)
 
     if os.path.exists(pdf_path) and os.path.isfile(pdf_path):
         with PDFReader(pdf_path, page_start, page_end) as pdf_reader:
