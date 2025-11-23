@@ -1,0 +1,60 @@
+import logging
+from statistics import mean
+
+from models import StyledLine, LineContext, Action, Decision
+
+logger = logging.getLogger(__name__)
+
+class LineCollector:
+    """Collects or skips lines based on decisions."""
+
+    def __init__(self):
+        self.result = []
+
+    def process(self, ctx: LineContext, decision: Decision):
+        """
+        Execute the decision on the line group.
+
+        Args:
+            ctx: Line context with the line group
+            decision: What to do with the line
+        """
+        if decision.action == Action.COLLECT:
+            self._collect_group(ctx.line_group, decision.reason)
+        elif decision.action == Action.SKIP:
+            self._skip_group(ctx.line_group, decision.reason)
+        elif decision.action == Action.UNHANDLED:
+            self._unhandled_group(ctx.line_group, decision.reason)
+
+    def _collect_group(self, line_group, reason: str):
+        """Merge and collect a line group."""
+        merged = self._merge_line_group(line_group)
+        logging.debug(f"Collected [CASE: {reason}]: {merged}")
+        self.result.append(merged)
+
+    def _skip_group(self, line_group, reason: str):
+        """Skip a line group."""
+        merged = self._merge_line_group(line_group)
+        logging.info(f"Skipped [CASE: {reason}]: {merged}")
+
+    def _unhandled_group(self, line_group, reason: str):
+        """Skip an unhandled line group."""
+        merged = self._merge_line_group(line_group)
+        logging.info(f"Skipped [CASE: {reason}]: {merged}")
+
+    @staticmethod
+    def _merge_line_group(line_group):
+        """Merge lines of a line group into a single StyledLine."""
+        return StyledLine(
+            text=' '.join(line.text for line in line_group if line.text.strip()),
+            character_density=sum(line.character_density for line in line_group),
+            font_size=mean(line.font_size for line in line_group),
+            font_name=line_group[0].font_name,
+            start_x=line_group[0].start_x,
+            start_y=line_group[0].start_y,
+            end_x=line_group[-1].end_x
+        )
+
+    def get_result(self) -> list:
+        """Return collected lines."""
+        return self.result
