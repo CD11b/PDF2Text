@@ -1,6 +1,6 @@
 from dataclasses import dataclass
-from models.styled_line import StyledLine
-from models.heuristics import Heuristics
+from models.lines.styled_line import StyledLine
+from models.layout.heuristics import Heuristics
 
 @dataclass(frozen=True)
 class ColumnData:
