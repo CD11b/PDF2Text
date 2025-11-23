@@ -264,35 +264,6 @@ class FilterText:
 
         return result
 
-    @staticmethod
-    def merge_line(line_group):
-
-        return StyledLine(text=' '.join(line.text for line in line_group if line.text.strip()),
-                          character_density=sum((line.character_density for line in line_group)),
-                          font_size=mean((line.font_size for line in line_group)),
-                          font_name=line_group[0].font_name,
-                          start_x=line_group[0].start_x,
-                          start_y=line_group[0].start_y,
-                          end_x=line_group[-1].end_x)
-
-    @staticmethod
-    def skip_group(line_group, case: str, unhandled: bool | None=None):
-
-        whole_line = FilterText.merge_line(line_group)
-
-        if unhandled:
-            logging.error(f"Skipped group [CASE: {case}]: {whole_line}")
-        else:
-            logging.info(f"Skipped group [CASE: {case}]: {whole_line}")
-
-    @staticmethod
-    def collect_group(line_group, result, case: str):
-
-        whole_line = FilterText.merge_line(line_group)
-        logging.debug(f"Collected group [CASE: {case}]: {whole_line}")
-
-        result.append(whole_line)
-
     def filter_indented_lines(self, ctx, groups_iter, result):
 
         if ctx.line_indentation is LineIndentation.INDENTED_BLOCK:
@@ -454,18 +425,6 @@ def memoize_group_method(method):
     return wrapper
 
 
-class LineIndentation(Enum):
-    INDENTED = auto()
-    NONE = auto()
-    INDENTED_BLOCK = auto()
-    AMBIGUOUS = auto()
-
-class PositionInParagraph(Enum):
-    START = auto()
-    BODY = auto()
-    END = auto()
-    SINGLE_LINE = auto()
-
 class ParagraphType:
     def __init__(self, layout):
         self.layout = layout
@@ -562,12 +521,6 @@ class ParagraphType:
         else:
             return PositionInParagraph.SINGLE_LINE
 
-
-class MarginPosition(Enum):
-    BEFORE = auto()
-    AT = auto()
-    AFTER = auto()
-
 class LinePosition:
 
     def __init__(self, layout):
@@ -594,10 +547,6 @@ class LinePosition:
         else:
             return MarginPosition.AFTER
 
-class VerticalRegion(Enum):
-    HEADER = auto()
-    BODY = auto()
-    FOOTER = auto()
 
 class LineRegion:
 
@@ -636,29 +585,6 @@ class LineRegion:
                     return VerticalRegion.FOOTER
 
             return VerticalRegion.BODY
-
-from dataclasses import dataclass
-@dataclass
-class LineContext:
-    line_group: list
-    position_in_paragraph: PositionInParagraph
-    line_indentation: LineIndentation
-    line_region: VerticalRegion
-    margin_position: MarginPosition
-    is_dense: bool
-    is_dominant_font: bool
-
-    @classmethod
-    def create(cls, layout, line_group, groups_iter, result):
-        return cls(
-            line_group=line_group,
-            position_in_paragraph=layout.get_position_in_paragraph(line_group, groups_iter, result),
-            line_indentation=layout.get_line_indentation(line_group, groups_iter, result),
-            line_region=layout.get_line_region(line_group),
-            margin_position=layout.get_line_position(line_group),
-            is_dense=layout.is_dense_line(line_group),
-            is_dominant_font=layout.is_dominant_font_size(line_group)
-        )
 
 class PageLayout:
 
