@@ -271,56 +271,57 @@ class FilterText:
 
     def filter_indented_lines(self, ctx, groups_iter, result):
 
-        if ctx.line_indentation is LineIndentation.INDENTED_BLOCK:
+        if ctx.indentation is LineIndentation.INDENTED_BLOCK:
 
             if self.layout.is_last_line(ctx.line_group):
                 result.extend(self.collector.process(ctx.line_group, Decision(Action.COLLECT, "Last Line is Continued Indented Paragraph", "TEMP")))
             elif ctx.position_in_paragraph is not PositionInParagraph.SINGLE_LINE:
-                FilterText.collect_group(ctx.line_group, result, case="Indented Block")
+                result.extend(self.collector.process(ctx.line_group, Decision(Action.COLLECT, "Indented Block", "filter_indented_lines")))
             else:
-                FilterText.skip_group(ctx.line_group, case="Continued Indent - Unhandled Indented Line", unhandled=True)
+                result.extend(self.collector.process(ctx.line_group, Decision(Action.UNHANDLED, "Continued Indent - Unhandled Indented Line", "filter_indented_lines")))
 
-        elif ctx.line_indentation is LineIndentation.INDENTED:
-            if ctx.is_dominant_font:
-                FilterText.collect_group(ctx.line_group, result, case="Indented Paragraph")
+        elif ctx.indentation is LineIndentation.INDENTED:
+            if ctx.font_name == FontName.MAIN:
+                result.extend(self.collector.process(ctx.line_group, Decision(Action.COLLECT, "Indented Paragraph", "filter_indented_lines")))
             else:
-                FilterText.skip_group(ctx.line_group, case="Indented Line @ Footer")
+                result.extend(self.collector.process(ctx.line_group, Decision(Action.SKIP, "Indented Line @ Footer", "filter_indented_lines")))
 
         elif self.page.ocr:
             if ctx.region is VerticalRegion.FOOTER:
-                FilterText.skip_group(ctx.line_group, case="Indented Line @ Footer")
+                result.extend(self.collector.process(ctx.line_group, Decision(Action.SKIP, "Indented Line @ Footer", "filter_indented_lines")))
             elif self.layout.is_continuous_line(ctx.line_group, groups_iter):
-                FilterText.collect_group(ctx.line_group, result, case="OCR - Indented Line Following Dominant Word Gap")
+                result.extend(self.collector.process(ctx.line_group, Decision(Action.COLLECT, "OCR - Indented Line Following Dominant Word Gap", "filter_indented_lines")))
             else:
                 if ctx.position_in_paragraph is not PositionInParagraph.SINGLE_LINE:
                     self._handle_continuous_paragraph(ctx, result)
                 else:
-                    FilterText.skip_group(ctx.line_group, case="OCR - Unhandled Indented Line", unhandled=True)
+                    result.extend(self.collector.process(ctx.line_group, Decision(Action.UNHANDLED, "OCR - Unhandled Indented Line", "filter_indented_lines")))
 
         else:
-            FilterText.skip_group(ctx.line_group, case="Unhandled Indented Line", unhandled=True)
+            result.extend(self.collector.process(ctx.line_group, Decision(Action.UNHANDLED, "Unhandled Indented Line", "filter_indented_lines")))
 
     def _handle_footer_region(self, ctx, groups_iter, result):
 
         if ctx.position_in_paragraph in [PositionInParagraph.BODY, PositionInParagraph.END]:
-            if ctx.line_indentation in [LineIndentation.INDENTED_BLOCK, LineIndentation.NONE]:
-                FilterText.collect_group(ctx.line_group, result, case="Body Paragraph")
+            if ctx.indentation in [LineIndentation.INDENTED_BLOCK, LineIndentation.NONE]:
+                result.extend(self.collector.process(ctx.line_group, Decision(Action.COLLECT, "Body Paragraph", "_handle_footer_region")))
             else:
-                FilterText.skip_group(ctx.line_group, case="Footer")
+                result.extend(self.collector.process(ctx.line_group, Decision(Action.SKIP, "Footer", "_handle_footer_region")))
 
-        elif ctx.is_dense:
-            FilterText.collect_group(ctx.line_group, result, case="Dense line @ Footer")
+        elif ctx.density == Density.DENSE:
+            result.extend(self.collector.process(ctx.line_group, Decision(Action.COLLECT, "Dense line @ Footer", "_handle_footer_region")))
         else:
-            FilterText.skip_group(ctx.line_group, case="Footer")
+            result.extend(self.collector.process(ctx.line_group, Decision(Action.SKIP, "Footer", "_handle_footer_region")))
 
     def _handle_header_region(self, ctx, groups_iter, result):
 
-        if ctx.position_in_paragraph  is not PositionInParagraph.START:
-            FilterText.collect_group(ctx.line_group, result, case="Body Paragraph")
+        if ctx.position_in_paragraph is not PositionInParagraph.START:
+            result.extend(self.collector.process(ctx.line_group, Decision(Action.COLLECT, "Body Paragraph", "_handle_header_region")))
+
         elif ctx.density is Density.DENSE:
-            result.extend(self.collector.process(ctx.line_group, Decision(Action.COLLECT, "Dense line @ Header", "TEMP")))
+            result.extend(self.collector.process(ctx.line_group, Decision(Action.COLLECT, "Dense line @ Header", "_handle_header_region")))
         else:
-            FilterText.skip_group(ctx.line_group, case="Header")
+            result.extend(self.collector.process(ctx.line_group, Decision(Action.SKIP, "Header", "_handle_header_region")))
 
     def _handle_new_paragraph(self, ctx, groups_iter, result):
 
@@ -329,14 +330,14 @@ class FilterText:
         elif ctx.position_in_paragraph is not PositionInParagraph.SINGLE_LINE:
             self._handle_continuous_paragraph(ctx, result)
         else:
-            FilterText.skip_group(ctx.line_group, case="Unhandled new paragraph", unhandled=True)
+            result.extend(self.collector.process(ctx.line_group, Decision(Action.SKIP, "Unhandled new paragraph", "_handle_new_paragraph")))
 
     def _handle_continuous_paragraph(self, ctx, result):
 
-        if self.layout.is_dominant_font_size(ctx.line_group, whole_document=True):
-            FilterText.collect_group(ctx.line_group, result, case="Continued Paragraph")
+        if ctx.font_size is FontSize.MAIN: #.layout.is_dominant_font_size(ctx.line_group, whole_document=True):
+            result.extend(self.collector.process(ctx.line_group, Decision(Action.COLLECT, "Continued Paragraph", "_handle_continuous_paragraph")))
         else:
-            FilterText.skip_group(ctx.line_group, case="Multi-line Title")
+            result.extend(self.collector.process(ctx.line_group, Decision(Action.SKIP, "Multi-line Title", "_handle_continuous_paragraph")))
 
     def _handle_at_left_margin(self, ctx, groups_iter, result):
 
@@ -350,7 +351,7 @@ class FilterText:
             self._handle_continuous_paragraph(ctx, result)
 
         else:
-            FilterText.collect_group(ctx.line_group, result, case="End of paragraph")
+            result.extend(self.collector.process(ctx.line_group, Decision(Action.COLLECT, "End of paragraph", "_handle_at_left_margin")))
 
     def _handle_before_left_margin(self, ctx, groups_iter, result):
 
@@ -358,10 +359,10 @@ class FilterText:
             self._handle_header_region(ctx, groups_iter, result)
 
         elif ctx.region is VerticalRegion.FOOTER:
-            FilterText.skip_group(ctx.line_group, case="Footer before left margin", unhandled=True)
+            result.extend(self.collector.process(ctx.line_group, Decision(Action.COLLECT, "Footer before left margin", "_handle_before_left_margin")))
 
         else:
-            FilterText.skip_group(ctx.line_group, case="Left-side")
+            result.extend(self.collector.process(ctx.line_group, Decision(Action.SKIP, "Left-side", "_handle_before_left_margin")))
 
     def _handle_after_left_margin(self, ctx, groups_iter, result):
 
@@ -387,7 +388,7 @@ class FilterText:
             self._handle_after_left_margin(ctx, groups_iter, result)
 
         else:
-            FilterText.skip_group(ctx.line_group, case="Unhandled Footer @ Left Margin", unhandled=True)
+            result.extend(self.collector.process(ctx.line_group, Decision(Action.UNHANDLED, "Unhandled Footer @ Left Margin", "_handle_left_margins")))
 
     def filter_by_boundaries(self):
 
@@ -406,13 +407,12 @@ class FilterText:
             groups_iter = PeekableIterator(column.line_groups)
             for line_group in groups_iter:
 
-                    if not self.layout.is_in_order(line_group, buffer):
-                        FilterText.skip_group(line_group, case="Text outside regular read-order")
+                ctx = LineContext.create(self.layout, line_group, groups_iter, buffer)
 
-                    else:
-                        ctx = LineContext.create(self.layout, line_group, groups_iter, buffer)
-
-                        self._handle_left_margins(ctx, groups_iter, buffer)
+                if not self.layout.is_in_order(line_group, buffer):
+                    result.extend(self.collector.process(ctx.line_group, Decision(Action.SKIP, "Text outside regular read-order", "filter_by_boundaries")))
+                else:
+                    self._handle_left_margins(ctx, groups_iter, buffer)
 
             if buffer:
                 buffer[-1] = buffer[-1].with_text(buffer[-1].text + "\n\n")
@@ -433,7 +433,7 @@ def memoize_group_method(method):
 class ParagraphType:
     def __init__(self, layout):
         self.layout = layout
-        self.word_gap_upper_bound = self.layout.page.heuristics.word_gaps[1]
+        self.word_gap_upper_bound = self.layout.page.heuristics.word_gaps[1] if self.layout.page.ocr else None
         self._cache = {}
 
     @memoize_group_method
@@ -721,7 +721,7 @@ class PageLayout:
     def is_in_order(self, line_group, filtered_lines):
         if not filtered_lines:
             return True
-        return line_group[0].start_y + self.page.heuristics.start_y.lower_bound > filtered_lines[-1].start_y
+        return line_group[0].start_y + self.page.heuristics.start_y.lower_bound >= filtered_lines[-1].start_y
 
     def is_reference_page(self):
         current_line_count = len(self.page.lines)

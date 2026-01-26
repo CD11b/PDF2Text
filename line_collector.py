@@ -1,4 +1,5 @@
 import logging
+from abc import ABC, abstractmethod
 from statistics import mean
 
 from models import StyledLine, LineContext, Action, Decision
@@ -8,35 +9,37 @@ logger = logging.getLogger(__name__)
 class LineCollector:
     """Collects or skips lines based on decisions."""
 
-    def __init__(self):
-        self.result = []
+    # def __init__(self):
+    #     # self.result = []
 
     def process(self, line_group, decision: Decision):
 
         if decision.action == Action.COLLECT:
-            self._collect_group(line_group, decision.reason, decision.handler_name)
+            return self._collect_group(line_group, decision.reason, decision.handler_name)
         elif decision.action == Action.SKIP:
-            self._skip_group(line_group, decision.reason, decision.handler_name)
+            return self._skip_group(line_group, decision.reason, decision.handler_name)
         elif decision.action == Action.UNHANDLED:
-            self._unhandled_group(line_group, decision.reason, decision.handler_name)
+            return self._unhandled_group(line_group, decision.reason, decision.handler_name)
 
-        return self.result
+        # return result
 
     def _collect_group(self, line_group, reason: str, handler: str):
         """Merge and collect a line group."""
         merged = self._merge_line_group(line_group)
         logging.debug(f"Collected [{handler} - CASE: {reason}]: {merged}")
-        self.result.append(merged)
+        return [merged]
 
     def _skip_group(self, line_group, reason: str, handler: str):
         """Skip a line group."""
         merged = self._merge_line_group(line_group)
         logging.info(f"Skipped [{handler} - CASE: {reason}]: {merged}")
+        return []
 
     def _unhandled_group(self, line_group, reason: str, handler: str):
         """Skip an unhandled line group."""
         merged = self._merge_line_group(line_group)
         logging.info(f"Skipped [{handler} - CASE: {reason}]: {merged}")
+        return []
 
     @staticmethod
     def _merge_line_group(line_group):
