@@ -347,6 +347,9 @@ class FilterText:
         elif ctx.position_in_paragraph is PositionInParagraph.START:
             self._handle_new_paragraph(ctx, groups_iter, result)
 
+        elif ctx.position_in_paragraph is PositionInParagraph.SINGLE_LINE:
+            result.extend(self.collector.process(ctx.line_group, Decision(Action.SKIP, "Header", "_handle_at_left_margin")))
+
         elif ctx.position_in_paragraph is PositionInParagraph.BODY:
             self._handle_continuous_paragraph(ctx, result)
 
