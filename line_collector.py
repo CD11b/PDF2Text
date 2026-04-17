@@ -1,5 +1,4 @@
 import logging
-from abc import ABC, abstractmethod
 from statistics import mean
 
 from models import StyledLine, LineContext, Action, Decision
