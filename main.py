@@ -281,7 +281,7 @@ class FilterText:
                 result.extend(self.collector.process(ctx.line_group, Decision(Action.UNHANDLED, "Continued Indent - Unhandled Indented Line", "filter_indented_lines")))
 
         elif ctx.indentation is LineIndentation.INDENTED:
-            if ctx.font_name == FontName.MAIN:
+            if ctx.font_name is FontName.MAIN:
                 result.extend(self.collector.process(ctx.line_group, Decision(Action.COLLECT, "Indented Paragraph", "filter_indented_lines")))
             else:
                 result.extend(self.collector.process(ctx.line_group, Decision(Action.SKIP, "Indented Line @ Footer", "filter_indented_lines")))
@@ -315,7 +315,7 @@ class FilterText:
 
     def _handle_header_region(self, ctx, groups_iter, result):
 
-        if ctx.position_in_paragraph is not PositionInParagraph.START:
+        if ctx.position_in_paragraph not in (PositionInParagraph.START, PositionInParagraph.SINGLE_LINE):
             result.extend(self.collector.process(ctx.line_group, Decision(Action.COLLECT, "Body Paragraph", "_handle_header_region")))
 
         elif ctx.density is Density.DENSE:
@@ -484,7 +484,7 @@ class ParagraphType:
             elif adjusted_line_start_x <= next_start_x:
                 return LineIndentation.INDENTED
 
-        return LineIndentation.AMBIGUOUS
+        return LineIndentation.LARGE_INDENTATION
 
     @staticmethod
     def _is_close_to_last_line(line_start_y, filtered_list, start_y_upper_bound):
