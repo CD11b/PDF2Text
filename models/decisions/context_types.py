@@ -4,7 +4,7 @@ class LineIndentation(Enum):
     INDENTED = auto()
     NONE = auto()
     INDENTED_BLOCK = auto()
-    AMBIGUOUS = auto()
+    LARGE_INDENTATION = auto()
 
 class PositionInParagraph(Enum):
     START = auto()
