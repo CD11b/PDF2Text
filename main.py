@@ -460,7 +460,7 @@ class ParagraphType:
         if self._at_left_margin(line_group):
             return LineIndentation.NONE
 
-        max_indent_size = self.layout.column.heuristics.start_x.upper_bound - self.layout.column.heuristics.start_x.most_common
+        max_indent_size = self.layout.column.heuristics.start_x.upper_bound - self.layout.column.heuristics.start_x.most_common # Too aggressive. Must fix. Losing out on first sentence of paragraph
         adjusted_line_start_x = line_start_x - max_indent_size
 
         if len(filtered_list) > 0:
