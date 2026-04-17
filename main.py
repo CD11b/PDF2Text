@@ -11,6 +11,8 @@ from enum import Enum, auto
 
 from IO import PDFReader, OutputWriter
 from models import *
+from rule_engine.indented import *
+from rule_engine.footer import *
 from document_analysis import DocumentAnalysis
 from logger_config import setup_logging
 from text_heuristics import TextHeuristics
@@ -254,13 +256,21 @@ class FilterText:
         self.document = document
         self.layout = None
         self.collector = LineCollector()
+
         self.indented_rule_engine = IndentedLineRuleEngine([
             IndentedBlockLastLineRule(),
             IndentedBlockParagraphRule(),
             IndentedMainFontRule(),
             OCRFooterRule(),
             OCRContinuousLineRule(),
-            FallbackIndentedRule(),
+            FallbackIndentedRule()
+        ])
+
+        self.footer_rule_engine = FooterRegionRuleEngine([
+            FooterRegionBodyParagraphRule(),
+            FooterRegionLoneIndentedTextRule(),
+            FooterRegionDenseLineRule(),
+            FallbackFooterRegionRule()
         ])
 
     def add_paragraph_breaks(self, filtered_lines):
@@ -285,16 +295,9 @@ class FilterText:
 
     def _handle_footer_region(self, ctx, groups_iter, result):
 
-        if ctx.position_in_paragraph in [PositionInParagraph.BODY, PositionInParagraph.END]:
-            if ctx.indentation in [LineIndentation.INDENTED_BLOCK, LineIndentation.NONE]:
-                result.extend(self.collector.process(ctx.line_group, Decision(Action.COLLECT, "Body Paragraph", "_handle_footer_region")))
-            else:
-                result.extend(self.collector.process(ctx.line_group, Decision(Action.SKIP, "Footer", "_handle_footer_region")))
+        decision = self.footer_rule_engine.decide(ctx, self.layout, groups_iter)
 
-        elif ctx.density == Density.DENSE:
-            result.extend(self.collector.process(ctx.line_group, Decision(Action.COLLECT, "Dense line @ Footer", "_handle_footer_region")))
-        else:
-            result.extend(self.collector.process(ctx.line_group, Decision(Action.SKIP, "Footer", "_handle_footer_region")))
+        result.extend(self.collector.process(ctx.line_group, decision))
 
     def _handle_header_region(self, ctx, groups_iter, result):
 

@@ -38,7 +38,7 @@ class OCRFooterRule(IndentedLineRule):
         return layout.page.ocr and ctx.region is VerticalRegion.FOOTER
 
     def decide(self, ctx):
-        return Decision(Action.SKIP, "Indented Line @ Footer", self.name,)
+        return Decision(Action.SKIP, "Indented Line @ Footer", self.name)
 
 class OCRContinuousLineRule(IndentedLineRule):
     priority = 50
