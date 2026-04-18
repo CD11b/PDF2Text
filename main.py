@@ -14,6 +14,7 @@ from models import *
 from rule_engine import RuleEngine
 from rule_engine.indented import *
 from rule_engine.footer import *
+from rule_engine.header import *
 from rule_engine.continuous_paragraph import *
 from document_analysis import DocumentAnalysis
 from logger_config import setup_logging

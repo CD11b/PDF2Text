@@ -20,7 +20,7 @@ class ContinuousParagraphMultiLineTitleRule(ContinuousParagraphRule):
         return ctx.font_size is FontSize.LARGE
 
     def decide(self, ctx):
-        return Decision(Action.COLLECT, "Multi-line Title", self.name)
+        return Decision(Action.SKIP, "Multi-line Title", self.name)
 
 class FallbackContinuousParagraphRule(ContinuousParagraphRule):
     priority = 999
