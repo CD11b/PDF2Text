@@ -410,88 +410,40 @@ def memoize_group_method(method):
 class ParagraphType:
     def __init__(self, layout):
         self.layout = layout
-        self.word_gap_upper_bound = self.layout.page.heuristics.word_gaps[1] if self.layout.page.ocr else None
         self._cache = {}
 
-    @memoize_group_method
-    def _at_left_margin(self, line_group):
+    def classify_indentation(self, line_start_x, previous_start_x, next_start_x):
 
-        line_start_x = line_group[0].start_x
-
-        if line_start_x == self.layout.left_boundary:
-            return True
-        elif self.layout.page.ocr:
-            difference = abs(line_start_x - self.layout.left_boundary)
-            if difference <= self.word_gap_upper_bound:
-                return True
-
-        return False
-
-    def classify_indentation(self, line_group, group_iter, filtered_list):
-
-        line_start_x = line_group[0].start_x
-
-        if self._at_left_margin(line_group):
+        if abs(line_start_x - self.layout.left_boundary) <= self.layout.coordinate_tolerance:
             return LineIndentation.NONE
 
         max_indent_size = self.layout.column.heuristics.start_x.upper_bound - self.layout.column.heuristics.start_x.most_common # Too aggressive. Must fix. Losing out on first sentence of paragraph
         adjusted_line_start_x = line_start_x - max_indent_size
 
-        if len(filtered_list) > 0:
-            previous_start_x = filtered_list[-1].start_x
+        if previous_start_x is not None:
+            if abs(line_start_x - previous_start_x) <= self.layout.coordinate_tolerance:
+                return LineIndentation.INDENTED_BLOCK
 
-            if self.layout.page.ocr:
-                difference = abs(line_start_x - previous_start_x)
-                if difference <= self.word_gap_upper_bound:
-                    return LineIndentation.INDENTED_BLOCK
-
-            if adjusted_line_start_x <= previous_start_x:
+            elif adjusted_line_start_x <= previous_start_x:
                 return LineIndentation.INDENTED
 
-        next_group = group_iter.peek()
-        if next_group:
-            next_start_x = next_group[0].start_x
-
-            if line_start_x == next_start_x:
+        if next_start_x is not None:
+            if abs(line_start_x - next_start_x) <= self.layout.coordinate_tolerance:
                 return LineIndentation.INDENTED_BLOCK
-            elif self.layout.page.ocr:
-                difference = abs(line_start_x - next_start_x)
-                if difference <= self.word_gap_upper_bound:
-                    return LineIndentation.INDENTED_BLOCK
+
             elif adjusted_line_start_x <= next_start_x:
                 return LineIndentation.INDENTED
 
         return LineIndentation.LARGE_INDENTATION
 
-    @staticmethod
-    def _is_close_to_last_line(line_start_y, filtered_list, start_y_upper_bound):
-        if len(filtered_list) > 0:
-            gap = abs(line_start_y - filtered_list[-1].start_y)
-            if gap <= start_y_upper_bound:
-                return True
+    def classify_position(self, line_start_y, previous_start_y, next_start_y):
 
-        return False
-
-    @staticmethod
-    def _is_close_to_next_line(line_start_y, group_iter, start_y_upper_bound):
-        next_group = group_iter.peek()
-        if next_group:
-            gap = abs(line_start_y - next_group[0].start_y)
-
-            if gap <= start_y_upper_bound:
-                return True
-
-        return False
-
-    def classify_position(self, line_group, group_iter, filtered_list):
-
-        line_start_y = line_group[0].start_y
         start_y_upper_bound = self.layout.column.heuristics.start_y.upper_bound
 
-        close_to_last_line = self._is_close_to_last_line(line_start_y, filtered_list, start_y_upper_bound)
-        close_to_next_line = self._is_close_to_next_line(line_start_y, group_iter, start_y_upper_bound)
+        close_to_previous_line = previous_start_y is not None and abs(line_start_y - previous_start_y) <= start_y_upper_bound
+        close_to_next_line = next_start_y is not None and abs(line_start_y - next_start_y) <= start_y_upper_bound
 
-        if close_to_last_line:
+        if close_to_previous_line:
             if close_to_next_line:
                 return PositionInParagraph.MIDDLE
             else:
