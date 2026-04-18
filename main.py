@@ -242,8 +242,8 @@ class CleanText:
 
     @staticmethod
     def normalize_unicode(text):
-        compatability_mapped = unicodedata.normalize('NFKC', text)
-        decomposed = unicodedata.normalize('NFD', compatability_mapped)
+        compatibility_mapped = unicodedata.normalize('NFKC', text)
+        decomposed = unicodedata.normalize('NFD', compatibility_mapped)
 
         # Step 2: Remove combining marks
         return ''.join(c for c in decomposed if not unicodedata.combining(c))
