@@ -268,8 +268,7 @@ class FilterText:
             IndentedBlockLastLineRule(),
             IndentedBlockParagraphRule(),
             IndentedMainFontRule(),
-            OCRFooterRule(),
-            OCRContinuousLineRule(),
+            ContinuousIndentedLineRule(),
             FallbackIndentedRule()
         ])
 

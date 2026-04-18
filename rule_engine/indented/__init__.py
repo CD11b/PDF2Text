@@ -4,7 +4,6 @@ __all__ = [
     "IndentedBlockLastLineRule",
     "IndentedBlockParagraphRule",
     "IndentedMainFontRule",
-    "OCRFooterRule",
-    "OCRContinuousLineRule",
+    "ContinuousIndentedLineRule",
     "FallbackIndentedRule",
 ]

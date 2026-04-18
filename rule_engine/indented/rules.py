@@ -31,20 +31,12 @@ class IndentedMainFontRule(IndentedLineRule):
     def decide(self, ctx):
         return Decision(Action.COLLECT, "Indented Paragraph", self.name)
 
-class OCRFooterRule(IndentedLineRule):
+
+class ContinuousIndentedLineRule(IndentedLineRule):
     priority = 40
 
     def matches(self, ctx, layout, groups_iter):
-        return layout.page.ocr and ctx.region is VerticalRegion.FOOTER
-
-    def decide(self, ctx):
-        return Decision(Action.SKIP, "Indented Line @ Footer", self.name)
-
-class OCRContinuousLineRule(IndentedLineRule):
-    priority = 50
-
-    def matches(self, ctx, layout, groups_iter):
-        return layout.page.ocr and layout.is_continuous_line(ctx.line_group, groups_iter)
+        return layout.is_continuous_line(ctx.line_group, groups_iter)
 
     def decide(self, ctx):
         return Decision(Action.COLLECT, "OCR - Indented Line Following Dominant Word Gap", self.name)
