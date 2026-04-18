@@ -14,6 +14,7 @@ from models import *
 from rule_engine import RuleEngine
 from rule_engine.indented import *
 from rule_engine.footer import *
+from rule_engine.continuous_paragraph import *
 from document_analysis import DocumentAnalysis
 from logger_config import setup_logging
 from text_heuristics import TextHeuristics
@@ -274,6 +275,14 @@ class FilterText:
             FallbackFooterRegionRule()
         ])
 
+        self.continuous_paragraph_engine = RuleEngine([
+            ContinuousParagraphMainFontRule(),
+            ContinuousParagraphMultiLineTitleRule(),
+            FallbackContinuousParagraphRule()
+        ])
+
+
+
     def add_paragraph_breaks(self, filtered_lines):
 
         result = []
@@ -315,16 +324,15 @@ class FilterText:
         if ctx.region is VerticalRegion.HEADER:
             self._handle_header_region(ctx, groups_iter, result)
         elif ctx.position_in_paragraph is not PositionInParagraph.SINGLE_LINE:
-            self._handle_continuous_paragraph(ctx, result)
+            self._handle_continuous_paragraph(ctx, groups_iter, result)
         else:
             result.extend(self.collector.process(ctx.line_group, Decision(Action.SKIP, "Unhandled new paragraph", "_handle_new_paragraph")))
 
-    def _handle_continuous_paragraph(self, ctx, result):
+    def _handle_continuous_paragraph(self, ctx, groups_iter, result):
 
-        if ctx.font_size is FontSize.MAIN: #.layout.is_dominant_font_size(ctx.line_group, whole_document=True):
-            result.extend(self.collector.process(ctx.line_group, Decision(Action.COLLECT, "Continued Paragraph", "_handle_continuous_paragraph")))
-        else:
-            result.extend(self.collector.process(ctx.line_group, Decision(Action.SKIP, "Multi-line Title", "_handle_continuous_paragraph")))
+        decision = self.footer_rule_engine.decide(ctx, self.layout, groups_iter)
+
+        result.extend(self.collector.process(ctx.line_group, decision))
 
     def _handle_at_left_margin(self, ctx, groups_iter, result):
 
