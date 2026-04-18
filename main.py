@@ -298,6 +298,12 @@ class FilterText:
             FallbackAtLeftMarginRule()
         ])
 
+        self.before_left_margin_engine = RuleEngine([
+            FooterBeforeLeftMarginRule(),
+            HeadingBeforeLeftMarginRule(),
+            FallbackBeforeLeftMarginRule()
+        ])
+
 
     def add_paragraph_breaks(self, filtered_lines):
 
@@ -313,24 +319,6 @@ class FilterText:
 
         return result
 
-    def filter_indented_lines(self, ctx, groups_iter, result):
-
-        decision = self.indented_rule_engine.decide(ctx, self.layout, groups_iter)
-
-        result.extend(self.collector.process(ctx.line_group, decision))
-
-    def _handle_footer_region(self, ctx, groups_iter, result):
-
-        decision = self.footer_rule_engine.decide(ctx, self.layout, groups_iter)
-
-        result.extend(self.collector.process(ctx.line_group, decision))
-
-    def _handle_header_region(self, ctx, groups_iter, result):
-
-        decision = self.header_rule_engine.decide(ctx, self.layout, groups_iter)
-
-        result.extend(self.collector.process(ctx.line_group, decision))
-
     def _handle_new_paragraph(self, ctx, groups_iter, result):
 
         if ctx.region is VerticalRegion.HEADER:
@@ -345,12 +333,6 @@ class FilterText:
             return
 
         decision = engine.decide(ctx, self.layout, groups_iter)
-        result.extend(self.collector.process(ctx.line_group, decision))
-
-    def _handle_continuous_paragraph(self, ctx, groups_iter, result):
-
-        decision = self.continuous_paragraph_engine.decide(ctx, self.layout, groups_iter)
-
         result.extend(self.collector.process(ctx.line_group, decision))
 
     def _handle_at_left_margin(self, ctx, groups_iter, result):
