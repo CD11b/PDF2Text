@@ -25,6 +25,6 @@ class LineContext:
             density=layout.get_line_density(line_group),
             font_name=layout.get_font_name(line_group),
             font_size=layout.get_font_size(line_group),
-            is_continuous=layout.is_continuous_line(line_group, groups_iter),
+            is_continuous=layout.is_split_span(line_group, groups_iter),
             is_last_line=layout.is_last_line(line_group)
         )

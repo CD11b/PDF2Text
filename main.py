@@ -685,7 +685,7 @@ class PageLayout:
 
         return False
 
-    def is_continuous_line(self, line_group, groups_iter) -> bool:
+    def is_split_span(self, line_group, groups_iter) -> bool:
         if self.coordinate_tolerance == 0.0: # For efficiency
             return False
 
