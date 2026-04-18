@@ -8,7 +8,7 @@ class Rule:
         if self.name is None:
             self.name = self.__class__.__name__
 
-    def matches(self, ctx, layout, groups_iter) -> bool:
+    def matches(self, ctx, groups_iter) -> bool:
         raise NotImplementedError
 
     def decide(self, ctx) -> Decision:
@@ -19,8 +19,8 @@ class RuleEngine:
     def __init__(self, rules):
         self.rules = sorted(rules, key=lambda r: r.priority)
 
-    def decide(self, ctx, layout, groups_iter):
+    def decide(self, ctx):
         for rule in self.rules:
-            if rule.matches(ctx, layout, groups_iter):
+            if rule.matches(ctx):
                 return rule.decide(ctx)
         return None
