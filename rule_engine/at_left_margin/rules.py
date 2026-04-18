@@ -1,0 +1,39 @@
+from models import *
+from rule_engine import Rule
+
+class AtLeftMarginRule(Rule):
+    pass
+
+class SingleLineHeaderAtLeftMarginRule(AtLeftMarginRule):
+    priority = 30
+
+    def matches(self, ctx, layout, groups_iter):
+        return ctx.position_in_paragraph is PositionInParagraph.SINGLE_LINE
+
+    def decide(self, ctx):
+        return Decision(Action.SKIP, "Lone header text", self.name)
+
+class EndParagraphAtLeftMarginRule(Rule):
+    priority = 50  # after other explicit cases
+
+    def matches(self, ctx, layout, groups_iter):
+        return (ctx.margin_position is MarginPosition.AT and
+                ctx.region is not VerticalRegion.FOOTER and
+                ctx.position_in_paragraph not in (
+                    PositionInParagraph.START,
+                    PositionInParagraph.SINGLE_LINE,
+                    PositionInParagraph.BODY))
+
+    def decide(self, ctx):
+        return Decision(Action.COLLECT, "End of paragraph", self.name)
+
+class FallbackAtLeftMarginRule(AtLeftMarginRule):
+    priority = 999
+
+    def matches(self, ctx, layout, groups_iter):
+        return True
+
+    def decide(self, ctx):
+        return Decision(Action.UNHANDLED, "Text at left margin", self.name)
+
+

@@ -11,11 +11,14 @@ from enum import Enum, auto
 
 from IO import PDFReader, OutputWriter
 from models import *
+
 from rule_engine import RuleEngine
 from rule_engine.indented import *
 from rule_engine.footer import *
 from rule_engine.header import *
 from rule_engine.continuous_paragraph import *
+from rule_engine.at_left_margin import *
+
 from document_analysis import DocumentAnalysis
 from logger_config import setup_logging
 from text_heuristics import TextHeuristics
@@ -288,6 +291,11 @@ class FilterText:
             FallbackContinuousParagraphRule()
         ])
 
+        self.at_left_margin_engine = RuleEngine([
+            SingleLineHeaderAtLeftMarginRule(),
+            EndParagraphAtLeftMarginRule(),
+            FallbackAtLeftMarginRule()
+        ])
 
 
     def add_paragraph_breaks(self, filtered_lines):
@@ -347,19 +355,20 @@ class FilterText:
     def _handle_at_left_margin(self, ctx, groups_iter, result):
 
         if ctx.region is VerticalRegion.FOOTER:
-            self._handle_footer_region(ctx, groups_iter, result)
+            engine = self.footer_rule_engine
 
         elif ctx.position_in_paragraph is PositionInParagraph.START:
             self._handle_new_paragraph(ctx, groups_iter, result)
-
-        elif ctx.position_in_paragraph is PositionInParagraph.SINGLE_LINE:
-            result.extend(self.collector.process(ctx.line_group, Decision(Action.SKIP, "Header", "_handle_at_left_margin")))
+            return
 
         elif ctx.position_in_paragraph is PositionInParagraph.BODY:
-            self._handle_continuous_paragraph(ctx, result)
+            engine = self.continuous_paragraph_engine
 
         else:
-            result.extend(self.collector.process(ctx.line_group, Decision(Action.COLLECT, "End of paragraph", "_handle_at_left_margin")))
+            engine = self.at_left_margin_engine
+
+        decision = engine.decide(ctx, self.layout, groups_iter)
+        result.extend(self.collector.process(ctx.line_group, decision))
 
     def _handle_before_left_margin(self, ctx, groups_iter, result):
 
