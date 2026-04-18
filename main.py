@@ -659,12 +659,6 @@ class PageLayout:
     def get_font_size(self, line_group) -> FontSize:
         return self.line_font_size.classify_font_size(line_group)
 
-    def get_position_in_paragraph(self, line_group, group_iter, filtered_list) -> PositionInParagraph:
-        return self.paragraph_type.classify_position(line_group, group_iter, filtered_list)
-
-    def get_line_indentation(self, line_group, group_iter, filtered_list) -> LineIndentation:
-        return self.paragraph_type.classify_indentation(line_group, group_iter, filtered_list)
-
     def set_top_boundary(self, top_boundary):
         self.top_boundary = top_boundary
 
