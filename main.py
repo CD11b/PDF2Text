@@ -325,11 +325,18 @@ class FilterText:
     def _handle_new_paragraph(self, ctx, groups_iter, result):
 
         if ctx.region is VerticalRegion.HEADER:
-            self._handle_header_region(ctx, groups_iter, result)
+            engine = self.header_rule_engine
+
         elif ctx.position_in_paragraph is not PositionInParagraph.SINGLE_LINE:
-            self._handle_continuous_paragraph(ctx, groups_iter, result)
+            engine = self.continuous_paragraph_engine
+
         else:
-            result.extend(self.collector.process(ctx.line_group, Decision(Action.SKIP, "Unhandled new paragraph", "_handle_new_paragraph")))
+            decision = Decision(Action.UNHANDLED, "Unhandled new paragraph", "_handle_new_paragraph")
+            result.extend(self.collector.process(ctx.line_group, decision))
+            return
+
+        decision = engine.decide(ctx, self.layout, groups_iter)
+        result.extend(self.collector.process(ctx.line_group, decision))
 
     def _handle_continuous_paragraph(self, ctx, groups_iter, result):
 
