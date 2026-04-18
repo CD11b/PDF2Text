@@ -7,7 +7,7 @@ class HeaderRegionRule(Rule):
 class BodyParagraphAtHeaderRegionRule(HeaderRegionRule):
     priority = 10
 
-    def matches(self, ctx, layout, groups_iter):
+    def matches(self, ctx):
         return ctx.position_in_paragraph in (PositionInParagraph.MIDDLE, PositionInParagraph.END)
 
     def decide(self, ctx):
@@ -16,7 +16,7 @@ class BodyParagraphAtHeaderRegionRule(HeaderRegionRule):
 class DenseLineAtHeaderRegionRule(HeaderRegionRule):
     priority = 20
 
-    def matches(self, ctx, layout, groups_iter):
+    def matches(self, ctx):
         return ctx.density is Density.DENSE
 
     def decide(self, ctx):
@@ -25,7 +25,7 @@ class DenseLineAtHeaderRegionRule(HeaderRegionRule):
 class FallbackHeaderRegionRule(HeaderRegionRule):
     priority = 999
 
-    def matches(self, ctx, layout, groups_iter):
+    def matches(self, ctx):
         return True
 
     def decide(self, ctx):

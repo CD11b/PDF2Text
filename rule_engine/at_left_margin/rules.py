@@ -7,7 +7,7 @@ class AtLeftMarginRule(Rule):
 class SingleLineHeaderAtLeftMarginRule(AtLeftMarginRule):
     priority = 10
 
-    def matches(self, ctx, layout, groups_iter):
+    def matches(self, ctx):
         return ctx.position_in_paragraph is PositionInParagraph.SINGLE_LINE
 
     def decide(self, ctx):
@@ -16,7 +16,7 @@ class SingleLineHeaderAtLeftMarginRule(AtLeftMarginRule):
 class EndParagraphAtLeftMarginRule(Rule):
     priority = 20
 
-    def matches(self, ctx, layout, groups_iter):
+    def matches(self, ctx):
         return (ctx.margin_position is MarginPosition.AT and
                 ctx.region is not VerticalRegion.FOOTER and
                 ctx.position_in_paragraph not in (
@@ -30,7 +30,7 @@ class EndParagraphAtLeftMarginRule(Rule):
 class FallbackAtLeftMarginRule(AtLeftMarginRule):
     priority = 999
 
-    def matches(self, ctx, layout, groups_iter):
+    def matches(self, ctx):
         return True
 
     def decide(self, ctx):

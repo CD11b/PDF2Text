@@ -357,13 +357,13 @@ class FilterText:
 
         return None
 
-    def _filter_line(self, ctx, groups_iter, result):
+    def _filter_line(self, ctx, result):
         engine = self._select_engine(ctx)
 
         if engine is None:
             decision = Decision(Action.UNHANDLED, "Unhandled case", "_handle")
         else:
-            decision = engine.decide(ctx, self.layout, groups_iter)
+            decision = engine.decide(ctx)
 
         result.extend(self.collector.process(ctx.line_group, decision))
 
@@ -389,7 +389,7 @@ class FilterText:
                 if not self.layout.is_in_order(line_group, buffer):
                     result.extend(self.collector.process(ctx.line_group, Decision(Action.SKIP, "Text outside regular read-order", "filter_by_boundaries")))
                 else:
-                    self._filter_line(ctx, groups_iter, buffer)
+                    self._filter_line(ctx, buffer)
 
             if buffer:
                 buffer[-1] = buffer[-1].with_text(buffer[-1].text + "\n\n")
@@ -629,6 +629,7 @@ class PageLayout:
         self.bottom_boundary = page.heuristics.start_y.maximum
         self.left_boundary = column.heuristics.start_x.most_common
         self.top_boundary = page.heuristics.start_y.minimum
+        self.coordinate_tolerance = (page.heuristics.word_gaps[1] if page.ocr else 0.0)
         self._cache = {}
 
         self.line_position = LinePosition(self)
@@ -685,6 +686,9 @@ class PageLayout:
         return False
 
     def is_continuous_line(self, line_group, groups_iter) -> bool:
+        if self.coordinate_tolerance == 0.0: # For efficiency
+            return False
+
         next_group = groups_iter.peek()
         if next_group is None:
             return False

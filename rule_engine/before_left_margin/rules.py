@@ -7,7 +7,7 @@ class BeforeLeftMarginRule(Rule):
 class FooterBeforeLeftMarginRule(BeforeLeftMarginRule):
     priority = 10
 
-    def matches(self, ctx, layout, groups_iter):
+    def matches(self, ctx):
         return ctx.region is VerticalRegion.FOOTER
 
     def decide(self, ctx):
@@ -16,7 +16,7 @@ class FooterBeforeLeftMarginRule(BeforeLeftMarginRule):
 class HeadingBeforeLeftMarginRule(Rule):
     priority = 20
 
-    def matches(self, ctx, layout, groups_iter):
+    def matches(self, ctx):
         return (ctx.region is VerticalRegion.BODY and
                 ctx.font_name is not FontName.MAIN)
 
@@ -26,7 +26,7 @@ class HeadingBeforeLeftMarginRule(Rule):
 class FallbackBeforeLeftMarginRule(BeforeLeftMarginRule):
     priority = 999
 
-    def matches(self, ctx, layout, groups_iter):
+    def matches(self, ctx):
         return True
 
     def decide(self, ctx):

@@ -7,7 +7,7 @@ class FooterRegionRule(Rule):
 class FooterRegionBodyParagraphRule(FooterRegionRule):
     priority = 10
 
-    def matches(self, ctx, layout, groups_iter):
+    def matches(self, ctx):
         return (ctx.position_in_paragraph in [PositionInParagraph.MIDDLE, PositionInParagraph.END]
         and ctx.indentation in [LineIndentation.INDENTED_BLOCK, LineIndentation.NONE])
 
@@ -17,7 +17,7 @@ class FooterRegionBodyParagraphRule(FooterRegionRule):
 class FooterRegionLoneIndentedTextRule(FooterRegionRule):
     priority = 20
 
-    def matches(self, ctx, layout, groups_iter):
+    def matches(self, ctx):
         return (ctx.position_in_paragraph in [PositionInParagraph.MIDDLE, PositionInParagraph.END]
                 and ctx.indentation in [LineIndentation.INDENTED, LineIndentation.LARGE_INDENTATION])
 
@@ -27,7 +27,7 @@ class FooterRegionLoneIndentedTextRule(FooterRegionRule):
 class FooterRegionDenseLineRule(FooterRegionRule):
     priority = 30
 
-    def matches(self, ctx, layout, groups_iter):
+    def matches(self, ctx):
         return ctx.density is Density.DENSE
 
     def decide(self, ctx):
@@ -36,7 +36,7 @@ class FooterRegionDenseLineRule(FooterRegionRule):
 class FallbackFooterRegionRule(FooterRegionRule):
     priority = 999
 
-    def matches(self, ctx, layout, groups_iter):
+    def matches(self, ctx):
         return True
 
     def decide(self, ctx):

@@ -7,8 +7,8 @@ class IndentedLineRule(Rule):
 class IndentedBlockLastLineRule(IndentedLineRule):
     priority = 10
 
-    def matches(self, ctx, layout, groups_iter):
-        return ctx.indentation is LineIndentation.INDENTED_BLOCK and layout.is_last_line(ctx.line_group)
+    def matches(self, ctx):
+        return ctx.indentation is LineIndentation.INDENTED_BLOCK and ctx.is_last_line
 
     def decide(self, ctx):
         return Decision(Action.COLLECT, "Last Line is Continued Indented Paragraph", self.name)
@@ -16,7 +16,7 @@ class IndentedBlockLastLineRule(IndentedLineRule):
 class IndentedBlockParagraphRule(IndentedLineRule):
     priority = 20
 
-    def matches(self, ctx, layout, groups_iter):
+    def matches(self, ctx):
         return ctx.indentation is LineIndentation.INDENTED_BLOCK and ctx.position_in_paragraph is not PositionInParagraph.SINGLE_LINE
 
     def decide(self, ctx):
@@ -25,7 +25,7 @@ class IndentedBlockParagraphRule(IndentedLineRule):
 class IndentedMainFontRule(IndentedLineRule):
     priority = 30
 
-    def matches(self, ctx, layout, groups_iter):
+    def matches(self, ctx):
         return ctx.indentation is LineIndentation.INDENTED and ctx.font_name is FontName.MAIN
 
     def decide(self, ctx):
@@ -35,8 +35,8 @@ class IndentedMainFontRule(IndentedLineRule):
 class ContinuousIndentedLineRule(IndentedLineRule):
     priority = 40
 
-    def matches(self, ctx, layout, groups_iter):
-        return layout.is_continuous_line(ctx.line_group, groups_iter)
+    def matches(self, ctx):
+        return ctx.is_continuous
 
     def decide(self, ctx):
         return Decision(Action.COLLECT, "OCR - Indented Line Following Dominant Word Gap", self.name)
@@ -44,7 +44,7 @@ class ContinuousIndentedLineRule(IndentedLineRule):
 class FallbackIndentedRule(IndentedLineRule):
     priority = 999
 
-    def matches(self, ctx, layout, groups_iter):
+    def matches(self, ctx):
         return True
 
     def decide(self, ctx):

@@ -11,6 +11,8 @@ class LineContext:
     density: Density
     font_name: FontName
     font_size: FontSize
+    is_continuous: bool
+    is_last_line: bool
 
     @classmethod
     def create(cls, layout, line_group, groups_iter, result):
@@ -22,5 +24,7 @@ class LineContext:
             margin_position=layout.get_line_position(line_group),
             density=layout.get_line_density(line_group),
             font_name=layout.get_font_name(line_group),
-            font_size=layout.get_font_size(line_group)
+            font_size=layout.get_font_size(line_group),
+            is_continuous=layout.is_continuous_line(line_group, groups_iter),
+            is_last_line=layout.is_last_line(line_group)
         )

@@ -7,7 +7,7 @@ class ContinuousParagraphRule(Rule):
 class ContinuousParagraphMainFontRule(ContinuousParagraphRule):
     priority = 10
 
-    def matches(self, ctx, layout, groups_iter):
+    def matches(self, ctx):
         return ctx.font_size is FontSize.MAIN
 
     def decide(self, ctx):
@@ -16,7 +16,7 @@ class ContinuousParagraphMainFontRule(ContinuousParagraphRule):
 class ContinuousParagraphMultiLineTitleRule(ContinuousParagraphRule):
     priority = 20
 
-    def matches(self, ctx, layout, groups_iter):
+    def matches(self, ctx):
         return ctx.font_size is FontSize.LARGE
 
     def decide(self, ctx):
@@ -25,7 +25,7 @@ class ContinuousParagraphMultiLineTitleRule(ContinuousParagraphRule):
 class FallbackContinuousParagraphRule(ContinuousParagraphRule):
     priority = 999
 
-    def matches(self, ctx, layout, groups_iter):
+    def matches(self, ctx):
         return True
 
     def decide(self, ctx):
