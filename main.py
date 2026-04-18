@@ -338,7 +338,8 @@ class FilterText:
                 if ctx.region is VerticalRegion.HEADER:
                     return self.header_rule_engine
 
-                return self.continuous_paragraph_engine
+                if ctx.region is VerticalRegion.BODY:
+                    return self.continuous_paragraph_engine
 
             if ctx.position_in_paragraph is PositionInParagraph.BODY:
                 return self.continuous_paragraph_engine
