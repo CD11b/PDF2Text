@@ -18,6 +18,7 @@ from rule_engine.footer import *
 from rule_engine.header import *
 from rule_engine.continuous_paragraph import *
 from rule_engine.at_left_margin import *
+from rule_engine.before_left_margin import *
 
 from document_analysis import DocumentAnalysis
 from logger_config import setup_logging
@@ -373,13 +374,13 @@ class FilterText:
     def _handle_before_left_margin(self, ctx, groups_iter, result):
 
         if ctx.region is VerticalRegion.HEADER:
-            self._handle_header_region(ctx, groups_iter, result)
-
-        elif ctx.region is VerticalRegion.FOOTER:
-            result.extend(self.collector.process(ctx.line_group, Decision(Action.COLLECT, "Footer before left margin", "_handle_before_left_margin")))
+            engine = self.header_rule_engine
 
         else:
-            result.extend(self.collector.process(ctx.line_group, Decision(Action.SKIP, "Left-side", "_handle_before_left_margin")))
+            engine = self.before_left_margin_engine
+
+        decision = engine.decide(ctx, self.layout, groups_iter)
+        result.extend(self.collector.process(ctx.line_group, decision))
 
     def _handle_after_left_margin(self, ctx, groups_iter, result):
 
