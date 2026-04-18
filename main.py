@@ -268,6 +268,12 @@ class FilterText:
             FallbackIndentedRule()
         ])
 
+        self.header_rule_engine = RuleEngine([
+            BodyParagraphAtHeaderRegionRule(),
+            DenseLineAtHeaderRegionRule(),
+            FallbackHeaderRegionRule()
+        ])
+
         self.footer_rule_engine = RuleEngine([
             FooterRegionBodyParagraphRule(),
             FooterRegionLoneIndentedTextRule(),
@@ -311,13 +317,9 @@ class FilterText:
 
     def _handle_header_region(self, ctx, groups_iter, result):
 
-        if ctx.position_in_paragraph not in (PositionInParagraph.START, PositionInParagraph.SINGLE_LINE):
-            result.extend(self.collector.process(ctx.line_group, Decision(Action.COLLECT, "Body Paragraph", "_handle_header_region")))
+        decision = self.header_rule_engine.decide(ctx, self.layout, groups_iter)
 
-        elif ctx.density is Density.DENSE:
-            result.extend(self.collector.process(ctx.line_group, Decision(Action.COLLECT, "Dense line @ Header", "_handle_header_region")))
-        else:
-            result.extend(self.collector.process(ctx.line_group, Decision(Action.SKIP, "Header", "_handle_header_region")))
+        result.extend(self.collector.process(ctx.line_group, decision))
 
     def _handle_new_paragraph(self, ctx, groups_iter, result):
 
