@@ -8,7 +8,7 @@ class FooterRegionBodyParagraphRule(FooterRegionRule):
     priority = 10
 
     def matches(self, ctx, layout, groups_iter):
-        return (ctx.position_in_paragraph in [PositionInParagraph.BODY, PositionInParagraph.END]
+        return (ctx.position_in_paragraph in [PositionInParagraph.MIDDLE, PositionInParagraph.END]
         and ctx.indentation in [LineIndentation.INDENTED_BLOCK, LineIndentation.NONE])
 
     def decide(self, ctx):
@@ -18,7 +18,7 @@ class FooterRegionLoneIndentedTextRule(FooterRegionRule):
     priority = 20
 
     def matches(self, ctx, layout, groups_iter):
-        return (ctx.position_in_paragraph in [PositionInParagraph.BODY, PositionInParagraph.END]
+        return (ctx.position_in_paragraph in [PositionInParagraph.MIDDLE, PositionInParagraph.END]
                 and ctx.indentation in [LineIndentation.INDENTED, LineIndentation.LARGE_INDENTATION])
 
     def decide(self, ctx):

@@ -22,7 +22,7 @@ class EndParagraphAtLeftMarginRule(Rule):
                 ctx.position_in_paragraph not in (
                     PositionInParagraph.START,
                     PositionInParagraph.SINGLE_LINE,
-                    PositionInParagraph.BODY))
+                    PositionInParagraph.MIDDLE))
 
     def decide(self, ctx):
         return Decision(Action.COLLECT, "End of paragraph", self.name)

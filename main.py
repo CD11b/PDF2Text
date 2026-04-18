@@ -341,7 +341,7 @@ class FilterText:
                 if ctx.region is VerticalRegion.BODY:
                     return self.continuous_paragraph_engine
 
-            if ctx.position_in_paragraph is PositionInParagraph.BODY:
+            if ctx.position_in_paragraph is PositionInParagraph.MIDDLE:
                 return self.continuous_paragraph_engine
 
             return self.at_left_margin_engine
@@ -494,7 +494,7 @@ class ParagraphType:
 
         if close_to_last_line:
             if close_to_next_line:
-                return PositionInParagraph.BODY
+                return PositionInParagraph.MIDDLE
             else:
                 return PositionInParagraph.END
 

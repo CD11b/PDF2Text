@@ -8,7 +8,7 @@ class LineIndentation(Enum):
 
 class PositionInParagraph(Enum):
     START = auto()
-    BODY = auto()
+    MIDDLE = auto()
     END = auto()
     SINGLE_LINE = auto()
 

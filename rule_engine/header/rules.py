@@ -8,7 +8,7 @@ class BodyParagraphAtHeaderRegionRule(HeaderRegionRule):
     priority = 10
 
     def matches(self, ctx, layout, groups_iter):
-        return ctx.position_in_paragraph in (PositionInParagraph.BODY, PositionInParagraph.END)
+        return ctx.position_in_paragraph in (PositionInParagraph.MIDDLE, PositionInParagraph.END)
 
     def decide(self, ctx):
         return Decision(Action.COLLECT, "Body paragraph at header", self.name)
