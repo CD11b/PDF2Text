@@ -610,11 +610,10 @@ class PageLayout:
 
         return False
 
-    def is_split_span(self, line_group, groups_iter) -> bool:
+    def is_split_span(self, line_group, next_group) -> bool:
         if self.coordinate_tolerance == 0.0: # For efficiency
             return False
 
-        next_group = groups_iter.peek()
         if next_group is None:
             return False
 

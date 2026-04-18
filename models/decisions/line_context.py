@@ -33,6 +33,6 @@ class LineContext:
             density=layout.line_density.classify_density(line_group),
             font_name=layout.line_font_name.classify_font_name(line_group),
             font_size=layout.line_font_size.classify_font_size(line_group),
-            is_continuous=layout.is_split_span(line_group, groups_iter),
+            is_continuous=layout.is_split_span(line_group, next_group),
             is_last_line=layout.is_last_line(line_group)
         )
