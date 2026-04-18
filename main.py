@@ -330,7 +330,7 @@ class FilterText:
 
     def _handle_continuous_paragraph(self, ctx, groups_iter, result):
 
-        decision = self.footer_rule_engine.decide(ctx, self.layout, groups_iter)
+        decision = self.continuous_paragraph_engine.decide(ctx, self.layout, groups_iter)
 
         result.extend(self.collector.process(ctx.line_group, decision))
 

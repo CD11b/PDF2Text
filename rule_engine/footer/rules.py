@@ -40,4 +40,4 @@ class FallbackFooterRegionRule(FooterRegionRule):
         return True
 
     def decide(self, ctx):
-        return Decision(Action.SKIP, "Footer Region Text", self.name)
+        return Decision(Action.UNHANDLED, "Footer Region Text", self.name)
