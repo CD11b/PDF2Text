@@ -8,7 +8,7 @@ class Rule:
         if self.name is None:
             self.name = self.__class__.__name__
 
-    def matches(self, ctx, groups_iter) -> bool:
+    def matches(self, ctx) -> bool:
         raise NotImplementedError
 
     def decide(self, ctx) -> Decision:
