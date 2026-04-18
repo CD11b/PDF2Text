@@ -5,7 +5,7 @@ class AtLeftMarginRule(Rule):
     pass
 
 class SingleLineHeaderAtLeftMarginRule(AtLeftMarginRule):
-    priority = 30
+    priority = 10
 
     def matches(self, ctx, layout, groups_iter):
         return ctx.position_in_paragraph is PositionInParagraph.SINGLE_LINE
@@ -14,7 +14,7 @@ class SingleLineHeaderAtLeftMarginRule(AtLeftMarginRule):
         return Decision(Action.SKIP, "Lone header text", self.name)
 
 class EndParagraphAtLeftMarginRule(Rule):
-    priority = 50  # after other explicit cases
+    priority = 20
 
     def matches(self, ctx, layout, groups_iter):
         return (ctx.margin_position is MarginPosition.AT and
