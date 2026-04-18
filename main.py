@@ -597,7 +597,6 @@ class PageLayout:
     def set_bottom_boundary(self, bottom_boundary):
         self.bottom_boundary = bottom_boundary
 
-    @memoize_group_method
     def is_last_line(self, line_group) -> bool:
         return line_group is self.column.line_groups[-1]
 
