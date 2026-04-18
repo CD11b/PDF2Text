@@ -385,13 +385,16 @@ class FilterText:
     def _handle_after_left_margin(self, ctx, groups_iter, result):
 
         if ctx.region is VerticalRegion.HEADER:
-            self._handle_header_region(ctx, groups_iter, result)
+            engine = self.header_rule_engine
 
         elif ctx.region is VerticalRegion.FOOTER:
-            self._handle_footer_region(ctx, groups_iter, result)
+            engine = self.footer_rule_engine
 
         else:
-            self.filter_indented_lines(ctx, groups_iter, result)
+            engine = self.indented_rule_engine
+
+        decision = engine.decide(ctx, self.layout, groups_iter)
+        result.extend(self.collector.process(ctx.line_group, decision))
 
     def _handle_left_margins(self, ctx, groups_iter, result):
 
