@@ -17,7 +17,7 @@ class ContinuousParagraphMultiLineTitleRule(ContinuousParagraphRule):
     priority = 20
 
     def matches(self, ctx, layout, groups_iter):
-        return ctx.font_size is FontSize.Large
+        return ctx.font_size is FontSize.LARGE
 
     def decide(self, ctx):
         return Decision(Action.COLLECT, "Multi-line Title", self.name)

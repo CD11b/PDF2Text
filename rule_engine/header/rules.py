@@ -11,7 +11,7 @@ class BodyParagraphAtHeaderRegionRule(HeaderRegionRule):
         return ctx.position_in_paragraph in (PositionInParagraph.BODY, PositionInParagraph.END)
 
     def decide(self, ctx):
-        return Decision(Action.SKIP, "Body paragraph at header", self.name)
+        return Decision(Action.COLLECT, "Body paragraph at header", self.name)
 
 class DenseLineAtHeaderRegionRule(HeaderRegionRule):
     priority = 20
@@ -20,7 +20,7 @@ class DenseLineAtHeaderRegionRule(HeaderRegionRule):
         return ctx.density is Density.DENSE
 
     def decide(self, ctx):
-        return Decision(Action.SKIP, "Dense line at header", self.name)
+        return Decision(Action.COLLECT, "Dense line at header", self.name)
 
 class FallbackHeaderRegionRule(HeaderRegionRule):
     priority = 999
