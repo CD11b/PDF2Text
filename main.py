@@ -319,79 +319,56 @@ class FilterText:
 
         return result
 
-    def _handle_new_paragraph(self, ctx, groups_iter, result):
-
-        if ctx.region is VerticalRegion.HEADER:
-            engine = self.header_rule_engine
-
-        elif ctx.position_in_paragraph is not PositionInParagraph.SINGLE_LINE:
-            engine = self.continuous_paragraph_engine
-
-        else:
-            decision = Decision(Action.UNHANDLED, "Unhandled new paragraph", "_handle_new_paragraph")
-            result.extend(self.collector.process(ctx.line_group, decision))
-            return
-
-        decision = engine.decide(ctx, self.layout, groups_iter)
-        result.extend(self.collector.process(ctx.line_group, decision))
-
-    def _handle_at_left_margin(self, ctx, groups_iter, result):
-
-        if ctx.region is VerticalRegion.FOOTER:
-            engine = self.footer_rule_engine
-
-        elif ctx.position_in_paragraph is PositionInParagraph.START:
-            self._handle_new_paragraph(ctx, groups_iter, result)
-            return
-
-        elif ctx.position_in_paragraph is PositionInParagraph.BODY:
-            engine = self.continuous_paragraph_engine
-
-        else:
-            engine = self.at_left_margin_engine
-
-        decision = engine.decide(ctx, self.layout, groups_iter)
-        result.extend(self.collector.process(ctx.line_group, decision))
-
-    def _handle_before_left_margin(self, ctx, groups_iter, result):
-
-        if ctx.region is VerticalRegion.HEADER:
-            engine = self.header_rule_engine
-
-        else:
-            engine = self.before_left_margin_engine
-
-        decision = engine.decide(ctx, self.layout, groups_iter)
-        result.extend(self.collector.process(ctx.line_group, decision))
-
-    def _handle_after_left_margin(self, ctx, groups_iter, result):
-
-        if ctx.region is VerticalRegion.HEADER:
-            engine = self.header_rule_engine
-
-        elif ctx.region is VerticalRegion.FOOTER:
-            engine = self.footer_rule_engine
-
-        else:
-            engine = self.indented_rule_engine
-
-        decision = engine.decide(ctx, self.layout, groups_iter)
-        result.extend(self.collector.process(ctx.line_group, decision))
-
-    def _handle_left_margins(self, ctx, groups_iter, result):
+    def _select_engine(self, ctx):
 
         if ctx.margin_position is MarginPosition.BEFORE:
-            self._handle_before_left_margin(ctx, groups_iter, result)
 
-        elif ctx.margin_position is MarginPosition.AT:
+            if ctx.region is VerticalRegion.HEADER:
+                return self.header_rule_engine
 
-            self._handle_at_left_margin(ctx, groups_iter, result)
+            return self.before_left_margin_engine
 
-        elif ctx.margin_position is MarginPosition.AFTER:  # Edge case: Indented main body
-            self._handle_after_left_margin(ctx, groups_iter, result)
+        if ctx.margin_position is MarginPosition.AT:
 
+            if ctx.region is VerticalRegion.FOOTER:
+                return self.footer_rule_engine
+
+            if ctx.position_in_paragraph is PositionInParagraph.START:
+
+                if ctx.region is VerticalRegion.HEADER:
+                    return self.header_rule_engine
+
+                if ctx.position_in_paragraph is not PositionInParagraph.SINGLE_LINE:
+                    return self.continuous_paragraph_engine
+
+                return self._select_new_paragraph_engine(ctx)
+
+            if ctx.position_in_paragraph is PositionInParagraph.BODY:
+                return self.continuous_paragraph_engine
+
+            return self.at_left_margin_engine
+
+        if ctx.margin_position is MarginPosition.AFTER:
+
+            if ctx.region is VerticalRegion.HEADER:
+                return self.header_rule_engine
+
+            if ctx.region is VerticalRegion.FOOTER:
+                return self.footer_rule_engine
+
+            return self.indented_rule_engine
+
+        return None
+
+    def _filter_line(self, ctx, groups_iter, result):
+        engine = self._select_engine(ctx)
+
+        if engine is None:
+            decision = Decision(Action.UNHANDLED, "Unhandled case", "_handle")
         else:
-            result.extend(self.collector.process(ctx.line_group, Decision(Action.UNHANDLED, "Unhandled Footer @ Left Margin", "_handle_left_margins")))
+            decision = engine.decide(ctx, self.layout, groups_iter)
+
+        result.extend(self.collector.process(ctx.line_group, decision))
 
     def filter_by_boundaries(self):
 
@@ -415,7 +392,7 @@ class FilterText:
                 if not self.layout.is_in_order(line_group, buffer):
                     result.extend(self.collector.process(ctx.line_group, Decision(Action.SKIP, "Text outside regular read-order", "filter_by_boundaries")))
                 else:
-                    self._handle_left_margins(ctx, groups_iter, buffer)
+                    self._filter_line(ctx, groups_iter, buffer)
 
             if buffer:
                 buffer[-1] = buffer[-1].with_text(buffer[-1].text + "\n\n")
