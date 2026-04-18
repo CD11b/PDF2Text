@@ -28,11 +28,11 @@ class LineContext:
             line_group=line_group,
             position_in_paragraph=layout.paragraph_type.classify_position(line_start_y, previous_start_x, next_start_y),
             indentation=layout.paragraph_type.classify_indentation(line_start_x, previous_start_x, next_start_x),
-            region=layout.get_line_region(line_group),
-            margin_position=layout.get_line_position(line_group),
-            density=layout.get_line_density(line_group),
-            font_name=layout.get_font_name(line_group),
-            font_size=layout.get_font_size(line_group),
+            region=layout.line_region.classify_vertical_region(line_group),
+            margin_position=layout.line_position.classify_left_margin(line_group),
+            density=layout.line_density.classify_density(line_group),
+            font_name=layout.line_font_name.classify_font_name(line_group),
+            font_size=layout.line_font_size.classify_font_size(line_group),
             is_continuous=layout.is_split_span(line_group, groups_iter),
             is_last_line=layout.is_last_line(line_group)
         )

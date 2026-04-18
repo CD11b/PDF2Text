@@ -591,26 +591,6 @@ class PageLayout:
         self.line_font_name = LineFontName(self)
         self.line_font_size = LineFontSize(self)
 
-    @memoize_group_method
-    def get_line_position(self, line_group) -> MarginPosition:
-        return self.line_position.classify_left_margin(line_group)
-
-    @memoize_group_method
-    def get_line_region(self, line_group) -> VerticalRegion:
-        return self.line_region.classify_vertical_region(line_group)
-
-    @memoize_group_method
-    def get_line_density(self, line_group) -> Density:
-        return self.line_density.classify_density(line_group)
-
-    @memoize_group_method
-    def get_font_name(self, line_group) -> FontName:
-        return self.line_font_name.classify_font_name(line_group)
-
-    @memoize_group_method
-    def get_font_size(self, line_group) -> FontSize:
-        return self.line_font_size.classify_font_size(line_group)
-
     def set_top_boundary(self, top_boundary):
         self.top_boundary = top_boundary
 
