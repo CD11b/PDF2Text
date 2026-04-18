@@ -13,7 +13,7 @@ class OutputWriter:
         """
         Sets the output path for the text file based on PDF metadata or filename.
         """
-        os.makedirs("../generated", exist_ok=True)
+        os.makedirs("./generated", exist_ok=True)
 
         title = pdf.metadata.get('title', '')
         if len(title) > 1:
