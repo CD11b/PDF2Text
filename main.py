@@ -11,6 +11,7 @@ from enum import Enum, auto
 
 from IO import PDFReader, OutputWriter
 from models import *
+from rule_engine import RuleEngine
 from rule_engine.indented import *
 from rule_engine.footer import *
 from document_analysis import DocumentAnalysis
@@ -257,7 +258,7 @@ class FilterText:
         self.layout = None
         self.collector = LineCollector()
 
-        self.indented_rule_engine = IndentedLineRuleEngine([
+        self.indented_rule_engine = RuleEngine([
             IndentedBlockLastLineRule(),
             IndentedBlockParagraphRule(),
             IndentedMainFontRule(),
@@ -266,7 +267,7 @@ class FilterText:
             FallbackIndentedRule()
         ])
 
-        self.footer_rule_engine = FooterRegionRuleEngine([
+        self.footer_rule_engine = RuleEngine([
             FooterRegionBodyParagraphRule(),
             FooterRegionLoneIndentedTextRule(),
             FooterRegionDenseLineRule(),
