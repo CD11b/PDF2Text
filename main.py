@@ -411,10 +411,7 @@ class LinePosition:
 
         if line_start < self.left_boundary:
             return MarginPosition.BEFORE
-        elif line_start == self.left_boundary:
-            return MarginPosition.AT
-        else:
-            return MarginPosition.AFTER
+        return MarginPosition.AFTER
 
 
 class LineRegion:
