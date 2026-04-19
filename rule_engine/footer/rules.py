@@ -15,7 +15,7 @@ class FooterRegionBodyParagraphRule(FooterRegionRule):
         return Decision.collect("Body Paragraph at Footer Region", self.name)
 
 class FooterRegionLoneIndentedTextRule(FooterRegionRule):
-    priority = 20
+    priority = 40
 
     def matches(self, ctx):
         return (ctx.position_in_paragraph in [PositionInParagraph.MIDDLE, PositionInParagraph.END]
