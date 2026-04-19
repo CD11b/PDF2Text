@@ -21,7 +21,7 @@ from document_analysis import DocumentAnalysis
 from logger_config import setup_logging
 from text_heuristics import TextHeuristics
 from line_collector import LineCollector
-from text_cleaning import remove_page_number_lines, merge_hyphenated_lines, normalize_unicode, correct_ocr_errors
+from text_cleaning import remove_page_number_lines, join_lines, normalize_text
 
 os.environ["TESSDATA_PREFIX"] = "./training"
 
@@ -747,7 +747,7 @@ def main():
 
     parser = argparse.ArgumentParser(description="Process a PDF file.")
 
-    default_path = "./docs/test_OCR.pdf"
+    default_path = "./docs/butler.pdf"
     parser.add_argument("--input-path", nargs="?", default=default_path, help="Path to the PDF file")
     parser.add_argument("--page-start", type=int, nargs="?", help="Page to start reading")
     parser.add_argument("--page-end", type=int, nargs="?", help="Page to end reading")
@@ -791,11 +791,9 @@ def main():
                 hanging_open = cleaned_brackets.get_hanging_open()
 
                 # filtered_lines = filter_text.add_paragraph_breaks(filtered_lines=filtered_lines)
-                page_text = merge_hyphenated_lines(filtered_lines=filtered_lines)
+                page_text = join_lines(filtered_lines)
+                page_text = normalize_text(page_text, page_data.ocr)
 
-                page_text = normalize_unicode(page_text)
-                if page_data.ocr:
-                    page_text = correct_ocr_errors(page_text)
                 output_writer.write(mode="a", text=f'{page_text}\n\n')
 
 if __name__ == '__main__':

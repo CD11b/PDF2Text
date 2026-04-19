@@ -1,56 +1,50 @@
 import logging, unicodedata, re
+from models import StyledLine
 
 logger = logging.getLogger(__name__)
 
-BROKEN_WORD_PATTERN = re.compile(r'\w-\s*$')
-HYPHEN_END_PATTERN = re.compile(r'-\s*$')
 PAGE_NUMBER_PATTERN = re.compile(r'\s*\d+\s*')
-COMMON_OCR_ERRORS = {
-    "ﬁ": "fi",
-    "ﬂ": "fl",
-    "“": "\"",
-    "”": "\"",
-    "‘": "'",
-    "’": "'",
-    "|": "I"
-}
+COMMON_OCR_ERRORS = str.maketrans({"ﬁ": "fi", "ﬂ": "fl", "“": "\"", "”": "\"", "‘": "'", "’": "'", "|": "I"})
 
-def remove_page_number_lines(filtered_lines) -> list:
+def remove_page_number_lines(lines: list[StyledLine]) -> list[StyledLine]:
 
-    logger.debug(f"Cleaning page numbers")
+    logger.debug("Cleaning page numbers from %d lines", len(lines))
 
-    return [line for line in filtered_lines if not PAGE_NUMBER_PATTERN.fullmatch(line.text)]
+    return [line for line in lines if not PAGE_NUMBER_PATTERN.fullmatch(line.text)]
 
-def merge_hyphenated_lines(filtered_lines) -> str:
+def join_lines(lines: list[StyledLine], clean_hyphens: bool = True) -> str:
 
-    logger.debug(f"Joining broken sentences.")
+    result = []
+    i = 0
+    n = len(lines)
 
-    def merge_broken_lines(lines):
+    while i < n:
+        text = lines[i].text.rstrip()
 
-        line_iter = iter(lines)
+        while clean_hyphens and text.endswith("-") and i + 1 < n:
+            text = text[:-1] + lines[i + 1].text.lstrip()
+            i += 1
 
-        for line in line_iter:
-            text = line.text
+        result.append(text.rstrip())
+        i += 1
 
-            while BROKEN_WORD_PATTERN.search(text):
-                try:
-                    next_line = next(line_iter)
-                    text = HYPHEN_END_PATTERN.sub('', text) + next_line.text.lstrip()
-                except StopIteration:
-                    break
+    logger.debug("Joined lines: %d to %d lines", len(lines), len(result))
 
-            yield text
+    return " ".join(result)
 
-    return " ".join(merge_broken_lines(filtered_lines))
+def correct_ocr_errors(text: str) -> str:
+    return text.translate(COMMON_OCR_ERRORS)
 
-def normalize_unicode(text):
-    compatibility_mapped = unicodedata.normalize('NFKC', text)
-    decomposed = unicodedata.normalize('NFD', compatibility_mapped)
+def normalize_unicode(text: str) -> str:
+    return unicodedata.normalize("NFKC", text)
 
+def strip_accents(text: str) -> str:
+    decomposed = unicodedata.normalize("NFD", text)
     return ''.join(c for c in decomposed if not unicodedata.combining(c))
 
-def correct_ocr_errors(text):
-    for bad, good in COMMON_OCR_ERRORS.items():
-        text = text.replace(bad, good)
-
+def normalize_text(text: str, correct_ocr: bool = False) -> str:
+    if correct_ocr:
+        text = correct_ocr_errors(text)
+    text = normalize_unicode(text)
+    text = strip_accents(text)
     return text
