@@ -21,6 +21,7 @@ from document_analysis import DocumentAnalysis
 from logger_config import setup_logging
 from text_heuristics import TextHeuristics
 from line_collector import LineCollector
+from classifer import LinePosition, LineRegion, ParagraphType, LineDensity, LineFontName, LineFontSize
 from text_cleaning import remove_page_number_lines, join_lines, normalize_text
 
 os.environ["TESSDATA_PREFIX"] = "./training"
@@ -331,152 +332,6 @@ class FilterText:
                 result.extend(buffer)
         return result
 
-
-def memoize_group_method(method):
-    @wraps(method)
-    def wrapper(self, line_group, *args, **kwargs):
-        key = (method.__name__, id(line_group), args, tuple(kwargs.items()))
-        if key not in self._cache:
-            self._cache[key] = method(self, line_group, *args, **kwargs)
-        return self._cache[key]
-    return wrapper
-
-class Classifier:
-    def __init__(self, layout):
-        self.layout = layout
-        self._cache = {}
-
-class ParagraphType(Classifier):
-
-    def classify_indentation(self, line_start_x, previous_start_x, next_start_x):
-
-        if abs(line_start_x - self.layout.left_boundary) <= self.layout.coordinate_tolerance:
-            return LineIndentation.NONE
-
-        max_indent_size = self.layout.column.heuristics.start_x.upper_bound - self.layout.column.heuristics.start_x.most_common # Too aggressive. Must fix. Losing out on first sentence of paragraph
-        adjusted_line_start_x = line_start_x - max_indent_size
-
-        if previous_start_x is not None:
-            if abs(line_start_x - previous_start_x) <= self.layout.coordinate_tolerance:
-                return LineIndentation.INDENTED_BLOCK
-
-            elif adjusted_line_start_x <= previous_start_x:
-                return LineIndentation.INDENTED
-
-        if next_start_x is not None:
-            if abs(line_start_x - next_start_x) <= self.layout.coordinate_tolerance:
-                return LineIndentation.INDENTED_BLOCK
-
-            elif adjusted_line_start_x <= next_start_x:
-                return LineIndentation.INDENTED
-
-        return LineIndentation.LARGE_INDENTATION
-
-    def classify_position(self, line_start_y, previous_start_y, next_start_y):
-
-        start_y_upper_bound = self.layout.column.heuristics.start_y.upper_bound
-
-        close_to_previous_line = previous_start_y is not None and abs(line_start_y - previous_start_y) <= start_y_upper_bound
-        close_to_next_line = next_start_y is not None and abs(line_start_y - next_start_y) <= start_y_upper_bound
-
-        if close_to_previous_line:
-            if close_to_next_line:
-                return PositionInParagraph.MIDDLE
-            else:
-                return PositionInParagraph.END
-
-        elif close_to_next_line:
-            return PositionInParagraph.START
-
-        else:
-            return PositionInParagraph.SINGLE_LINE
-
-class LinePosition(Classifier):
-
-    @memoize_group_method
-    def classify_left_margin(self, line_group) -> MarginPosition:
-        line_start = line_group[0].start_x
-
-        if abs(line_start - self.layout.left_boundary) <= self.layout.coordinate_tolerance:
-            return MarginPosition.AT
-
-        if line_start in self.layout.document.get_all_left_margins():
-            return MarginPosition.AT
-
-        if line_start < self.layout.left_boundary:
-            return MarginPosition.BEFORE
-        return MarginPosition.AFTER
-
-class LineRegion(Classifier):
-
-    @memoize_group_method
-    def classify_vertical_region(self, line_group) -> VerticalRegion:
-        line_start = line_group[0].start_y
-        midway = (self.layout.bottom_boundary - self.layout.top_boundary) / 2 + self.layout.top_boundary
-
-        if line_start < midway:
-            if self.layout.has_default_top:
-                if line_start <= self.layout.top_boundary + self.layout.page.heuristics.start_y.upper_bound:
-                    return VerticalRegion.HEADER
-
-                for top_boundary, lower_bound in self.layout.document.get_all_top_boundaries():
-                    if line_start <= top_boundary + lower_bound:
-                        return VerticalRegion.HEADER
-            else:
-                if line_start <= self.layout.top_boundary:
-                    return VerticalRegion.HEADER
-
-            return VerticalRegion.BODY
-
-        else:
-            if self.layout.has_default_bottom:
-                if line_start >= self.layout.bottom_boundary - self.layout.page.heuristics.start_y.upper_bound:
-                    return VerticalRegion.FOOTER
-                for bottom_boundary, lower_bound in self.layout.document.get_all_bottom_boundaries():
-                    if line_start >= bottom_boundary - lower_bound:
-                        return VerticalRegion.FOOTER
-            else:
-                if line_start >= self.layout.bottom_boundary:
-                    return VerticalRegion.FOOTER
-
-            return VerticalRegion.BODY
-
-class LineDensity(Classifier):
-
-    @memoize_group_method
-    def classify_density(self, line_group) -> Density:
-        line_density = sum((line.character_density for line in line_group))
-        if line_density >= self.layout.page.heuristics.character_density.lower_bound:
-            return Density.DENSE
-        else:
-            return Density.SPARSE
-
-class LineFontName(Classifier):
-
-    @memoize_group_method
-    def classify_font_name(self, line_group) -> FontName:
-
-        if line_group[0].font_name in self.layout.document.get_all_font_names():
-            return FontName.MAIN
-        return FontName.OTHER
-
-class LineFontSize(Classifier):
-
-    @memoize_group_method
-    def classify_font_size(self, line_group) -> FontSize:
-
-        line_font_size = mean((line.font_size for line in line_group))
-
-        for most_common, lower_bound, upper_bound in self.layout.document.get_all_font_sizes():
-            if lower_bound <= line_font_size <= upper_bound:
-                return FontSize.MAIN
-
-        if line_font_size < self.layout.page.heuristics.font_size.lower_bound:
-            return FontSize.SMALL
-        else:
-            return FontSize.LARGE
-
-
 class PageLayout:
 
     def __init__(self, page, column, document):
@@ -513,7 +368,7 @@ class PageLayout:
     def is_last_line(self, line_group) -> bool:
         return line_group is self.column.line_groups[-1]
 
-    @memoize_group_method
+    # @memoize_group_method
     def is_indented_paragraph(self, line_group) -> bool:
 
         line_start = line_group[0].start_x
