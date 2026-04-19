@@ -11,7 +11,7 @@ class IndentedBlockLastLineRule(IndentedLineRule):
         return ctx.indentation is LineIndentation.INDENTED_BLOCK and ctx.is_last_line
 
     def decide(self, ctx):
-        return Decision(Action.COLLECT, "Last Line is Continued Indented Paragraph", self.name)
+        return Decision.collect("Last Line is Continued Indented Paragraph", self.name)
 
 class IndentedBlockParagraphRule(IndentedLineRule):
     priority = 20
@@ -20,7 +20,7 @@ class IndentedBlockParagraphRule(IndentedLineRule):
         return ctx.indentation is LineIndentation.INDENTED_BLOCK and ctx.position_in_paragraph is not PositionInParagraph.SINGLE_LINE
 
     def decide(self, ctx):
-        return Decision(Action.COLLECT, "Indented Block", self.name)
+        return Decision.collect("Indented Block", self.name)
 
 class IndentedMainFontRule(IndentedLineRule):
     priority = 30
@@ -39,7 +39,7 @@ class ContinuousIndentedLineRule(IndentedLineRule):
         return ctx.is_continuous
 
     def decide(self, ctx):
-        return Decision(Action.COLLECT, "OCR - Indented Line Following Dominant Word Gap", self.name)
+        return Decision.collect("OCR - Indented Line Following Dominant Word Gap", self.name)
 
 class FallbackIndentedRule(IndentedLineRule):
     priority = 999
@@ -48,4 +48,4 @@ class FallbackIndentedRule(IndentedLineRule):
         return True
 
     def decide(self, ctx):
-        return Decision(Action.UNHANDLED, "Unhandled Indented Line", self.name)
+        return Decision.unhandled("Unhandled Indented Line", self.name)

@@ -11,7 +11,7 @@ class SingleLineHeaderAtLeftMarginRule(AtLeftMarginRule):
         return ctx.position_in_paragraph is PositionInParagraph.SINGLE_LINE
 
     def decide(self, ctx):
-        return Decision(Action.SKIP, "Lone header text", self.name)
+        return Decision.skip("Lone header text", self.name)
 
 class EndParagraphAtLeftMarginRule(Rule):
     priority = 20
@@ -25,7 +25,7 @@ class EndParagraphAtLeftMarginRule(Rule):
                     PositionInParagraph.MIDDLE))
 
     def decide(self, ctx):
-        return Decision(Action.COLLECT, "End of paragraph", self.name)
+        return Decision.collect("End of paragraph", self.name)
 
 class FallbackAtLeftMarginRule(AtLeftMarginRule):
     priority = 999
@@ -34,6 +34,6 @@ class FallbackAtLeftMarginRule(AtLeftMarginRule):
         return True
 
     def decide(self, ctx):
-        return Decision(Action.UNHANDLED, "Text at left margin", self.name)
+        return Decision.unhandled("Text at left margin", self.name)
 
 
