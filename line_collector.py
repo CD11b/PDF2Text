@@ -14,7 +14,7 @@ class LineCollector:
         return [merged] if decision.action.should_collect else []
 
     @staticmethod
-    def _log(merged, decision):
+    def _log(merged: StyledLine, decision: Decision) -> None:
         logger.log(decision.action.log_level, "%s [%s - CASE: %s]: %s", decision.action.action_label, decision.handler_name, decision.reason, merged)
 
     @staticmethod
