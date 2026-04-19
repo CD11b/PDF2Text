@@ -496,9 +496,7 @@ class LineFontSize:
         line_font_size = mean((line.font_size for line in line_group))
 
         for most_common, lower_bound, upper_bound in self.layout.document.get_all_font_sizes():
-            if line_font_size == most_common:
-                return FontSize.MAIN
-            elif lower_bound <= line_font_size <= upper_bound:
+            if lower_bound <= line_font_size <= upper_bound:
                 return FontSize.MAIN
 
         if line_font_size < self.layout.page.heuristics.font_size.lower_bound:
