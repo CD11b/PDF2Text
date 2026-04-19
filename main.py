@@ -2,9 +2,7 @@ import os
 import logging
 import argparse
 from itertools import tee, groupby
-from statistics import mean
 from collections import defaultdict
-from functools import wraps
 
 from IO import PDFReader, OutputWriter
 from models import *
