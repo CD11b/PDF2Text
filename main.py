@@ -402,9 +402,8 @@ class LinePosition:
     def classify_left_margin(self, line_group) -> MarginPosition:
         line_start = line_group[0].start_x
 
-        if self.layout.page.ocr:
-            if self.lower_bound <= line_start <= self.left_boundary:
-                return MarginPosition.AT
+        if abs(line_start - self.layout.left_boundary) <= self.layout.coordinate_tolerance:
+            return MarginPosition.AT
 
         if line_start in self.layout.document.get_all_left_margins():
             return MarginPosition.AT
