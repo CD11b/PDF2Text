@@ -341,11 +341,12 @@ def memoize_group_method(method):
         return self._cache[key]
     return wrapper
 
-
-class ParagraphType:
+class Classifier:
     def __init__(self, layout):
         self.layout = layout
         self._cache = {}
+
+class ParagraphType(Classifier):
 
     def classify_indentation(self, line_start_x, previous_start_x, next_start_x):
 
@@ -390,13 +391,7 @@ class ParagraphType:
         else:
             return PositionInParagraph.SINGLE_LINE
 
-class LinePosition:
-
-    def __init__(self, layout):
-        self.layout = layout
-        self.lower_bound = self.layout.page.heuristics.start_x.lower_bound
-        self.left_boundary = self.layout.left_boundary
-        self._cache = {}
+class LinePosition(Classifier):
 
     @memoize_group_method
     def classify_left_margin(self, line_group) -> MarginPosition:
@@ -412,12 +407,7 @@ class LinePosition:
             return MarginPosition.BEFORE
         return MarginPosition.AFTER
 
-
-class LineRegion:
-
-    def __init__(self, layout):
-        self.layout = layout
-        self._cache = {}
+class LineRegion(Classifier):
 
     @memoize_group_method
     def classify_vertical_region(self, line_group) -> VerticalRegion:
@@ -451,11 +441,7 @@ class LineRegion:
 
             return VerticalRegion.BODY
 
-class LineDensity:
-
-    def __init__(self, layout):
-        self.layout = layout
-        self._cache = {}
+class LineDensity(Classifier):
 
     @memoize_group_method
     def classify_density(self, line_group) -> Density:
@@ -465,11 +451,7 @@ class LineDensity:
         else:
             return Density.SPARSE
 
-class LineFontName:
-
-    def __init__(self, layout):
-        self.layout = layout
-        self._cache = {}
+class LineFontName(Classifier):
 
     @memoize_group_method
     def classify_font_name(self, line_group) -> FontName:
@@ -480,11 +462,7 @@ class LineFontName:
 
         return FontName.OTHER
 
-class LineFontSize:
-
-    def __init__(self, layout):
-        self.layout = layout
-        self._cache = {}
+class LineFontSize(Classifier):
 
     @memoize_group_method
     def classify_font_size(self, line_group) -> FontSize:
