@@ -20,12 +20,15 @@ class LineCollector:
     @staticmethod
     def _merge_line_group(line_group: list[StyledLine]) -> StyledLine:
         """Merge lines of a line group into a single StyledLine."""
+
+        first_group, last_group = line_group[0], line_group[-1]
+
         return StyledLine(
             text=' '.join(line.text for line in line_group if line.text.strip()),
             character_density=sum(line.character_density for line in line_group),
             font_size=mean(line.font_size for line in line_group),
-            font_name=line_group[0].font_name,
-            start_x=line_group[0].start_x,
-            start_y=line_group[0].start_y,
-            end_x=line_group[-1].end_x
+            font_name=first_group.font_name,
+            start_x=first_group.start_x,
+            start_y=first_group.start_y,
+            end_x=last_group.end_x
         )
