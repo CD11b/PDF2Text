@@ -24,6 +24,7 @@ from document_analysis import DocumentAnalysis
 from logger_config import setup_logging
 from text_heuristics import TextHeuristics
 from line_collector import LineCollector
+from text_cleaning import clean_page_numbers, join_broken_sentences, normalize_unicode, correct_ocr_errors
 
 os.environ["TESSDATA_PREFIX"] = "./training"
 
@@ -786,18 +787,18 @@ def main():
                 filter_text = FilterText(page=page_data, document=document_heuristics)
 
                 filtered_lines = filter_text.filter_by_boundaries()
-                filtered_lines = CleanText.clean_page_numbers(filtered_lines)
+                filtered_lines = clean_page_numbers(filtered_lines)
 
                 cleaned_brackets = BracketCleaner(hanging_open)
                 filtered_lines = cleaned_brackets.clean_brackets(filtered_lines)
                 hanging_open = cleaned_brackets.get_hanging_open()
 
                 # filtered_lines = filter_text.add_paragraph_breaks(filtered_lines=filtered_lines)
-                page_text = CleanText.join_broken_sentences(filtered_lines=filtered_lines)
+                page_text = join_broken_sentences(filtered_lines=filtered_lines)
 
-                page_text = CleanText.normalize_unicode(page_text)
+                page_text = normalize_unicode(page_text)
                 if page_data.ocr:
-                    page_text = CleanText.correct_ocr_errors(page_text)
+                    page_text = correct_ocr_errors(page_text)
                 output_writer.write(mode="a", text=f'{page_text}\n\n')
 
 if __name__ == '__main__':
