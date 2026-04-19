@@ -415,7 +415,7 @@ class LineRegion(Classifier):
         midway = (self.layout.bottom_boundary - self.layout.top_boundary) / 2 + self.layout.top_boundary
 
         if line_start < midway:
-            if self.layout.top_boundary == self.layout.page.heuristics.start_y.minimum:
+            if self.layout.has_default_top:
                 if line_start <= self.layout.top_boundary + self.layout.page.heuristics.start_y.upper_bound:
                     return VerticalRegion.HEADER
 
@@ -429,7 +429,7 @@ class LineRegion(Classifier):
             return VerticalRegion.BODY
 
         else:
-            if self.layout.bottom_boundary == self.layout.page.heuristics.start_y.maximum:
+            if self.layout.has_default_bottom:
                 if line_start >= self.layout.bottom_boundary - self.layout.page.heuristics.start_y.upper_bound:
                     return VerticalRegion.FOOTER
                 for bottom_boundary, lower_bound in self.layout.document.get_all_bottom_boundaries():
@@ -495,6 +495,14 @@ class PageLayout:
         self.line_density = LineDensity(self)
         self.line_font_name = LineFontName(self)
         self.line_font_size = LineFontSize(self)
+
+    @property
+    def has_default_top(self) -> bool:
+        return self.top_boundary == self.page.heuristics.start_y.minimum
+
+    @property
+    def has_default_bottom(self) -> bool:
+        return self.bottom_boundary == self.page.heuristics.start_y.maximum
 
     def set_top_boundary(self, top_boundary):
         self.top_boundary = top_boundary
