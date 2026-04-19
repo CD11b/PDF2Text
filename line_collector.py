@@ -1,42 +1,24 @@
 import logging
 from statistics import mean
-
-from models import StyledLine, LineContext, Action, Decision
+from models import StyledLine, Decision
 
 logger = logging.getLogger(__name__)
 
 class LineCollector:
     """Collects or skips lines based on decisions."""
 
-    def process(self, line_group, decision: Decision):
+    def process(self, line_group: list[StyledLine], decision: Decision) -> list[StyledLine]:
 
-        if decision.action == Action.COLLECT:
-            return self._collect_group(line_group, decision.reason, decision.handler_name)
-        elif decision.action == Action.SKIP:
-            return self._skip_group(line_group, decision.reason, decision.handler_name)
-        elif decision.action == Action.UNHANDLED:
-            return self._unhandled_group(line_group, decision.reason, decision.handler_name)
-
-    def _collect_group(self, line_group, reason: str, handler: str):
-        """Merge and collect a line group."""
         merged = self._merge_line_group(line_group)
-        logger.debug(f"Collected [{handler} - CASE: {reason}]: {merged}")
-        return [merged]
-
-    def _skip_group(self, line_group, reason: str, handler: str):
-        """Skip a line group."""
-        merged = self._merge_line_group(line_group)
-        logger.info(f"Skipped [{handler} - CASE: {reason}]: {merged}")
-        return []
-
-    def _unhandled_group(self, line_group, reason: str, handler: str):
-        """Skip an unhandled line group."""
-        merged = self._merge_line_group(line_group)
-        logger.info(f"Skipped [{handler} - CASE: {reason}]: {merged}")
-        return []
+        self._log(merged, decision)
+        return [merged] if decision.action.should_collect else []
 
     @staticmethod
-    def _merge_line_group(line_group):
+    def _log(merged, decision):
+        logger.log(decision.action.log_level, "%s [%s - CASE: %s]: %s", decision.action.action_label, decision.handler_name, decision.reason, merged)
+
+    @staticmethod
+    def _merge_line_group(line_group: list[StyledLine]) -> StyledLine:
         """Merge lines of a line group into a single StyledLine."""
         return StyledLine(
             text=' '.join(line.text for line in line_group if line.text.strip()),
