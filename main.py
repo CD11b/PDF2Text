@@ -620,7 +620,7 @@ class PageLayout:
         if line_group[0].start_y != next_group[0].start_y:
             return False
 
-        indent_gap = next_group[-1].end_x - line_group[0].start_x
+        indent_gap = next_group[0].start_x - line_group[-1].end_x
         return self.column.heuristics.word_gaps[0] <= indent_gap <= self.column.heuristics.word_gaps[1]
 
     def is_in_order(self, line_group, filtered_lines):
