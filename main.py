@@ -7,7 +7,6 @@ from itertools import tee, groupby
 from statistics import mean
 from collections import defaultdict
 from functools import wraps
-from enum import Enum, auto
 
 from IO import PDFReader, OutputWriter
 from models import *
@@ -299,7 +298,7 @@ class FilterText:
         engine = self._select_engine(ctx)
 
         if engine is None:
-            decision = Decision(Action.UNHANDLED, "Unhandled case", "_handle")
+            decision = Decision.unhandled("Unhandled case", "_handle")
         else:
             decision = engine.decide(ctx)
 
@@ -325,7 +324,7 @@ class FilterText:
                 ctx = LineContext.create(self.layout, line_group, groups_iter, buffer)
 
                 if not self.layout.is_in_order(line_group, buffer):
-                    result.extend(self.collector.process(ctx.line_group, Decision(Action.SKIP, "Text outside regular read-order", "filter_by_boundaries")))
+                    result.extend(self.collector.process(ctx.line_group, Decision.skip("Text outside regular read-order", "filter_by_boundaries")))
                 else:
                     self._filter_line(ctx, buffer)
 

@@ -29,7 +29,7 @@ class IndentedMainFontRule(IndentedLineRule):
         return ctx.indentation is LineIndentation.INDENTED and ctx.font_name is FontName.MAIN
 
     def decide(self, ctx):
-        return Decision(Action.COLLECT, "Indented Paragraph", self.name)
+        return Decision.collect("Indented Paragraph", self.name)
 
 
 class ContinuousIndentedLineRule(IndentedLineRule):

@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from enum import Enum
 import logging
+from typing import Self
 
 class Action(Enum):
     """Actions that can be taken on a line group."""
@@ -38,13 +39,13 @@ class Decision:
     handler_name: str
 
     @classmethod
-    def collect(cls, reason: str, handler: str) -> 'Decision':
+    def collect(cls, reason: str, handler: str) -> Self:
         return cls(Action.COLLECT, reason, handler)
 
     @classmethod
-    def skip(cls, reason: str, handler: str) -> 'Decision':
+    def skip(cls, reason: str, handler: str) -> Self:
         return cls(Action.SKIP, reason, handler)
 
     @classmethod
-    def unhandled(cls, reason: str, handler: str) -> 'Decision':
+    def unhandled(cls, reason: str, handler: str) -> Self:
         return cls(Action.UNHANDLED, reason, handler)

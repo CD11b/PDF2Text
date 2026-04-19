@@ -12,7 +12,7 @@ class FooterRegionBodyParagraphRule(FooterRegionRule):
         and ctx.indentation in [LineIndentation.INDENTED_BLOCK, LineIndentation.NONE])
 
     def decide(self, ctx):
-        return Decision(Action.COLLECT, "Body Paragraph at Footer Region", self.name)
+        return Decision.collect("Body Paragraph at Footer Region", self.name)
 
 class FooterRegionLoneIndentedTextRule(FooterRegionRule):
     priority = 20
@@ -22,7 +22,7 @@ class FooterRegionLoneIndentedTextRule(FooterRegionRule):
                 and ctx.indentation in [LineIndentation.INDENTED, LineIndentation.LARGE_INDENTATION])
 
     def decide(self, ctx):
-        return Decision(Action.SKIP, "Lone indented text at Footer Region", self.name)
+        return Decision.skip("Lone indented text at Footer Region", self.name)
 
 class FooterRegionDenseLineRule(FooterRegionRule):
     priority = 30
@@ -31,7 +31,7 @@ class FooterRegionDenseLineRule(FooterRegionRule):
         return ctx.density is Density.DENSE
 
     def decide(self, ctx):
-        return Decision(Action.COLLECT, "Dense line at Footer", self.name) # Would also collect citations
+        return Decision.collect("Dense line at Footer", self.name) # Would also collect citations
 
 class FallbackFooterRegionRule(FooterRegionRule):
     priority = 999
@@ -40,4 +40,4 @@ class FallbackFooterRegionRule(FooterRegionRule):
         return True
 
     def decide(self, ctx):
-        return Decision(Action.UNHANDLED, "Footer Region Text", self.name)
+        return Decision.unhandled("Footer Region Text", self.name)

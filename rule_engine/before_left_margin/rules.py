@@ -11,7 +11,7 @@ class FooterBeforeLeftMarginRule(BeforeLeftMarginRule):
         return ctx.region is VerticalRegion.FOOTER
 
     def decide(self, ctx):
-        return Decision(Action.COLLECT, "Footer before left margin", self.name) # Shouldn't this be skipped?
+        return Decision.collect("Footer before left margin", self.name) # Shouldn't this be skipped?
 
 class HeadingBeforeLeftMarginRule(Rule):
     priority = 20
@@ -21,7 +21,7 @@ class HeadingBeforeLeftMarginRule(Rule):
                 ctx.font_name is not FontName.MAIN)
 
     def decide(self, ctx):
-        return Decision(Action.SKIP, "Heading before left margin", self.name)
+        return Decision.skip("Heading before left margin", self.name)
 
 class FallbackBeforeLeftMarginRule(BeforeLeftMarginRule):
     priority = 999
@@ -30,6 +30,6 @@ class FallbackBeforeLeftMarginRule(BeforeLeftMarginRule):
         return True
 
     def decide(self, ctx):
-        return Decision(Action.UNHANDLED, "Text before left margin", self.name)
+        return Decision.unhandled("Text before left margin", self.name)
 
 

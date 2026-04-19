@@ -11,7 +11,7 @@ class ContinuousParagraphMainFontRule(ContinuousParagraphRule):
         return ctx.font_size is FontSize.MAIN
 
     def decide(self, ctx):
-        return Decision(Action.COLLECT, "Continued Paragraph", self.name)
+        return Decision.collect("Continued Paragraph", self.name)
 
 class ContinuousParagraphMultiLineTitleRule(ContinuousParagraphRule):
     priority = 20
@@ -20,7 +20,7 @@ class ContinuousParagraphMultiLineTitleRule(ContinuousParagraphRule):
         return ctx.font_size is FontSize.LARGE
 
     def decide(self, ctx):
-        return Decision(Action.SKIP, "Multi-line Title", self.name)
+        return Decision.skip("Multi-line Title", self.name)
 
 class FallbackContinuousParagraphRule(ContinuousParagraphRule):
     priority = 999
@@ -29,4 +29,4 @@ class FallbackContinuousParagraphRule(ContinuousParagraphRule):
         return True
 
     def decide(self, ctx):
-        return Decision(Action.UNHANDLED, "Continuous Paragraph Text", self.name)
+        return Decision.unhandled("Continuous Paragraph Text", self.name)
