@@ -456,10 +456,8 @@ class LineFontName(Classifier):
     @memoize_group_method
     def classify_font_name(self, line_group) -> FontName:
 
-        for most_common in self.layout.document.get_all_font_names():
-            if line_group[0].font_name == most_common:
-                return FontName.MAIN
-
+        if line_group[0].font_name in self.layout.document.get_all_font_names():
+            return FontName.MAIN
         return FontName.OTHER
 
 class LineFontSize(Classifier):
