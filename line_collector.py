@@ -9,7 +9,7 @@ class LineCollector:
 
     def process(self, line_group: list[StyledLine], decision: Decision) -> list[StyledLine]:
 
-        merged = self._merge_line_group(line_group)
+        merged = self._aggregate_line_group(line_group)
         self._log(merged, decision)
         return [merged] if decision.action.should_collect else []
 
@@ -18,7 +18,7 @@ class LineCollector:
         logger.log(decision.action.log_level, "%s [%s - CASE: %s]: %s", decision.action.action_label, decision.handler_name, decision.reason, merged)
 
     @staticmethod
-    def _merge_line_group(line_group: list[StyledLine]) -> StyledLine:
+    def _aggregate_line_group(line_group: list[StyledLine]) -> StyledLine:
         """Merge lines of a line group into a single StyledLine."""
 
         first_group, last_group = line_group[0], line_group[-1]
