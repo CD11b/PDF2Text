@@ -8,9 +8,6 @@ logger = logging.getLogger(__name__)
 class LineCollector:
     """Collects or skips lines based on decisions."""
 
-    # def __init__(self):
-    #     # self.result = []
-
     def process(self, line_group, decision: Decision):
 
         if decision.action == Action.COLLECT:
@@ -19,8 +16,6 @@ class LineCollector:
             return self._skip_group(line_group, decision.reason, decision.handler_name)
         elif decision.action == Action.UNHANDLED:
             return self._unhandled_group(line_group, decision.reason, decision.handler_name)
-
-        # return result
 
     def _collect_group(self, line_group, reason: str, handler: str):
         """Merge and collect a line group."""
@@ -52,7 +47,3 @@ class LineCollector:
             start_y=line_group[0].start_y,
             end_x=line_group[-1].end_x
         )
-
-    def get_result(self) -> list:
-        """Return collected lines."""
-        return self.result
