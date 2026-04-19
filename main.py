@@ -408,7 +408,7 @@ class LinePosition:
         if line_start in self.layout.document.get_all_left_margins():
             return MarginPosition.AT
 
-        if line_start < self.left_boundary:
+        if line_start < self.layout.left_boundary:
             return MarginPosition.BEFORE
         return MarginPosition.AFTER
 
