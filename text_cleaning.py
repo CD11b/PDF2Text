@@ -15,13 +15,13 @@ COMMON_OCR_ERRORS = {
     "|": "I"
 }
 
-def clean_page_numbers(filtered_lines) -> list:
+def remove_page_number_lines(filtered_lines) -> list:
 
     logger.debug(f"Cleaning page numbers")
 
     return [line for line in filtered_lines if not PAGE_NUMBER_PATTERN.fullmatch(line.text)]
 
-def join_broken_sentences(filtered_lines) -> str:
+def merge_hyphenated_lines(filtered_lines) -> str:
 
     logger.debug(f"Joining broken sentences.")
 
