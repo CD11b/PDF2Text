@@ -31,7 +31,7 @@ class DocumentAnalysis:
             page_dict = page_text.extractDICT(sort=sort)
             return page_dict["blocks"]
         except Exception as e:
-            logging.exception(f"Error reading PDF blocks: {e}")
+            logger.exception(f"Error reading PDF blocks: {e}")
             raise
 
     @staticmethod

@@ -20,19 +20,19 @@ class LineCollector:
     def _collect_group(self, line_group, reason: str, handler: str):
         """Merge and collect a line group."""
         merged = self._merge_line_group(line_group)
-        logging.debug(f"Collected [{handler} - CASE: {reason}]: {merged}")
+        logger.debug(f"Collected [{handler} - CASE: {reason}]: {merged}")
         return [merged]
 
     def _skip_group(self, line_group, reason: str, handler: str):
         """Skip a line group."""
         merged = self._merge_line_group(line_group)
-        logging.info(f"Skipped [{handler} - CASE: {reason}]: {merged}")
+        logger.info(f"Skipped [{handler} - CASE: {reason}]: {merged}")
         return []
 
     def _unhandled_group(self, line_group, reason: str, handler: str):
         """Skip an unhandled line group."""
         merged = self._merge_line_group(line_group)
-        logging.info(f"Skipped [{handler} - CASE: {reason}]: {merged}")
+        logger.info(f"Skipped [{handler} - CASE: {reason}]: {merged}")
         return []
 
     @staticmethod
