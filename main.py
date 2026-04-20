@@ -523,7 +523,7 @@ class PageAnalyzer:
                     column_heuristics = TextHeuristics(ocr).analyze(column_lines)
                     column_line_groups = self.group_consecutive_lines_by_y(column_lines, coordinate_tolerance)
                     columns.append(ColumnData(column_line_groups, column_heuristics))
-                    return PageData(lines, heuristics, columns, ocr)
+                return PageData(lines, heuristics, columns, ocr)
 
         columns.append(ColumnData(line_groups, heuristics))
 
