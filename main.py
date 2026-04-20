@@ -440,10 +440,8 @@ class PageAnalyzer:
         counter = Counter()
 
         for group in line_groups_by_y.values():
-            density = 0
-            for line in group:
-                density += line.character_density
-            counter[len(group)] += density
+            row_density = sum(line.character_density for line in group)
+            counter[len(group)] += row_density
 
         number_columns = counter.most_common(1)[0][0]
         return number_columns
