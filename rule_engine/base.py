@@ -2,11 +2,10 @@ from models import Decision
 
 class Rule:
     priority = 999
-    name = None
 
-    def __init__(self):
-        if self.name is None:
-            self.name = self.__class__.__name__
+    @property
+    def name(self):
+        return self.__class__.__name__
 
     def matches(self, ctx) -> bool:
         raise NotImplementedError
