@@ -27,8 +27,8 @@ class LineContext:
 
         return cls(
             line_group=line_group,
-            position_in_paragraph=layout.line_position.classify(context=[line_start_y, previous_start_y, next_start_y]),
-            indentation=layout.line_indentation.classify(context=[line_start_x, previous_start_x, next_start_x]),
+            position_in_paragraph=layout.line_position.classify(context=(line_start_y, previous_start_y, next_start_y)),
+            indentation=layout.line_indentation.classify(context=(line_start_x, previous_start_x, next_start_x)),
             region=layout.line_region.classify(line_group),
             margin_position=layout.margin_position.classify(line_group),
             density=layout.line_density.classify(line_group),
