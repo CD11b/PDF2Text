@@ -299,7 +299,7 @@ class FilterText:
         else:
             decision = engine.decide(ctx)
 
-        result.extend(self.collector.process(ctx.line_group, decision))
+        result.extend(self.collector.process(ctx, decision))
 
     def filter_by_boundaries(self):
 

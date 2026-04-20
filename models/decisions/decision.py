@@ -6,13 +6,14 @@ from typing import Self
 class Action(Enum):
     """Actions that can be taken on a line group."""
 
-    COLLECT = (True, logging.DEBUG, "Collected")
-    SKIP = (False, logging.INFO, "Skipped")
-    UNHANDLED = (False, logging.WARNING, "Unhandled")
+    COLLECT = (True, logging.DEBUG, False, "Collected")
+    SKIP = (False, logging.INFO, True, "Skipped")
+    UNHANDLED = (False, logging.WARNING, True, "Unhandled")
 
-    def __init__(self, should_collect: bool, log_level: int, label: str):
+    def __init__(self, should_collect: bool, log_level: int, log_verbose: bool, label: str):
         self._should_collect = should_collect
         self._log_level = log_level
+        self._log_verbose = log_verbose
         self._label = label
 
     @property
@@ -22,6 +23,10 @@ class Action(Enum):
     @property
     def log_level(self) -> int:
         return self._log_level
+
+    @property
+    def log_verbose(self) -> bool:
+        return self._log_verbose
 
     @property
     def action_label(self) -> str:

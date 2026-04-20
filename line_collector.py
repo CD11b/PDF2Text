@@ -1,21 +1,26 @@
 import logging
 from statistics import mean
-from models import StyledLine, Decision
+from models import StyledLine, Decision, LineContext
 
 logger = logging.getLogger(__name__)
 
 class LineCollector:
     """Collects or skips lines based on decisions."""
 
-    def process(self, line_group: list[StyledLine], decision: Decision) -> list[StyledLine]:
+    def process(self, ctx: LineContext, decision: Decision) -> list[StyledLine]:
 
-        merged = self._aggregate_line_group(line_group)
-        self._log(merged, decision)
+        merged = self._aggregate_line_group(ctx.line_group)
+        self._log(decision, merged, ctx)
         return [merged] if decision.action.should_collect else []
 
     @staticmethod
-    def _log(merged: StyledLine, decision: Decision) -> None:
-        logger.log(decision.action.log_level, "%s [%s - CASE: %s]: %s", decision.action.action_label, decision.handler_name, decision.reason, merged)
+    def _log(decision: Decision, merged: StyledLine, ctx: LineContext) -> None:
+        logger.log(decision.action.log_level,
+                   "%s [%s - CASE: %s]: %s, %s",
+                   decision.action.action_label,
+                   decision.handler_name, decision.reason,
+                   merged if decision.action.log_verbose else merged.text,
+                   ctx if decision.action.log_verbose else "")
 
     @staticmethod
     def _aggregate_line_group(line_group: list[StyledLine]) -> StyledLine:

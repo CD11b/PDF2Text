@@ -37,3 +37,13 @@ class LineContext:
             split_span=layout.is_split_span(line_group, next_group),
             last_line=layout.is_last_line(line_group)
         )
+
+    def __repr__(self):
+        return (f"LineContext(pos={self.position_in_paragraph},"
+                f" indent={self.indentation},"
+                f" region={self.region},"
+                f" margin={self.margin_position},"
+                f" density={self.density},"
+                f" font={self.font_name}/{self.font_size},"
+                f" split_s={self.split_span},"
+                f" last={self.last_line})")
