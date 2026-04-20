@@ -4,6 +4,9 @@ __all__ = [
     "IndentedBlockLastLineRule",
     "IndentedBlockParagraphRule",
     "IndentedMainFontRule",
-    "ContinuousIndentedLineRule",
+    "SplitSpanIndentationLineRule",
+    "ParagraphStartIndentedRule",
+    "EpigraphAuthorRule",
+    "TitlePageRule",
     "FallbackIndentedRule",
 ]

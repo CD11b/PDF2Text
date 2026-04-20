@@ -40,6 +40,39 @@ class SplitSpanIndentationLineRule(IndentedLineRule):
     def decide(self, ctx):
         return Decision.collect("Span mistakenly split into two lines due to OCR fuzziness", self.name)
 
+class ParagraphStartIndentedRule(IndentedLineRule):
+    priority = 50
+
+    def matches(self, ctx):
+        return (ctx.indentation is LineIndentation.LARGE_INDENTATION and
+                ctx.position_in_paragraph in (PositionInParagraph.START, PositionInParagraph.MIDDLE) and
+                ctx.density is Density.DENSE)
+
+    def decide(self, ctx):
+        return Decision.collect("Start of paragraph is indented", self.name)
+
+class EpigraphAuthorRule(IndentedLineRule):
+    priority = 60
+
+    def matches(self, ctx):
+        return (ctx.indentation is LineIndentation.LARGE_INDENTATION and
+                ctx.position_in_paragraph is PositionInParagraph.END and
+                ctx.density is Density.SPARSE)
+
+    def decide(self, ctx):
+        return Decision.skip("Source/author of epigraph", self.name)
+
+class TitlePageRule(IndentedLineRule):
+    priority = 60
+
+    def matches(self, ctx):
+        return (ctx.indentation in (LineIndentation.LARGE_INDENTATION, LineIndentation.INDENTED_BLOCK) and
+                ctx.font_size is FontSize.LARGE and
+                ctx.density is Density.SPARSE)
+
+    def decide(self, ctx):
+        return Decision.skip("Title/sub-title", self.name)
+
 class FallbackIndentedRule(IndentedLineRule):
     priority = 999
 
