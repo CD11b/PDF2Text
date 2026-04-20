@@ -230,8 +230,7 @@ class FilterText:
         ])
 
         self.at_left_margin_engine = RuleEngine([
-            SingleLineHeaderAtLeftMarginRule(),
-            EndParagraphAtLeftMarginRule(),
+            SingleEmphasizedLineRule(),
             FallbackAtLeftMarginRule()
         ])
 
@@ -270,15 +269,10 @@ class FilterText:
             if ctx.region is VerticalRegion.FOOTER:
                 return self.footer_rule_engine
 
-            if ctx.position_in_paragraph is PositionInParagraph.START:
+            if ctx.region is VerticalRegion.HEADER:
+                return self.header_rule_engine
 
-                if ctx.region is VerticalRegion.HEADER:
-                    return self.header_rule_engine
-
-                if ctx.region is VerticalRegion.BODY:
-                    return self.continuous_paragraph_engine
-
-            if ctx.position_in_paragraph is PositionInParagraph.MIDDLE:
+            if ctx.position_in_paragraph is not PositionInParagraph.SINGLE_LINE:
                 return self.continuous_paragraph_engine
 
             return self.at_left_margin_engine

@@ -4,17 +4,16 @@ from rule_engine import Rule
 class AtLeftMarginRule(Rule):
     pass
 
-class SingleLineHeaderAtLeftMarginRule(AtLeftMarginRule):
+class SingleEmphasizedLineRule(AtLeftMarginRule):
     priority = 10
 
     def matches(self, ctx):
-        return ctx.position_in_paragraph is PositionInParagraph.SINGLE_LINE
+        return (ctx.position_in_paragraph is PositionInParagraph.SINGLE_LINE and
+                ctx.density is Density.DENSE and
+                ctx.font_size is FontSize.MAIN)
 
     def decide(self, ctx):
-        return Decision.skip("Lone header text", self.name)
-
-class EndParagraphAtLeftMarginRule(Rule):
-    priority = 20
+        return Decision.collect("Single line that's part of main body", self.name)
 
 
 class FallbackAtLeftMarginRule(AtLeftMarginRule):
