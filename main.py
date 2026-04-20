@@ -484,10 +484,11 @@ class PageAnalyzer:
     @staticmethod
     def group_consecutive_lines_by_y(lines, coordinate_tolerance):
         result = []
-        for _, y_group in groupby(lines, key=lambda line: line.start_y):
-            sorted_lines = sorted(y_group, key=lambda line: line.start_x)
-            buffer = [sorted_lines[0]]
-            for previous, current in zip(sorted_lines, sorted_lines[1:]):
+        y_sorted_lines = sorted(lines, key=lambda line: line.start_y)
+        for _, y_group in groupby(y_sorted_lines, key=lambda line: line.start_y):
+            x_sorted_lines = sorted(y_group, key=lambda line: line.start_x)
+            buffer = [x_sorted_lines[0]]
+            for previous, current in zip(x_sorted_lines, x_sorted_lines[1:]):
                 if current.start_x - previous.end_x <= coordinate_tolerance:
                     buffer.append(current)
                 else:
