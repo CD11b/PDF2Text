@@ -31,8 +31,7 @@ class IndentedMainFontRule(IndentedLineRule):
     def decide(self, ctx):
         return Decision.collect("Indented Paragraph", self.name)
 
-
-class ContinuousIndentedLineRule(IndentedLineRule):
+class SplitSpanIndentationLineRule(IndentedLineRule):
     priority = 40
 
     def matches(self, ctx):
