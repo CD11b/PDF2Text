@@ -39,11 +39,11 @@ class LineContext:
         )
 
     def __repr__(self):
-        return (f"LineContext(pos={self.position_in_paragraph},"
-                f" indent={self.indentation},"
-                f" region={self.region},"
-                f" margin={self.margin_position},"
-                f" density={self.density},"
-                f" font={self.font_name}/{self.font_size},"
-                f" split_s={self.split_span},"
-                f" last={self.last_line})")
+        return (f"{self.position_in_paragraph},"
+                f" {self.indentation},"
+                f" {self.region},"
+                f" {self.margin_position},"
+                f" {self.density},"
+                f" {self.font_name}/{self.font_size},"
+                f" split_span={self.split_span},"
+                f" last_line={self.last_line})")
