@@ -11,7 +11,7 @@ class FooterBeforeLeftMarginRule(BeforeLeftMarginRule):
         return ctx.region is VerticalRegion.FOOTER
 
     def decide(self, ctx):
-        return Decision.collect("Footer before left margin", self.name) # Shouldn't this be skipped?
+        return Decision.skip("Footer before left margin", self.name)
 
 class HeadingBeforeLeftMarginRule(Rule):
     priority = 20
