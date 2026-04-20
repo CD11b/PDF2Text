@@ -20,8 +20,8 @@ class LineContext:
         line_start_x = line_group[0].start_x
         line_start_y = line_group[0].start_y
         next_group = groups_iter.peek()
-        previous_start_x = result[-1].start_x if len(result) > 1 else None
-        previous_start_y = result[-1].start_y if len(result) > 1 else None
+        previous_start_x = result[-1].start_x if len(result) >= 1 else None
+        previous_start_y = result[-1].start_y if len(result) >= 1 else None
         next_start_x = next_group[0].start_x if next_group else None
         next_start_y = next_group[0].start_y if next_group else None
 
