@@ -19,7 +19,7 @@ from document_analysis import DocumentAnalysis
 from logger_config import setup_logging
 from text_heuristics import TextHeuristics
 from line_collector import LineCollector
-from classifer import LinePosition, LineRegion, ParagraphType, LineDensity, LineFontName, LineFontSize
+from classifer import IndentationClassifier, PositionClassifier, MarginClassifier, RegionClassifier, DensityClassifier, FontNameClassifier, FontSizeClassifier
 from text_cleaning import remove_page_number_lines, join_lines, normalize_text
 
 os.environ["TESSDATA_PREFIX"] = "./training"
@@ -342,12 +342,13 @@ class PageLayout:
         self.coordinate_tolerance = (page.heuristics.word_gaps[1] if page.ocr else 0.0)
         self._cache = {}
 
-        self.line_position = LinePosition(self)
-        self.line_region = LineRegion(self)
-        self.paragraph_type = ParagraphType(self)
-        self.line_density = LineDensity(self)
-        self.line_font_name = LineFontName(self)
-        self.line_font_size = LineFontSize(self)
+        self.line_position = PositionClassifier(self)
+        self.line_indentation = IndentationClassifier(self)
+        self.line_region = RegionClassifier(self)
+        self.margin_position = MarginClassifier(self)
+        self.line_density = DensityClassifier(self)
+        self.line_font_name = FontNameClassifier(self)
+        self.line_font_size = FontSizeClassifier(self)
 
     @property
     def has_default_top(self) -> bool:

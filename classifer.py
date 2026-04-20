@@ -2,23 +2,30 @@ from functools import wraps
 from statistics import mean
 from models import *
 
-def memoize_group_method(method):
-    @wraps(method)
-    def wrapper(self, line_group, *args, **kwargs):
-        key = (method.__name__, id(line_group), args, tuple(kwargs.items()))
-        if key not in self._cache:
-            self._cache[key] = method(self, line_group, *args, **kwargs)
-        return self._cache[key]
-    return wrapper
-
 class Classifier:
+
     def __init__(self, layout):
         self.layout = layout
         self._cache = {}
 
-class ParagraphType(Classifier):
+    @property
+    def name(self):
+        return self.__class__.__name__
 
-    def classify_indentation(self, line_start_x, previous_start_x, next_start_x):
+    def _cached(self, key, compute_fn):
+        if key not in self._cache:
+            self._cache[key] = compute_fn()
+        return self._cache[key]
+
+    def classify(self, context):
+        key = (self.name, tuple(context))
+        return self._cached(key, lambda: self._compute(context))
+
+class IndentationClassifier(Classifier):
+
+    def _compute(self, context):
+
+        line_start_x, previous_start_x, next_start_x = context
 
         if abs(line_start_x - self.layout.left_boundary) <= self.layout.coordinate_tolerance:
             return LineIndentation.NONE
@@ -42,7 +49,11 @@ class ParagraphType(Classifier):
 
         return LineIndentation.LARGE_INDENTATION
 
-    def classify_position(self, line_start_y, previous_start_y, next_start_y):
+class PositionClassifier(Classifier):
+
+    def _compute(self, context):
+
+        line_start_y, previous_start_y, next_start_y = context
 
         start_y_upper_bound = self.layout.column.heuristics.start_y.upper_bound
 
@@ -61,10 +72,9 @@ class ParagraphType(Classifier):
         else:
             return PositionInParagraph.SINGLE_LINE
 
-class LinePosition(Classifier):
+class MarginClassifier(Classifier):
 
-    @memoize_group_method
-    def classify_left_margin(self, line_group) -> MarginPosition:
+    def _compute(self, line_group) -> MarginPosition:
         line_start = line_group[0].start_x
 
         if abs(line_start - self.layout.left_boundary) <= self.layout.coordinate_tolerance:
@@ -77,10 +87,9 @@ class LinePosition(Classifier):
             return MarginPosition.BEFORE
         return MarginPosition.AFTER
 
-class LineRegion(Classifier):
+class RegionClassifier(Classifier):
 
-    @memoize_group_method
-    def classify_vertical_region(self, line_group) -> VerticalRegion:
+    def _compute(self, line_group) -> VerticalRegion:
         line_start = line_group[0].start_y
         midway = (self.layout.bottom_boundary - self.layout.top_boundary) / 2 + self.layout.top_boundary
 
@@ -111,29 +120,26 @@ class LineRegion(Classifier):
 
             return VerticalRegion.BODY
 
-class LineDensity(Classifier):
+class DensityClassifier(Classifier):
 
-    @memoize_group_method
-    def classify_density(self, line_group) -> Density:
+    def _compute(self, line_group) -> Density:
         line_density = sum((line.character_density for line in line_group))
         if line_density >= self.layout.page.heuristics.character_density.lower_bound:
             return Density.DENSE
         else:
             return Density.SPARSE
 
-class LineFontName(Classifier):
+class FontNameClassifier(Classifier):
 
-    @memoize_group_method
-    def classify_font_name(self, line_group) -> FontName:
+    def _compute(self, line_group) -> FontName:
 
         if line_group[0].font_name in self.layout.document.get_all_font_names():
             return FontName.MAIN
         return FontName.OTHER
 
-class LineFontSize(Classifier):
+class FontSizeClassifier(Classifier):
 
-    @memoize_group_method
-    def classify_font_size(self, line_group) -> FontSize:
+    def _compute(self, line_group) -> FontSize:
 
         line_font_size = mean((line.font_size for line in line_group))
 

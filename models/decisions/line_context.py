@@ -27,13 +27,13 @@ class LineContext:
 
         return cls(
             line_group=line_group,
-            position_in_paragraph=layout.paragraph_type.classify_position(line_start_y, previous_start_y, next_start_y),
-            indentation=layout.paragraph_type.classify_indentation(line_start_x, previous_start_x, next_start_x),
-            region=layout.line_region.classify_vertical_region(line_group),
-            margin_position=layout.line_position.classify_left_margin(line_group),
-            density=layout.line_density.classify_density(line_group),
-            font_name=layout.line_font_name.classify_font_name(line_group),
-            font_size=layout.line_font_size.classify_font_size(line_group),
+            position_in_paragraph=layout.line_position.classify(context=[line_start_y, previous_start_y, next_start_y]),
+            indentation=layout.line_indentation.classify(context=[line_start_x, previous_start_x, next_start_x]),
+            region=layout.line_region.classify(line_group),
+            margin_position=layout.margin_position.classify(line_group),
+            density=layout.line_density.classify(line_group),
+            font_name=layout.line_font_name.classify(line_group),
+            font_size=layout.line_font_size.classify(line_group),
             is_continuous=layout.is_split_span(line_group, next_group),
             is_last_line=layout.is_last_line(line_group)
         )
