@@ -212,6 +212,7 @@ class FilterText:
         self.header_rule_engine = RuleEngine([
             BodyParagraphAtHeaderRegionRule(),
             DenseLineAtHeaderRegionRule(),
+            JournalNameAtHeaderRule(),
             FallbackHeaderRegionRule()
         ])
 

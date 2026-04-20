@@ -22,6 +22,16 @@ class DenseLineAtHeaderRegionRule(HeaderRegionRule):
     def decide(self, ctx):
         return Decision.collect("Dense line at header", self.name)
 
+class JournalNameAtHeaderRule(HeaderRegionRule):
+    priority = 30
+
+    def matches(self, ctx):
+        return (ctx.density is Density.SPARSE and
+                ctx.position_in_paragraph is PositionInParagraph.SINGLE_LINE)
+
+    def decide(self, ctx):
+        return Decision.skip("Journal name at header", self.name)
+
 class FallbackHeaderRegionRule(HeaderRegionRule):
     priority = 999
 
