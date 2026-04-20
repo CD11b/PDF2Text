@@ -16,16 +16,6 @@ class SingleLineHeaderAtLeftMarginRule(AtLeftMarginRule):
 class EndParagraphAtLeftMarginRule(Rule):
     priority = 20
 
-    def matches(self, ctx):
-        return (ctx.margin_position is MarginPosition.AT and
-                ctx.region is not VerticalRegion.FOOTER and
-                ctx.position_in_paragraph not in (
-                    PositionInParagraph.START,
-                    PositionInParagraph.SINGLE_LINE,
-                    PositionInParagraph.MIDDLE))
-
-    def decide(self, ctx):
-        return Decision.collect("End of paragraph", self.name)
 
 class FallbackAtLeftMarginRule(AtLeftMarginRule):
     priority = 999
