@@ -16,22 +16,23 @@ class Classifier:
             self._cache[key] = compute_fn()
         return self._cache[key]
 
-    def _make_cache_key(self, context): # fallback
-        return self.name, tuple(context)
+    def _make_cache_key(self, features):
+        return self.name, features
 
     def classify(self, context):
-        key = self._make_cache_key(context)
-        return self._cached(key, lambda: self._compute(context))
+        features = self._extract_features(context)
+        key = self._make_cache_key(features)
+        return self._cached(key, lambda: self._compute(features))
 
 class IndentationClassifier(Classifier):
 
-    def _make_cache_key(self, context):
+    def _extract_features(self, context):
         line_start_x, previous_start_x, next_start_x = context
-        return self.name, line_start_x, previous_start_x, next_start_x
+        return line_start_x, previous_start_x, next_start_x
 
-    def _compute(self, context):
+    def _compute(self, features):
 
-        line_start_x, previous_start_x, next_start_x = context
+        line_start_x, previous_start_x, next_start_x = features
 
         if abs(line_start_x - self.layout.left_boundary) <= self.layout.coordinate_tolerance:
             return LineIndentation.NONE
@@ -57,13 +58,13 @@ class IndentationClassifier(Classifier):
 
 class PositionClassifier(Classifier):
 
-    def _make_cache_key(self, context):
+    def _extract_features(self, context):
         line_start_y, previous_start_y, next_start_y = context
-        return self.name, line_start_y, previous_start_y, next_start_y
+        return line_start_y, previous_start_y, next_start_y
 
-    def _compute(self, context):
+    def _compute(self, features):
 
-        line_start_y, previous_start_y, next_start_y = context
+        line_start_y, previous_start_y, next_start_y = features
 
         start_y_upper_bound = self.layout.column.heuristics.start_y.upper_bound
 
@@ -84,11 +85,12 @@ class PositionClassifier(Classifier):
 
 class MarginClassifier(Classifier):
 
-    def _make_cache_key(self, line_group):
-        return self.name, line_group[0].start_x
+    def _extract_features(self, line_group):
+        return line_group[0].start_x
 
-    def _compute(self, line_group) -> MarginPosition:
-        line_start = line_group[0].start_x
+    def _compute(self, features) -> MarginPosition:
+
+        line_start = features
 
         if abs(line_start - self.layout.left_boundary) <= self.layout.coordinate_tolerance:
             return MarginPosition.AT
@@ -102,11 +104,13 @@ class MarginClassifier(Classifier):
 
 class RegionClassifier(Classifier):
 
-    def _make_cache_key(self, line_group):
-        return self.name, line_group[0].start_y
+    def _extract_features(self, line_group):
+        return line_group[0].start_y
 
-    def _compute(self, line_group) -> VerticalRegion:
-        line_start = line_group[0].start_y
+    def _compute(self, features) -> VerticalRegion:
+
+        line_start = features
+
         midway = (self.layout.bottom_boundary - self.layout.top_boundary) / 2 + self.layout.top_boundary
 
         if line_start < midway:
@@ -138,12 +142,14 @@ class RegionClassifier(Classifier):
 
 class DensityClassifier(Classifier):
 
-    def _make_cache_key(self, line_group):
+    def _extract_features(self, line_group):
         line_density = sum((line.character_density for line in line_group))
-        return self.name, line_density
+        return line_density
 
-    def _compute(self, line_group) -> Density:
-        line_density = sum((line.character_density for line in line_group))
+    def _compute(self, features) -> Density:
+
+        line_density = features
+
         if line_density >= self.layout.page.heuristics.character_density.lower_bound:
             return Density.DENSE
         else:
@@ -151,24 +157,26 @@ class DensityClassifier(Classifier):
 
 class FontNameClassifier(Classifier):
 
-    def _make_cache_key(self, line_group):
-        return self.name, line_group[0].font_name
+    def _extract_features(self, line_group):
+        return line_group[0].font_name
 
-    def _compute(self, line_group) -> FontName:
+    def _compute(self, features) -> FontName:
 
-        if line_group[0].font_name in self.layout.document.get_all_font_names():
+        line_font_name = features
+
+        if line_font_name in self.layout.document.get_all_font_names():
             return FontName.MAIN
         return FontName.OTHER
 
 class FontSizeClassifier(Classifier):
 
-    def _make_cache_key(self, line_group):
+    def _extract_features(self, line_group):
         line_font_size = mean((line.font_size for line in line_group))
-        return self.name, line_font_size
+        return line_font_size
 
-    def _compute(self, line_group) -> FontSize:
+    def _compute(self, features) -> FontSize:
 
-        line_font_size = mean((line.font_size for line in line_group))
+        line_font_size = features
 
         for most_common, lower_bound, upper_bound in self.layout.document.get_all_font_sizes():
             if lower_bound <= line_font_size <= upper_bound:
