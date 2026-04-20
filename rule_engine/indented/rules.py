@@ -8,7 +8,7 @@ class IndentedBlockLastLineRule(IndentedLineRule):
     priority = 10
 
     def matches(self, ctx):
-        return ctx.indentation is LineIndentation.INDENTED_BLOCK and ctx.is_last_line
+        return ctx.indentation is LineIndentation.INDENTED_BLOCK and ctx.last_line is True
 
     def decide(self, ctx):
         return Decision.collect("Last Line is Continued Indented Paragraph", self.name)
@@ -35,7 +35,7 @@ class SplitSpanIndentationLineRule(IndentedLineRule):
     priority = 40
 
     def matches(self, ctx):
-        return ctx.is_continuous
+        return ctx.split_span is True
 
     def decide(self, ctx):
         return Decision.collect("Span mistakenly split into two lines due to OCR fuzziness", self.name)

@@ -11,8 +11,8 @@ class LineContext:
     density: Density
     font_name: FontName
     font_size: FontSize
-    is_continuous: bool
-    is_last_line: bool
+    split_span: bool
+    last_line: bool
 
     @classmethod
     def create(cls, layout, line_group, groups_iter, result):
@@ -34,6 +34,6 @@ class LineContext:
             density=layout.line_density.classify(line_group),
             font_name=layout.line_font_name.classify(line_group),
             font_size=layout.line_font_size.classify(line_group),
-            is_continuous=layout.is_split_span(line_group, next_group),
-            is_last_line=layout.is_last_line(line_group)
+            split_span=layout.is_split_span(line_group, next_group),
+            last_line=layout.is_last_line(line_group)
         )
