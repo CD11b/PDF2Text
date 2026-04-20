@@ -1,4 +1,4 @@
-from statistics import mean
+from statistics import median
 from models import *
 
 class Classifier:
@@ -171,7 +171,7 @@ class FontNameClassifier(Classifier):
 class FontSizeClassifier(Classifier):
 
     def _extract_features(self, line_group):
-        line_font_size = mean((line.font_size for line in line_group))
+        line_font_size = median((line.font_size for line in line_group))
         return line_font_size
 
     def _compute(self, features) -> FontSize:
