@@ -103,7 +103,7 @@ class MarginClassifier(Classifier):
 class RegionClassifier(Classifier):
 
     def _make_cache_key(self, line_group):
-        return self.name, line_group[0].start_x
+        return self.name, line_group[0].start_y
 
     def _compute(self, line_group) -> VerticalRegion:
         line_start = line_group[0].start_y
