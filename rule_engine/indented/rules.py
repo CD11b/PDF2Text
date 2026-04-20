@@ -38,7 +38,7 @@ class SplitSpanIndentationLineRule(IndentedLineRule):
         return ctx.is_continuous
 
     def decide(self, ctx):
-        return Decision.collect("OCR - Indented Line Following Dominant Word Gap", self.name)
+        return Decision.collect("Span mistakenly split into two lines due to OCR fuzziness", self.name)
 
 class FallbackIndentedRule(IndentedLineRule):
     priority = 999
