@@ -514,16 +514,18 @@ class PageAnalyzer:
 
             line_groups_by_y = self.group_line_groups_by_y(line_groups)
             number_columns = self.compute_column_count(line_groups_by_y)
-            start_x_columns = self.compute_column_starts(line_groups_by_y, number_columns)
-            columned_groups = self.sort_line_columns(line_groups, start_x_columns)
+            if number_columns > 1:
+                start_x_columns = self.compute_column_starts(line_groups_by_y, number_columns)
+                columned_groups = self.sort_line_columns(line_groups, start_x_columns)
 
-            for start_x in sorted(columned_groups.keys()):
-                column_lines = columned_groups[start_x]
-                column_heuristics = TextHeuristics(ocr).analyze(column_lines)
-                column_line_groups = self.group_consecutive_lines_by_y(column_lines)
-                columns.append(ColumnData(column_line_groups, column_heuristics))
-        else:
-            columns.append(ColumnData(line_groups, heuristics))
+                for start_x in sorted(columned_groups.keys()):
+                    column_lines = columned_groups[start_x]
+                    column_heuristics = TextHeuristics(ocr).analyze(column_lines)
+                    column_line_groups = self.group_consecutive_lines_by_y(column_lines, coordinate_tolerance)
+                    columns.append(ColumnData(column_line_groups, column_heuristics))
+                    return PageData(lines, heuristics, columns, ocr)
+
+        columns.append(ColumnData(line_groups, heuristics))
 
         return PageData(lines, heuristics, columns, ocr)
 
