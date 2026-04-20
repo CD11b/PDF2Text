@@ -482,12 +482,19 @@ class PageAnalyzer:
         return columned_groups
 
     @staticmethod
-    def group_consecutive_lines_by_y(lines):
-
-        """Group consecutive lines that share the same Y position."""
-        return [list(group)
-                for _, group in groupby(lines, key=lambda line: line.start_y)
-                ]
+    def group_consecutive_lines_by_y(lines, coordinate_tolerance):
+        result = []
+        for _, y_group in groupby(lines, key=lambda line: line.start_y):
+            sorted_lines = sorted(y_group, key=lambda line: line.start_x)
+            buffer = [sorted_lines[0]]
+            for previous, current in zip(sorted_lines, sorted_lines[1:]):
+                if current.start_x - previous.end_x <= coordinate_tolerance:
+                    buffer.append(current)
+                else:
+                    result.append(buffer)
+                    buffer = [current]
+            result.append(buffer)
+        return result
 
     def analyze(self, lines):
 
@@ -499,7 +506,8 @@ class PageAnalyzer:
             ocr = False
             heuristics = TextHeuristics(ocr).analyze(lines)
 
-        line_groups = self.group_consecutive_lines_by_y(lines)
+        coordinate_tolerance = heuristics.word_gaps[1] if ocr else 0.0
+        line_groups = self.group_consecutive_lines_by_y(lines, coordinate_tolerance)
 
         columns = []
         if not ocr:
