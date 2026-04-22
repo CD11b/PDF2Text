@@ -503,8 +503,6 @@ class PageAnalyzer:
 
         font_name = FeatureStats(FontNameHeuristic(ocr).compute_distribution(lines), Bounds(None, None))
 
-        if ocr and font_name.most_common != 'GlyphLessFont':
-            ocr = False
 
         page_lines = PageLines(lines)
 
