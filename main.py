@@ -403,7 +403,7 @@ class PageLayout:
 
 class PageAnalyzer:
 
-    def __init__(self, lines):
+    def __init__(self, lines: PageLines):
         self.lines = lines
         self._ocr = None
 
