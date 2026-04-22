@@ -28,11 +28,9 @@ class PageLines:
     @property
     def rows(self):
         if self._rows is None:
-            sorted_lines = sorted(self.lines, key=lambda l: l.start_y)
-            self._rows = [
-                sorted(group, key=lambda l: l.start_x)
-                for _, group in groupby(sorted_lines, key=lambda l: l.start_y)
-            ]
+            y_sorted_lines = sorted(self.lines, key=lambda line: line.start_y)
+            self._rows = [sorted(y_group, key=lambda line: line.start_x)
+                          for _, y_group in groupby(y_sorted_lines, key=lambda line: line.start_y)]
         return self._rows
 
 class Heuristic:
