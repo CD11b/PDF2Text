@@ -510,7 +510,7 @@ class PageAnalyzer:
         start_y = FeatureStats(StartYHeuristic(self.ocr).compute_distribution(page_lines),
                                LineGapHeuristic(self.ocr).compute_bounds(page_lines))
         end_x = EndXHeuristic(self.ocr).compute_feature_stats(page_lines)
-        word_gaps = WordGapHeuristic(self.ocr).compute_bounds(page_lines)
+        word_gaps = WordGapHeuristic(self.ocr).compute_bounds(page_lines) if self.ocr else Bounds(None, None)
         character_count = CharacterCountHeuristic(self.ocr).compute_feature_stats(page_lines)
         font_size = FontSizeHeuristic(self.ocr).compute_feature_stats(page_lines)
         font_name = FeatureStats(FontNameHeuristic(self.ocr).compute_distribution(page_lines), Bounds(None, None))
