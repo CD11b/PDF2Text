@@ -403,24 +403,32 @@ class PageLayout:
 
 class PageAnalyzer:
 
-    @staticmethod
-    def detect_ocr(lines):
-        if len(lines) == 0:
-            return False
+    def __init__(self, lines):
+        self.lines = lines
+        self._ocr = None
 
-        words = 1
-        phrases = 1
+    @property
+    def ocr(self):
+        if self._ocr is None:
+            if len(self.lines) == 0:
+                return False
 
-        for line in lines:
-            text = line.text.strip()
-            if not text:
-                continue
-            elif " " not in text:
-                words += 1
-            else:
-                phrases += 1
+            words = 1
+            phrases = 1
 
-        return (words / (words + phrases)) > 0.95
+            for line in self.lines:
+                text = line.text.strip()
+                if not text:
+                    continue
+                elif " " not in text:
+                    words += 1
+                else:
+                    phrases += 1
+
+            self._ocr = (words / (words + phrases)) > 0.95
+
+        return self._ocr
+
 
     @staticmethod
     def group_line_groups_by_y(line_groups):
@@ -499,7 +507,7 @@ class PageAnalyzer:
 
     def analyze(self, lines):
 
-        ocr = self.detect_ocr(lines)
+    def analyze(self):
 
         font_name = FeatureStats(FontNameHeuristic(ocr).compute_distribution(lines), Bounds(None, None))
 
@@ -515,11 +523,12 @@ class PageAnalyzer:
         font_name = FeatureStats(FontNameHeuristic(ocr).compute_distribution(page_lines), Bounds(None, None))
         heuristics = LayoutProfile(start_x, start_y, end_x, word_gaps, character_count, font_size, font_name)
 
-        coordinate_tolerance = heuristics.word_gaps[1] if ocr else 0.0
+
+        coordinate_tolerance = heuristics.word_gaps[1] if self.ocr else 0.0
         line_groups = self.group_consecutive_lines_by_y(page_lines, coordinate_tolerance)
 
         columns = []
-        if not ocr:
+        if not self.ocr:
 
             line_groups_by_y = self.group_line_groups_by_y(line_groups)
             number_columns = self.compute_column_count(line_groups_by_y)
@@ -533,11 +542,11 @@ class PageAnalyzer:
                     column_heuristics = heuristics # TextHeuristics(ocr).analyze(column_lines)
                     column_line_groups = self.group_consecutive_lines_by_y(column_lines, coordinate_tolerance)
                     columns.append(ColumnData(column_line_groups, column_heuristics))
-                return PageData(page_lines, heuristics, columns, ocr)
+                return PageData(page_lines, heuristics, columns, self.ocr)
 
         columns.append(ColumnData(line_groups, heuristics))
 
-        return PageData(page_lines, heuristics, columns, ocr)
+        return PageData(page_lines, heuristics, columns, self.ocr)
 
 class DocumentData:
     def __init__(self):
@@ -627,7 +636,7 @@ def main():
                 if len(lines) == 0:
                     continue
 
-                page_data = PageAnalyzer().analyze(lines)
+                page_data = PageAnalyzer(lines).analyze()
                 document_heuristics.add_page(page_data)
                 filter_text = FilterText(page=page_data, document=document_heuristics)
 
