@@ -506,17 +506,19 @@ class PageAnalyzer:
         if ocr and font_name.most_common != 'GlyphLessFont':
             ocr = False
 
-        start_x = IndentHeuristic(ocr).compute_feature_stats(lines)
-        start_y = FeatureStats(StartYHeuristic(ocr).compute_distribution(lines), LineGapHeuristic(ocr).compute_bounds(lines))
-        end_x = EndXHeuristic(ocr).compute_feature_stats(lines)
-        word_gaps = WordGapHeuristic(ocr).compute_bounds(lines)
-        character_count = CharacterCountHeuristic(ocr).compute_feature_stats(lines)
-        font_size = FontSizeHeuristic(ocr).compute_feature_stats(lines)
-        font_name = FeatureStats(FontNameHeuristic(ocr).compute_distribution(lines), Bounds(None, None))
+        page_lines = PageLines(lines)
+
+        start_x = IndentHeuristic(ocr).compute_feature_stats(page_lines)
+        start_y = FeatureStats(StartYHeuristic(ocr).compute_distribution(page_lines), LineGapHeuristic(ocr).compute_bounds(page_lines))
+        end_x = EndXHeuristic(ocr).compute_feature_stats(page_lines)
+        word_gaps = WordGapHeuristic(ocr).compute_bounds(page_lines)
+        character_count = CharacterCountHeuristic(ocr).compute_feature_stats(page_lines)
+        font_size = FontSizeHeuristic(ocr).compute_feature_stats(page_lines)
+        font_name = FeatureStats(FontNameHeuristic(ocr).compute_distribution(page_lines), Bounds(None, None))
         heuristics = LayoutProfile(start_x, start_y, end_x, word_gaps, character_count, font_size, font_name)
 
         coordinate_tolerance = heuristics.word_gaps[1] if ocr else 0.0
-        line_groups = self.group_consecutive_lines_by_y(lines, coordinate_tolerance)
+        line_groups = self.group_consecutive_lines_by_y(page_lines, coordinate_tolerance)
 
         columns = []
         if not ocr:
@@ -533,11 +535,11 @@ class PageAnalyzer:
                     column_heuristics = heuristics # TextHeuristics(ocr).analyze(column_lines)
                     column_line_groups = self.group_consecutive_lines_by_y(column_lines, coordinate_tolerance)
                     columns.append(ColumnData(column_line_groups, column_heuristics))
-                return PageData(lines, heuristics, columns, ocr)
+                return PageData(page_lines, heuristics, columns, ocr)
 
         columns.append(ColumnData(line_groups, heuristics))
 
-        return PageData(lines, heuristics, columns, ocr)
+        return PageData(page_lines, heuristics, columns, ocr)
 
 class DocumentData:
     def __init__(self):

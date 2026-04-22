@@ -1,4 +1,6 @@
 from __future__ import annotations
+
+from dataclasses import dataclass
 from collections import Counter
 from typing import Optional, Any
 from itertools import groupby
@@ -7,6 +9,31 @@ import logging
 from models import StyledLine, FeatureStats, LayoutProfile, Bounds, Distribution
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass(slots=True)
+class PageLines:
+    lines: list
+    _rows: list | None = None
+
+    def __iter__(self):
+        return iter(self.lines)
+
+    def __getitem__(self, item):
+        return self.lines[item]
+
+    def __len__(self):
+        return len(self.lines)
+
+    @property
+    def rows(self):
+        if self._rows is None:
+            sorted_lines = sorted(self.lines, key=lambda l: l.start_y)
+            self._rows = [
+                sorted(group, key=lambda l: l.start_x)
+                for _, group in groupby(sorted_lines, key=lambda l: l.start_y)
+            ]
+        return self._rows
 
 class Heuristic:
 
@@ -46,12 +73,6 @@ class Heuristic:
         """Override in subclasses."""
         raise NotImplementedError
 
-    def iter_rows(self, lines: list[StyledLine]):
-
-        sorted_lines = sorted(lines, key=lambda line: line.start_y)
-        for _, group in groupby(sorted_lines, key=lambda line: line.start_y):
-            yield sorted(group, key=lambda line: line.start_x)
-
     def compute_distribution(self, lines: list[StyledLine]):
         counter = self.build_counter(lines)
         return Distribution.create(counter)
@@ -80,10 +101,10 @@ class CharacterCountHeuristic(Heuristic):
     def threshold(self) -> float:
         return self._THRESHOLD
 
-    def build_counter(self, lines: list[StyledLine])-> Counter[float]:
+    def build_counter(self, lines)-> Counter[float]:
 
         counter: Counter[float] = Counter()
-        for row in self.iter_rows(lines):
+        for row in lines.rows:
             character_count = sum(line.character_count for line in row)
             if character_count > 0:
                 counter[character_count] += 1
@@ -98,10 +119,10 @@ class IndentHeuristic(Heuristic):
     def threshold(self) -> float:
         return self._THRESHOLD
 
-    def build_counter(self, lines: list[StyledLine]) -> Counter[float]:
+    def build_counter(self, lines) -> Counter[float]:
 
         counter: Counter[float] = Counter()
-        for row in self.iter_rows(lines):
+        for row in lines.rows:
             indent = row[0].start_x
             counter[indent] += 1
 
@@ -123,10 +144,10 @@ class LineGapHeuristic(Heuristic):
 
 class WordGapHeuristic(Heuristic):
 
-    def build_counter(self, lines: list[StyledLine]) -> Counter[float]:
+    def build_counter(self, lines) -> Counter[float]:
         counter: Counter[float] = Counter()
 
-        for row in self.iter_rows(lines):
+        for row in lines.rows:
             for i in range(len(row) - 1):
                 gap = row[i + 1].start_x - row[i].end_x
                 if gap > 0:
