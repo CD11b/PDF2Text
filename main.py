@@ -519,10 +519,9 @@ class PageAnalyzer:
 
     def analyze(self):
 
-        page_lines = PageLines(self.lines)
-        heuristics = self.compute_layout_profile(page_lines)
+        heuristics = self.compute_layout_profile(self.lines)
         coordinate_tolerance = heuristics.word_gaps[1] if self.ocr else 0.0
-        line_groups = self.group_consecutive_lines_by_y(page_lines, coordinate_tolerance)
+        line_groups = self.group_consecutive_lines_by_y(self.lines, coordinate_tolerance)
 
         columns = []
         if not self.ocr:
@@ -539,11 +538,11 @@ class PageAnalyzer:
                     column_heuristics = heuristics # TextHeuristics(ocr).analyze(column_lines)
                     column_line_groups = self.group_consecutive_lines_by_y(column_lines, coordinate_tolerance)
                     columns.append(ColumnData(column_line_groups, column_heuristics))
-                return PageData(page_lines, heuristics, columns, self.ocr)
+                return PageData(self.lines, heuristics, columns, self.ocr)
 
         columns.append(ColumnData(line_groups, heuristics))
 
-        return PageData(page_lines, heuristics, columns, self.ocr)
+        return PageData(self.lines, heuristics, columns, self.ocr)
 
 class DocumentData:
     def __init__(self):
@@ -629,7 +628,7 @@ def main():
             document_heuristics = DocumentData()
             for page_blocks in pdf_reader.iter_pages(sort=True):
 
-                lines = list(DocumentAnalysis.iter_pdf_styling_from_blocks(page_blocks=page_blocks))
+                lines = PageLines(list(DocumentAnalysis.iter_pdf_styling_from_blocks(page_blocks=page_blocks)))
                 if len(lines) == 0:
                     continue
 
