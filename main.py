@@ -505,25 +505,22 @@ class PageAnalyzer:
             result.append(buffer)
         return result
 
-    def analyze(self, lines):
+    def compute_layout_profile(self, page_lines):
+        start_x = IndentHeuristic(self.ocr).compute_feature_stats(page_lines)
+        start_y = FeatureStats(StartYHeuristic(self.ocr).compute_distribution(page_lines),
+                               LineGapHeuristic(self.ocr).compute_bounds(page_lines))
+        end_x = EndXHeuristic(self.ocr).compute_feature_stats(page_lines)
+        word_gaps = WordGapHeuristic(self.ocr).compute_bounds(page_lines)
+        character_count = CharacterCountHeuristic(self.ocr).compute_feature_stats(page_lines)
+        font_size = FontSizeHeuristic(self.ocr).compute_feature_stats(page_lines)
+        font_name = FeatureStats(FontNameHeuristic(self.ocr).compute_distribution(page_lines), Bounds(None, None))
+
+        return LayoutProfile(start_x, start_y, end_x, word_gaps, character_count, font_size, font_name)
 
     def analyze(self):
 
-        font_name = FeatureStats(FontNameHeuristic(ocr).compute_distribution(lines), Bounds(None, None))
-
-
-        page_lines = PageLines(lines)
-
-        start_x = IndentHeuristic(ocr).compute_feature_stats(page_lines)
-        start_y = FeatureStats(StartYHeuristic(ocr).compute_distribution(page_lines), LineGapHeuristic(ocr).compute_bounds(page_lines))
-        end_x = EndXHeuristic(ocr).compute_feature_stats(page_lines)
-        word_gaps = WordGapHeuristic(ocr).compute_bounds(page_lines)
-        character_count = CharacterCountHeuristic(ocr).compute_feature_stats(page_lines)
-        font_size = FontSizeHeuristic(ocr).compute_feature_stats(page_lines)
-        font_name = FeatureStats(FontNameHeuristic(ocr).compute_distribution(page_lines), Bounds(None, None))
-        heuristics = LayoutProfile(start_x, start_y, end_x, word_gaps, character_count, font_size, font_name)
-
-
+        page_lines = PageLines(self.lines)
+        heuristics = self.compute_layout_profile(page_lines)
         coordinate_tolerance = heuristics.word_gaps[1] if self.ocr else 0.0
         line_groups = self.group_consecutive_lines_by_y(page_lines, coordinate_tolerance)
 
