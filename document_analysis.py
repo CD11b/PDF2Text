@@ -55,7 +55,6 @@ class DocumentAnalysis:
                         text = span.get("text", "").strip()
                         if text:
                             yield StyledLine(text=text,
-                                             character_density=len(text),
                                              font_size=float(span["size"]),
                                              font_name=str(span["font"]),
                                              start_x=float(span["origin"][0]),

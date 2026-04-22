@@ -30,7 +30,6 @@ class LineCollector:
 
         return StyledLine(
             text=' '.join(line.text for line in line_group if line.text.strip()),
-            character_density=sum(line.character_density for line in line_group),
             font_size=mean(line.font_size for line in line_group),
             font_name=first_group.font_name,
             start_x=first_group.start_x,
