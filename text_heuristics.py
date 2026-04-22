@@ -112,10 +112,6 @@ class LineGapHeuristic(Heuristic):
     def build_counter(self, lines: list[StyledLine]) -> Counter[float]:
         start_y_counter = self.get_styling_counter(lines, "start_y")
 
-        # if len(start_y_counter) < 2:
-        #     logger.warning("Only one line detected on page.")
-        #     return 0.0, 0.0
-
         counter: Counter[float] = Counter()
         values = sorted(start_y_counter)
 
