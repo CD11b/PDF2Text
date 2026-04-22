@@ -46,6 +46,12 @@ class Heuristic:
         """Override in subclasses."""
         raise NotImplementedError
 
+    def iter_rows(self, lines: list[StyledLine]):
+
+        sorted_lines = sorted(lines, key=lambda line: line.start_y)
+        for _, group in groupby(sorted_lines, key=lambda line: line.start_y):
+            yield sorted(group, key=lambda line: line.start_x)
+
     def compute_distribution(self, lines: list[StyledLine]):
         counter = self.build_counter(lines)
         return Distribution.create(counter)
@@ -77,9 +83,8 @@ class CharacterCountHeuristic(Heuristic):
     def build_counter(self, lines: list[StyledLine])-> Counter[float]:
 
         counter: Counter[float] = Counter()
-        for _, group in groupby(lines, key=lambda line: line.start_y):
-            group_lines = sorted(group, key=lambda line: line.start_x)
-            character_count = sum(line.character_count for line in group_lines)
+        for row in self.iter_rows(lines):
+            character_count = sum(line.character_count for line in row)
             if character_count > 0:
                 counter[character_count] += 1
 
@@ -96,9 +101,8 @@ class IndentHeuristic(Heuristic):
     def build_counter(self, lines: list[StyledLine]) -> Counter[float]:
 
         counter: Counter[float] = Counter()
-        for _, group in groupby(lines, key=lambda line: line.start_y):
-            group_lines = sorted(group, key=lambda line: line.start_x)
-            indent = group_lines[0].start_x
+        for row in self.iter_rows(lines):
+            indent = row[0].start_x
             counter[indent] += 1
 
         return counter
@@ -126,11 +130,9 @@ class WordGapHeuristic(Heuristic):
     def build_counter(self, lines: list[StyledLine]) -> Counter[float]:
         counter: Counter[float] = Counter()
 
-        for _, group in groupby(lines, key=lambda line: line.start_y):
-            group_lines = sorted(group, key=lambda line: line.start_x)
-
-            for i in range(len(group_lines) - 1):
-                gap = group_lines[i + 1].start_x - group_lines[i].end_x
+        for row in self.iter_rows(lines):
+            for i in range(len(row) - 1):
+                gap = row[i + 1].start_x - row[i].end_x
                 if gap > 0:
                     counter[gap] += 1
 
