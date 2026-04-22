@@ -22,9 +22,9 @@ class VerticalRegion(Enum):
     BODY = auto()
     FOOTER = auto()
 
-class Density(Enum):
-    DENSE = auto()
-    SPARSE = auto()
+class CharacterCount(Enum):
+    HIGH = auto()
+    LOW = auto()
 
 class FontName(Enum):
     MAIN = auto()

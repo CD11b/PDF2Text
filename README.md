@@ -6,7 +6,7 @@ A layout-aware PDF text extraction pipeline that preserves reading order and fil
 
 ## Overview
 
-Standard PDF text extraction tools treat a document as a flat stream of characters, losing structural information about columns, paragraphs, and reading order. This library reconstructs that structure by analyzing the geometric and typographic properties of each text span (font size, position, indentation, and character density) and applying a rule-based classifier to decide whether each line belongs to the main body text.
+Standard PDF text extraction tools treat a document as a flat stream of characters, losing structural information about columns, paragraphs, and reading order. This library reconstructs that structure by analyzing the geometric and typographic properties of each text span (font size, position, indentation, and character count) and applying a rule-based classifier to decide whether each line belongs to the main body text.
 
 ---
 
@@ -42,9 +42,9 @@ Broadly, the pipeline processes one page at a time in five stages:
 PDFReader → PageAnalyzer → FilterText → BracketCleaner → OutputWriter
 ```
 
-**`PageAnalyzer`** extracts raw text spans from PyMuPDF block dictionaries, detects OCR, computes statistical heuristics (font size distribution, line spacing, indentation bounds, character density), and segments the page into columns and line groups.
+**`PageAnalyzer`** extracts raw text spans from PyMuPDF block dictionaries, detects OCR, computes statistical heuristics (font size distribution, line spacing, indentation bounds, character count), and segments the page into columns and line groups.
 
-**`FilterText`** classifies each line group using a `PageLayout` context that holds the column's geometric boundaries and coordinate tolerance. Each line group is assigned a `LineContext`, a snapshot of its margin position, vertical region, paragraph position, indentation, density, font name, and font size, and routed to one of six rule engines that decide whether to collect or skip it.
+**`FilterText`** classifies each line group using a `PageLayout` context that holds the column's geometric boundaries and coordinate tolerance. Each line group is assigned a `LineContext`, a snapshot of its margin position, vertical region, paragraph position, indentation, character_count, font name, and font size, and routed to one of six rule engines that decide whether to collect or skip it.
 
 - Rule engines contain prioritized, independently testable rules. Each rule inspects only the pre-computed `LineContext` with no access to the raw iterator or layout internals.
 
@@ -88,7 +88,7 @@ Output is written to `./generated/<document_title>.txt`.
 
 ```
 ├── main.py                  # Pipeline entry point
-├── classifier.py            # Line classification (margin, region, density, font)
+├── classifier.py            # Line classification (margin, region, character_count, font)
 ├── text_heuristics.py       # Statistical heuristic computation (MAD-based bounds)
 ├── document_analysis.py     # PyMuPDF block extraction
 ├── line_collector.py        # Collect/skip decisions

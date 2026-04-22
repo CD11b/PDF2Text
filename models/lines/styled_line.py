@@ -11,7 +11,7 @@ class StyledLine:
     end_x: float
 
     @property
-    def character_density(self):
+    def character_count(self):
         return len(self.text)
 
     def __post_init__(self):

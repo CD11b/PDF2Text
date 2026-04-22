@@ -24,14 +24,14 @@ class FooterRegionLoneIndentedTextRule(FooterRegionRule):
     def decide(self, ctx):
         return Decision.skip("Lone indented text at Footer Region", self.name)
 
-class FooterRegionDenseLineRule(FooterRegionRule):
+class FooterRegionHighCharacterCountLineRule(FooterRegionRule):
     priority = 30
 
     def matches(self, ctx):
-        return ctx.density is Density.DENSE
+        return ctx.character_count is CharacterCount.HIGH
 
     def decide(self, ctx):
-        return Decision.collect("Dense line at Footer", self.name) # Would also collect citations
+        return Decision.collect("High character count line at Footer", self.name) # Would also collect citations
 
 class FallbackFooterRegionRule(FooterRegionRule):
     priority = 999

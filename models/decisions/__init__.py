@@ -9,6 +9,6 @@ __all__ = ["Action",
            "PositionInParagraph",
            "MarginPosition",
            "VerticalRegion",
-           "Density",
+           "CharacterCount",
            "FontName",
            "FontSize"]

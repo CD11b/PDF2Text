@@ -140,20 +140,20 @@ class RegionClassifier(Classifier):
 
             return VerticalRegion.BODY
 
-class DensityClassifier(Classifier):
+class CharacterCountClassifier(Classifier):
 
     def _extract_features(self, line_group):
-        line_density = sum((line.character_density for line in line_group))
-        return line_density
+        line_character_count = sum((line.character_count for line in line_group))
+        return line_character_count
 
-    def _compute(self, features) -> Density:
+    def _compute(self, features) -> CharacterCount:
 
-        line_density = features
+        line_character_count = features
 
-        if line_density >= self.layout.page.heuristics.character_density.lower_bound:
-            return Density.DENSE
+        if line_character_count >= self.layout.page.heuristics.character_count.lower_bound:
+            return CharacterCount.HIGH
         else:
-            return Density.SPARSE
+            return CharacterCount.LOW
 
 class FontNameClassifier(Classifier):
 

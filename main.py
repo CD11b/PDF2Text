@@ -19,7 +19,7 @@ from document_analysis import DocumentAnalysis
 from logger_config import setup_logging
 from text_heuristics import *
 from line_collector import LineCollector
-from classifer import IndentationClassifier, PositionClassifier, MarginClassifier, RegionClassifier, DensityClassifier, FontNameClassifier, FontSizeClassifier
+from classifer import IndentationClassifier, PositionClassifier, MarginClassifier, RegionClassifier, CharacterCountClassifier, FontNameClassifier, FontSizeClassifier
 from text_cleaning import remove_page_number_lines, join_lines, normalize_text
 
 os.environ["TESSDATA_PREFIX"] = "./training"
@@ -211,7 +211,7 @@ class FilterText:
 
         self.header_rule_engine = RuleEngine([
             BodyParagraphAtHeaderRegionRule(),
-            DenseLineAtHeaderRegionRule(),
+            HighCharacterCountLineAtHeaderRegionRule(),
             JournalNameAtHeaderRule(),
             FallbackHeaderRegionRule()
         ])
@@ -219,7 +219,7 @@ class FilterText:
         self.footer_rule_engine = RuleEngine([
             FooterRegionBodyParagraphRule(),
             FooterRegionLoneIndentedTextRule(),
-            FooterRegionDenseLineRule(),
+            FooterRegionHighCharacterCountLineRule(),
             FallbackFooterRegionRule()
         ])
 
@@ -344,7 +344,7 @@ class PageLayout:
         self.line_indentation = IndentationClassifier(self)
         self.line_region = RegionClassifier(self)
         self.margin_position = MarginClassifier(self)
-        self.line_density = DensityClassifier(self)
+        self.line_character_count = CharacterCountClassifier(self)
         self.line_font_name = FontNameClassifier(self)
         self.line_font_size = FontSizeClassifier(self)
 
@@ -440,8 +440,8 @@ class PageAnalyzer:
         counter = Counter()
 
         for group in line_groups_by_y.values():
-            row_density = sum(line.character_density for line in group)
-            counter[len(group)] += row_density
+            row_character_count = sum(line.character_count for line in group)
+            counter[len(group)] += row_character_count
 
         number_columns = counter.most_common(1)[0][0]
         return number_columns
@@ -454,7 +454,7 @@ class PageAnalyzer:
         start_x_counter = Counter()
         for group in line_groups_by_y.values():
             for line in group:
-                start_x_counter[line.start_x] += line.character_density
+                start_x_counter[line.start_x] += line.character_count
 
         start_x_columns = [column[0] for column in start_x_counter.most_common(number_columns)]
 
@@ -510,10 +510,10 @@ class PageAnalyzer:
         start_y = FeatureStats(StartYHeuristic(ocr).compute_distribution(lines), LineGapHeuristic(ocr).compute_bounds(lines))
         end_x = EndXHeuristic(ocr).compute_feature_stats(lines)
         word_gaps = WordGapHeuristic(ocr).compute_bounds(lines)
-        density = CharacterDensityHeuristic(ocr).compute_feature_stats(lines)
+        character_count = CharacterCountHeuristic(ocr).compute_feature_stats(lines)
         font_size = FontSizeHeuristic(ocr).compute_feature_stats(lines)
         font_name = FeatureStats(FontNameHeuristic(ocr).compute_distribution(lines), Bounds(None, None))
-        heuristics = LayoutProfile(start_x, start_y, end_x, word_gaps, density, font_size, font_name)
+        heuristics = LayoutProfile(start_x, start_y, end_x, word_gaps, character_count, font_size, font_name)
 
         coordinate_tolerance = heuristics.word_gaps[1] if ocr else 0.0
         line_groups = self.group_consecutive_lines_by_y(lines, coordinate_tolerance)

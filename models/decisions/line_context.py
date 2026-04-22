@@ -8,7 +8,7 @@ class LineContext:
     indentation: LineIndentation
     region: VerticalRegion
     margin_position: MarginPosition
-    density: Density
+    character_count: CharacterCount
     font_name: FontName
     font_size: FontSize
     split_span: bool
@@ -31,7 +31,7 @@ class LineContext:
             indentation=layout.line_indentation.classify(context=(line_start_x, previous_start_x, next_start_x)),
             region=layout.line_region.classify(line_group),
             margin_position=layout.margin_position.classify(line_group),
-            density=layout.line_density.classify(line_group),
+            character_count=layout.line_character_count.classify(line_group),
             font_name=layout.line_font_name.classify(line_group),
             font_size=layout.line_font_size.classify(line_group),
             split_span=layout.is_split_span(line_group, next_group),
@@ -43,7 +43,7 @@ class LineContext:
                 f" {self.indentation},"
                 f" {self.region},"
                 f" {self.margin_position},"
-                f" {self.density},"
+                f" {self.character_count},"
                 f" {self.font_name}/{self.font_size},"
                 f" split_span={self.split_span},"
                 f" last_line={self.last_line})")

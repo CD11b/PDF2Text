@@ -88,6 +88,6 @@ class LayoutProfile:
     start_y: FeatureStats
     end_x: FeatureStats
     word_gaps: Bounds
-    character_density: FeatureStats
+    character_count: FeatureStats
     font_size: FeatureStats
     font_name: str

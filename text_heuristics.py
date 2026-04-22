@@ -67,7 +67,7 @@ class FontSizeHeuristic(Heuristic):
         return self.get_styling_counter(lines, "font_size")
 
 
-class CharacterDensityHeuristic(Heuristic):
+class CharacterCountHeuristic(Heuristic):
     _THRESHOLD: float = 2.0
 
     @property
@@ -79,9 +79,9 @@ class CharacterDensityHeuristic(Heuristic):
         counter: Counter[float] = Counter()
         for _, group in groupby(lines, key=lambda line: line.start_y):
             group_lines = sorted(group, key=lambda line: line.start_x)
-            density = sum(line.character_density for line in group_lines)
-            if density > 0:
-                counter[density] += 1
+            character_count = sum(line.character_count for line in group_lines)
+            if character_count > 0:
+                counter[character_count] += 1
 
         return counter
 

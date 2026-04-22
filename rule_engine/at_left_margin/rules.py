@@ -9,7 +9,7 @@ class SingleEmphasizedLineRule(AtLeftMarginRule):
 
     def matches(self, ctx):
         return (ctx.position_in_paragraph is PositionInParagraph.SINGLE_LINE and
-                ctx.density is Density.DENSE and
+                ctx.character_count is CharacterCount.HIGH and
                 ctx.font_size is FontSize.MAIN)
 
     def decide(self, ctx):

@@ -13,20 +13,20 @@ class BodyParagraphAtHeaderRegionRule(HeaderRegionRule):
     def decide(self, ctx):
         return Decision.collect("Body paragraph at header", self.name)
 
-class DenseLineAtHeaderRegionRule(HeaderRegionRule):
+class HighCharacterCountLineAtHeaderRegionRule(HeaderRegionRule):
     priority = 20
 
     def matches(self, ctx):
-        return ctx.density is Density.DENSE
+        return ctx.character_count is CharacterCount.HIGH
 
     def decide(self, ctx):
-        return Decision.collect("Dense line at header", self.name)
+        return Decision.collect("High character count line at header", self.name)
 
 class JournalNameAtHeaderRule(HeaderRegionRule):
     priority = 30
 
     def matches(self, ctx):
-        return (ctx.density is Density.SPARSE and
+        return (ctx.character_count is CharacterCount.LOW and
                 ctx.position_in_paragraph is PositionInParagraph.SINGLE_LINE)
 
     def decide(self, ctx):
