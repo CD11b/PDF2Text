@@ -5,14 +5,20 @@ from collections import Counter
 @dataclass(frozen=True, slots=True)
 class Distribution:
     most_common: float
-    minimum: float
-    maximum: float
+    minimum: float | None
+    maximum: float | None
 
     @classmethod
-    def create(cls, counter):
+    def create(cls, counter, discrete = False):
         most_common = counter.most_common(1)[0][0]
-        minimum = min(counter)
-        maximum = max(counter)
+
+        if not discrete:
+            minimum = min(counter)
+            maximum = max(counter)
+        else:
+            minimum = None
+            maximum = None
+
         return cls(most_common, minimum, maximum)
 
 

@@ -6,7 +6,7 @@ from typing import Optional, Any
 from itertools import groupby
 import logging
 
-from models import StyledLine, FeatureStats, LayoutProfile, Bounds, Distribution
+from models import StyledLine, FeatureStats, Bounds, Distribution
 
 logger = logging.getLogger(__name__)
 
@@ -174,3 +174,7 @@ class FontNameHeuristic(Heuristic):
 
     def build_counter(self, lines: list[StyledLine]) -> Counter[float]:
         return self.get_styling_counter(lines, "font_name")
+
+    def compute_distribution(self, lines: list[StyledLine]):
+        counter = self.build_counter(lines)
+        return Distribution.create(counter, discrete=True)
