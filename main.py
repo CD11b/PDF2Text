@@ -17,7 +17,7 @@ from rule_engine.before_left_margin import *
 
 from document_analysis import DocumentAnalysis
 from logger_config import setup_logging
-from text_heuristics import TextHeuristics
+from text_heuristics import *
 from line_collector import LineCollector
 from classifer import IndentationClassifier, PositionClassifier, MarginClassifier, RegionClassifier, DensityClassifier, FontNameClassifier, FontSizeClassifier
 from text_cleaning import remove_page_number_lines, join_lines, normalize_text
@@ -501,11 +501,19 @@ class PageAnalyzer:
 
         ocr = self.detect_ocr(lines)
 
-        heuristics = TextHeuristics(ocr).analyze(lines)
+        font_name = FeatureStats(FontNameHeuristic(ocr).compute_distribution(lines), Bounds(None, None))
 
-        if ocr and heuristics.font_name != 'GlyphLessFont':
+        if ocr and font_name.most_common != 'GlyphLessFont':
             ocr = False
-            heuristics = TextHeuristics(ocr).analyze(lines)
+
+        start_x = IndentHeuristic(ocr).compute_feature_stats(lines)
+        start_y = FeatureStats(StartYHeuristic(ocr).compute_distribution(lines), LineGapHeuristic(ocr).compute_bounds(lines))
+        end_x = EndXHeuristic(ocr).compute_feature_stats(lines)
+        word_gaps = WordGapHeuristic(ocr).compute_bounds(lines)
+        density = CharacterDensityHeuristic(ocr).compute_feature_stats(lines)
+        font_size = FontSizeHeuristic(ocr).compute_feature_stats(lines)
+        font_name = FeatureStats(FontNameHeuristic(ocr).compute_distribution(lines), Bounds(None, None))
+        heuristics = LayoutProfile(start_x, start_y, end_x, word_gaps, density, font_size, font_name)
 
         coordinate_tolerance = heuristics.word_gaps[1] if ocr else 0.0
         line_groups = self.group_consecutive_lines_by_y(lines, coordinate_tolerance)
@@ -515,13 +523,14 @@ class PageAnalyzer:
 
             line_groups_by_y = self.group_line_groups_by_y(line_groups)
             number_columns = self.compute_column_count(line_groups_by_y)
+            logging.debug(f"Detected {number_columns} column(s)")
             if number_columns > 1:
                 start_x_columns = self.compute_column_starts(line_groups_by_y, number_columns)
                 columned_groups = self.sort_line_columns(line_groups, start_x_columns)
 
                 for start_x in sorted(columned_groups.keys()):
                     column_lines = columned_groups[start_x]
-                    column_heuristics = TextHeuristics(ocr).analyze(column_lines)
+                    column_heuristics = heuristics # TextHeuristics(ocr).analyze(column_lines)
                     column_line_groups = self.group_consecutive_lines_by_y(column_lines, coordinate_tolerance)
                     columns.append(ColumnData(column_line_groups, column_heuristics))
                 return PageData(lines, heuristics, columns, ocr)

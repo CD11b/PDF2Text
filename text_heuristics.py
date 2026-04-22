@@ -1,28 +1,36 @@
 from __future__ import annotations
-import numpy as np
 from collections import Counter
 from typing import Optional, Any
 from itertools import groupby
 import logging
 
-from models import StyledLine, Bounds, Heuristics
+from models import StyledLine, FeatureStats, LayoutProfile, Bounds, Distribution
 
 logger = logging.getLogger(__name__)
 
-class TextHeuristics:
-    """Computes statistical heuristics for lines of styled text."""
-
-    _NORMAL_THRESHOLD: float = 1.0
-    _OCR_THRESHOLD: float = 3.0
-    _INDENT_THRESHOLD: float = 2.0
-    _DENSITY_THRESHOLD: float = 2.0
+class Heuristic:
 
     def __init__(self, ocr: bool, override_threshold: Optional[float] = None) -> None:
         self.ocr: bool = ocr
-        if override_threshold is not None:
-            self.threshold: float = override_threshold
+        self.override_threshold = override_threshold
+
+    @property
+    def name(self):
+        return self.__class__.__name__
+
+    @property
+    def threshold(self) -> float:
+        """Override if subclass needs a custom threshold."""
+
+        _THRESHOLD: float = 1.0
+        _OCR_THRESHOLD: float = 3.0
+
+        if self.override_threshold is not None:
+            threshold: float = self.override_threshold
         else:
-            self.threshold = self._OCR_THRESHOLD if ocr else self._NORMAL_THRESHOLD
+            threshold = _OCR_THRESHOLD if self.ocr else _THRESHOLD
+
+        return threshold
 
     @staticmethod
     def get_styling_counter(lines: list[StyledLine], attribute: str) -> Counter[Any]:
@@ -34,66 +42,75 @@ class TextHeuristics:
             counter[attr_value] += len(line.text)
         return counter
 
-    @staticmethod
-    def most_common_value(counter: Counter[Any]) -> Optional[Any]:
-        """Return the most common key in a Counter, or None if empty."""
+    def build_counter(self, lines: list[StyledLine]) -> Counter[Any]:
+        """Override in subclasses."""
+        raise NotImplementedError
 
-        return counter.most_common(1)[0][0] if counter else None
+    def compute_distribution(self, lines: list[StyledLine]):
+        counter = self.build_counter(lines)
+        return Distribution.create(counter)
 
-    def compute_bounds(self, data: Counter[float], threshold: Optional[float] = None) -> tuple[float, float] | None:
-        """Compute statistical bounds for a numeric counter using MAD."""
-        if not data:
-            return None
+    def compute_bounds(self, lines: list[StyledLine]):
+        counter = self.build_counter(lines)
+        return Bounds.create(counter, self.threshold)
 
-        if threshold is None:
-            threshold = self.threshold
+    def compute_feature_stats(self, lines: list[StyledLine]):
+        counter = self.build_counter(lines)
+        bounds = Bounds.create(counter, self.threshold)
 
-        values = np.array(list(data.keys()))
-        weights = np.array(list(data.values()))
+        return FeatureStats(distribution=Distribution.create(counter),
+                            bounds = bounds)
 
-        # Weighted median
-        sorted_idx = np.argsort(values)
-        sorted_values = values[sorted_idx]
-        sorted_weights = weights[sorted_idx]
-        cumsum = np.cumsum(sorted_weights)
-        median = sorted_values[np.searchsorted(cumsum, cumsum[-1] / 2)]
+class FontSizeHeuristic(Heuristic):
 
-        # Median Absolute Deviation
-        deviations = np.abs(values - median)
-        mad = np.average(deviations, weights=weights)
+    def build_counter(self, lines):
+        return self.get_styling_counter(lines, "font_size")
 
-        if mad == 0 or np.isnan(mad):
-            return float(values.min()), float(values.max())
 
-        # MAD filtering
-        mad_scores = np.abs((values - median) / (1.4826 * mad))
-        inliers = values[mad_scores <= threshold]
+class CharacterDensityHeuristic(Heuristic):
+    _THRESHOLD: float = 2.0
 
-        if len(inliers) == 0:
-            return float(values.min()), float(values.max())
+    @property
+    def threshold(self) -> float:
+        return self._THRESHOLD
 
-        return float(inliers.min()), float(inliers.max())
-
-    def compute_word_gaps(self, lines: list[StyledLine]) -> tuple[float, float]:
-        """Compute typical horizontal gaps between words on the same line."""
+    def build_counter(self, lines: list[StyledLine])-> Counter[float]:
 
         counter: Counter[float] = Counter()
         for _, group in groupby(lines, key=lambda line: line.start_y):
             group_lines = sorted(group, key=lambda line: line.start_x)
+            density = sum(line.character_density for line in group_lines)
+            if density > 0:
+                counter[density] += 1
 
-            for i in range(len(group_lines) - 1):
-                gap = group_lines[i + 1].start_x - group_lines[i].end_x
-                if gap > 0:
-                    counter[gap] += 1
+        return counter
 
-        return self.compute_bounds(counter)
 
-    def compute_line_gaps(self, start_y_counter: Counter[float]) -> tuple[float, float]:
-        """Compute vertical gaps between consecutive lines."""
+class IndentHeuristic(Heuristic):
+    _THRESHOLD = 2.0
 
-        if len(start_y_counter) < 2:
-            logger.warning("Only one line detected on page. Line gaps may be misleading.")
-            return 0.0, 0.0
+    @property
+    def threshold(self) -> float:
+        return self._THRESHOLD
+
+    def build_counter(self, lines: list[StyledLine]) -> Counter[float]:
+
+        counter: Counter[float] = Counter()
+        for _, group in groupby(lines, key=lambda line: line.start_y):
+            group_lines = sorted(group, key=lambda line: line.start_x)
+            indent = group_lines[0].start_x
+            counter[indent] += 1
+
+        return counter
+
+class LineGapHeuristic(Heuristic):
+
+    def build_counter(self, lines: list[StyledLine]) -> Counter[float]:
+        start_y_counter = self.get_styling_counter(lines, "start_y")
+
+        # if len(start_y_counter) < 2:
+        #     logger.warning("Only one line detected on page.")
+        #     return 0.0, 0.0
 
         counter: Counter[float] = Counter()
         values = sorted(start_y_counter)
@@ -102,92 +119,39 @@ class TextHeuristics:
             gap = abs(y2 - y1)
             counter[gap] += start_y_counter[y1]
 
-        return self.compute_bounds(counter)
+        return counter
 
-    def compute_indent_gaps(self, lines: list[StyledLine]) -> tuple[float, float]:
-        """Compute typical indentation values from the first line in each text group."""
+class WordGapHeuristic(Heuristic):
 
+    def build_counter(self, lines: list[StyledLine]) -> Counter[float]:
         counter: Counter[float] = Counter()
 
         for _, group in groupby(lines, key=lambda line: line.start_y):
-
             group_lines = sorted(group, key=lambda line: line.start_x)
-            indent = group_lines[0].start_x
-            counter[indent] += 1
 
-        return self.compute_bounds(counter, threshold=self._INDENT_THRESHOLD)
+            for i in range(len(group_lines) - 1):
+                gap = group_lines[i + 1].start_x - group_lines[i].end_x
+                if gap > 0:
+                    counter[gap] += 1
 
-    def compute_character_density(self, lines: list[StyledLine]) -> tuple[float, float]:
-        """Compute typical character density of a line."""
+        return counter
 
-        counter: Counter[float] = Counter()
-        for _, group in groupby(lines, key=lambda line: line.start_y):
-            group_lines = sorted(group, key=lambda line: line.start_x)
-            density = sum((line.character_density for line in group_lines))
-            if density > 0:
-                counter[density] += 1
+class EndXHeuristic(Heuristic):
 
-        return self.compute_bounds(counter, threshold=self._DENSITY_THRESHOLD)
+    def build_counter(self, lines: list[StyledLine]) -> Counter[float]:
+        return self.get_styling_counter(lines, "end_x")
 
-    def analyze(self, lines: list[StyledLine]) -> Heuristics:
-        """Perform full heuristic analysis of styled lines."""
+class StartXHeuristic(Heuristic):
 
-        logger.debug("Analyzing text heuristics.")
+    def build_counter(self, lines: list[StyledLine]) -> Counter[float]:
+        return self.get_styling_counter(lines, "start_x")
 
-        counters: dict[str, Counter[Any]] = {
-            attr: self.get_styling_counter(lines, attr)
-            for attr in ['character_density', 'font_size', 'font_name', 'start_x', 'start_y', 'end_x']
-        }
+class StartYHeuristic(Heuristic):
 
-        most_common: dict[str, Any] = {
-            k: self.most_common_value(v) for k, v in counters.items()
-        }
+    def build_counter(self, lines: list[StyledLine]) -> Counter[float]:
+        return self.get_styling_counter(lines, "start_y")
 
-        font_bounds = self.compute_bounds(counters['font_size'])
-        character_density_bounds = self.compute_character_density(lines=lines)
-        line_gaps = self.compute_line_gaps(counters['start_y'])
-        indent_bounds = self.compute_indent_gaps(lines=lines)
-        edge_bounds = self.compute_bounds(counters['end_x'])
+class FontNameHeuristic(Heuristic):
 
-        word_gaps: tuple[Optional[float], Optional[float]]
-        word_gaps = self.compute_word_gaps(lines=lines) if self.ocr else None
-
-        return Heuristics(
-            start_x=Bounds(
-                most_common=most_common['start_x'],
-                minimum=min(counters['start_x']),
-                maximum=max(counters['start_x']),
-                lower_bound=indent_bounds[0],
-                upper_bound=indent_bounds[1]
-            ),
-            start_y=Bounds(
-                most_common=most_common['start_y'],
-                minimum=min(counters['start_y']),
-                maximum=max(counters['start_y']),
-                lower_bound=line_gaps[0],
-                upper_bound=line_gaps[1]
-            ),
-            end_x=Bounds(
-                most_common=most_common['end_x'],
-                minimum=min(counters['end_x']),
-                maximum=max(counters['end_x']),
-                lower_bound=edge_bounds[0],
-                upper_bound=edge_bounds[1]
-            ),
-            word_gaps=word_gaps,
-            character_density=Bounds(
-                most_common=most_common['character_density'],
-                minimum=min(counters['character_density']),
-                maximum=max(counters['character_density']),
-                lower_bound=character_density_bounds[0],
-                upper_bound=character_density_bounds[1]
-            ),
-            font_size=Bounds(
-                most_common=most_common['font_size'],
-                minimum=min(counters['font_size']),
-                maximum=max(counters['font_size']),
-                lower_bound=font_bounds[0],
-                upper_bound=font_bounds[1]
-            ),
-            font_name=most_common['font_name']
-        )
+    def build_counter(self, lines: list[StyledLine]) -> Counter[float]:
+        return self.get_styling_counter(lines, "font_name")
