@@ -62,6 +62,12 @@ class Bounds:
 
 
 @dataclass(frozen=True, slots=True)
+class GapData:
+    within_rows: Bounds
+    between_rows: Bounds
+
+
+@dataclass(frozen=True, slots=True)
 class FeatureStats:
     distribution: Distribution
     bounds: Bounds
@@ -93,7 +99,7 @@ class LayoutProfile:
     start_x: FeatureStats
     start_y: FeatureStats
     end_x: FeatureStats
-    word_gaps: Bounds
+    gaps: GapData
     character_count: FeatureStats
     font_size: FeatureStats
     font_name: str

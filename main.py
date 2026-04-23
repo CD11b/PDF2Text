@@ -494,13 +494,16 @@ class PageAnalyzer:
         start_x = IndentHeuristic(self.ocr).compute_feature_stats(page_lines)
         start_y = FeatureStats(StartYHeuristic(self.ocr).compute_distribution(page_lines), Bounds(None, None))
         end_x = EndXHeuristic(self.ocr).compute_feature_stats(page_lines)
+
         gap_within_rows = GapWithinRowsHeuristic(self.ocr).compute_bounds(page_lines) if self.ocr else Bounds(None, None)
         gap_between_rows = GapBetweenRowsHeuristic(self.ocr).compute_bounds(page_lines)
+        gap_data = GapData(gap_within_rows, gap_between_rows)
+
         character_count = CharacterCountHeuristic(self.ocr).compute_feature_stats(page_lines)
         font_size = FontSizeHeuristic(self.ocr).compute_feature_stats(page_lines)
         font_name = FeatureStats(FontNameHeuristic(self.ocr).compute_distribution(page_lines), Bounds(None, None))
 
-        return LayoutProfile(start_x, start_y, end_x, word_gaps, character_count, font_size, font_name)
+        return LayoutProfile(start_x, start_y, end_x, gap_data, character_count, font_size, font_name)
 
     def analyze(self):
 
