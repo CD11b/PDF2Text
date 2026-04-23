@@ -66,7 +66,7 @@ class PositionClassifier(Classifier):
 
         line_start_y, previous_start_y, next_start_y = features
 
-        start_y_upper_bound = self.layout.column.heuristics.start_y.upper_bound
+        start_y_upper_bound = self.layout.column.heuristics.row_separation
 
         close_to_previous_line = previous_start_y is not None and abs(line_start_y - previous_start_y) <= start_y_upper_bound
         close_to_next_line = next_start_y is not None and abs(line_start_y - next_start_y) <= start_y_upper_bound
@@ -115,11 +115,11 @@ class RegionClassifier(Classifier):
 
         if line_start < midway:
             if self.layout.has_default_top:
-                if line_start <= self.layout.top_boundary + self.layout.page.heuristics.start_y.upper_bound:
+                if line_start <= self.layout.top_boundary + self.layout.page.heuristics.row_separation:
                     return VerticalRegion.HEADER
 
-                for top_boundary, lower_bound in self.layout.document.get_all_top_boundaries():
-                    if line_start <= top_boundary + lower_bound:
+                for top_boundary, row_separation in self.layout.document.get_all_top_boundaries():
+                    if line_start <= top_boundary + row_separation:
                         return VerticalRegion.HEADER
             else:
                 if line_start <= self.layout.top_boundary:
@@ -129,10 +129,10 @@ class RegionClassifier(Classifier):
 
         else:
             if self.layout.has_default_bottom:
-                if line_start >= self.layout.bottom_boundary - self.layout.page.heuristics.start_y.upper_bound:
+                if line_start >= self.layout.bottom_boundary - self.layout.page.heuristics.row_separation:
                     return VerticalRegion.FOOTER
-                for bottom_boundary, lower_bound in self.layout.document.get_all_bottom_boundaries():
-                    if line_start >= bottom_boundary - lower_bound:
+                for bottom_boundary, row_separation in self.layout.document.get_all_bottom_boundaries():
+                    if line_start >= bottom_boundary - row_separation:
                         return VerticalRegion.FOOTER
             else:
                 if line_start >= self.layout.bottom_boundary:

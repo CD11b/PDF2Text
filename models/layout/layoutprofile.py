@@ -103,3 +103,7 @@ class LayoutProfile:
     character_count: FeatureStats
     font_size: FeatureStats
     font_name: str
+
+    @property
+    def row_separation(self) -> float:
+        return self.gaps.between_rows.upper

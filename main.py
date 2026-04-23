@@ -378,7 +378,7 @@ class PageLayout:
     def is_in_order(self, line_group, filtered_lines):
         if not filtered_lines:
             return True
-        return line_group[0].start_y + self.page.heuristics.start_y.upper_bound >= filtered_lines[-1].start_y
+        return line_group[0].start_y + self.page.heuristics.row_separation >= filtered_lines[-1].start_y
 
     def is_reference_page(self):
         current_line_count = len(self.page.lines)
@@ -551,8 +551,8 @@ class DocumentData:
             self._document_indents.add((column.heuristics.start_x.most_common, column.heuristics.start_x.upper_bound))
             self._document_body_boundaries.add((column.heuristics.start_x.lower_bound, column.heuristics.start_x.upper_bound))
 
-        self._document_bottom_boundary.add((page_data.heuristics.start_y.maximum, page_data.heuristics.start_y.upper_bound))
-        self._document_top_boundary.add((page_data.heuristics.start_y.minimum, page_data.heuristics.start_y.upper_bound))
+        self._document_bottom_boundary.add((page_data.heuristics.start_y.maximum, page_data.heuristics.row_separation))
+        self._document_top_boundary.add((page_data.heuristics.start_y.minimum, page_data.heuristics.row_separation))
         self._document_font_sizes.add((page_data.heuristics.font_size.most_common, page_data.heuristics.font_size.lower_bound, page_data.heuristics.font_size.upper_bound))
         self._document_font_names.add(page_data.heuristics.font_name.most_common)
         self._document_line_counts.add(len(page_data.lines))
