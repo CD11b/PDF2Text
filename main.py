@@ -548,8 +548,8 @@ class DocumentData:
             self._document_indents.add((column.heuristics.start_x.most_common, column.heuristics.start_x.upper_bound))
             self._document_body_boundaries.add((column.heuristics.start_x.lower_bound, column.heuristics.start_x.upper_bound))
 
-        self._document_bottom_boundary.add((page_data.heuristics.start_y.maximum, page_data.heuristics.start_y.lower_bound))
-        self._document_top_boundary.add((page_data.heuristics.start_y.minimum, page_data.heuristics.start_y.lower_bound))
+        self._document_bottom_boundary.add((page_data.heuristics.start_y.maximum, page_data.heuristics.start_y.upper_bound))
+        self._document_top_boundary.add((page_data.heuristics.start_y.minimum, page_data.heuristics.start_y.upper_bound))
         self._document_font_sizes.add((page_data.heuristics.font_size.most_common, page_data.heuristics.font_size.lower_bound, page_data.heuristics.font_size.upper_bound))
         self._document_font_names.add(page_data.heuristics.font_name.most_common)
         self._document_line_counts.add(len(page_data.lines))
