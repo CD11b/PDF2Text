@@ -306,12 +306,7 @@ class FilterText:
     def filter_by_boundaries(self):
 
         result = []
-
-
         logging.debug(f"Page: {self.page.heuristics}")
-        # if remove_references and self.layout.is_reference_page():
-        #     return []
-
         for column in self.page.columns:
 
             buffer = []
@@ -607,14 +602,11 @@ def main():
     parser.add_argument("--page-start", type=int, nargs="?", help="Page to start reading")
     parser.add_argument("--page-end", type=int, nargs="?", help="Page to end reading")
     parser.add_argument("--log-level", default="DEBUG", choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"], help="Set the logging level")
-    parser.add_argument("--remove-references", action="store_true", help="Remove references from the document.")
 
     args = parser.parse_args()
-
     pdf_path = args.input_path
     page_start = args.page_start
     page_end = args.page_end
-    remove_references = args.remove_references
 
     setup_logging(log_level=args.log_level)
 
