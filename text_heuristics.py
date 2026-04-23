@@ -126,7 +126,7 @@ class IndentHeuristic(Heuristic):
 
         return counter
 
-class LineGapHeuristic(Heuristic):
+class GapBetweenRowsHeuristic(Heuristic):
 
     def build_counter(self, lines: list[StyledLine]) -> Counter[float]:
         start_y_counter = self.get_styling_counter(lines, "start_y")
@@ -140,7 +140,7 @@ class LineGapHeuristic(Heuristic):
 
         return counter
 
-class WordGapHeuristic(Heuristic):
+class GapWithinRowsHeuristic(Heuristic):
 
     def build_counter(self, lines) -> Counter[float]:
         counter: Counter[float] = Counter()
