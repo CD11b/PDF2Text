@@ -324,7 +324,7 @@ class PageLayout:
         self.bottom_boundary = page.heuristics.start_y.maximum
         self.left_boundary = column.heuristics.start_x.most_common
         self.top_boundary = page.heuristics.start_y.minimum
-        self.coordinate_tolerance = page.heuristics.word_gaps.upper if page.ocr else 0.0
+        self.coordinate_tolerance = page.heuristics.gaps.within_rows.upper if page.ocr else 0.0
         self._cache = {}
 
         self.line_position = PositionClassifier(self)
@@ -373,7 +373,7 @@ class PageLayout:
             return False
 
         indent_gap = next_group[0].start_x - line_group[-1].end_x
-        return self.column.heuristics.word_gaps.lower <= indent_gap <= self.column.heuristics.word_gaps.upper
+        return self.column.heuristics.gaps.within_rows.lower <= indent_gap <= self.column.heuristics.gaps.within_rows.upper
 
     def is_in_order(self, line_group, filtered_lines):
         if not filtered_lines:
@@ -508,7 +508,7 @@ class PageAnalyzer:
     def analyze(self):
 
         heuristics = self.compute_layout_profile(self.lines)
-        coordinate_tolerance = heuristics.word_gaps.upper if self.ocr else 0.0
+        coordinate_tolerance = heuristics.gaps.within_rows.upper if self.ocr else 0.0
         line_groups = self.create_line_groups(self.lines, coordinate_tolerance)
 
         columns = []
