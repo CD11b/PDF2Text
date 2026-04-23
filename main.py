@@ -261,34 +261,22 @@ class FilterText:
 
     def _select_engine(self, ctx):
 
+        if ctx.region is VerticalRegion.HEADER:
+            return self.header_rule_engine
+
+        if ctx.region is VerticalRegion.FOOTER:
+            return self.footer_rule_engine
+
         if ctx.margin_position is MarginPosition.BEFORE:
-
-            if ctx.region is VerticalRegion.HEADER:
-                return self.header_rule_engine
-
             return self.before_left_margin_engine
 
         if ctx.margin_position is MarginPosition.AT:
-
-            if ctx.region is VerticalRegion.FOOTER:
-                return self.footer_rule_engine
-
-            if ctx.region is VerticalRegion.HEADER:
-                return self.header_rule_engine
-
             if ctx.position_in_paragraph is not PositionInParagraph.SINGLE_LINE:
                 return self.continuous_paragraph_engine
 
             return self.at_left_margin_engine
 
         if ctx.margin_position is MarginPosition.AFTER:
-
-            if ctx.region is VerticalRegion.HEADER:
-                return self.header_rule_engine
-
-            if ctx.region is VerticalRegion.FOOTER:
-                return self.footer_rule_engine
-
             return self.indented_rule_engine
 
         return None
