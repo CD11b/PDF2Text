@@ -490,7 +490,7 @@ class PageAnalyzer:
         return columned_groups
 
     @staticmethod
-    def group_consecutive_lines_by_y(lines, coordinate_tolerance):
+    def create_line_groups(lines, coordinate_tolerance):
         result = []
         for x_sorted_lines in lines.rows:
             buffer = [x_sorted_lines[0]]
@@ -519,7 +519,7 @@ class PageAnalyzer:
 
         heuristics = self.compute_layout_profile(self.lines)
         coordinate_tolerance = heuristics.word_gaps[1] if self.ocr else 0.0
-        line_groups = self.group_consecutive_lines_by_y(self.lines, coordinate_tolerance)
+        line_groups = self.create_line_groups(self.lines, coordinate_tolerance)
 
         columns = []
         if not self.ocr:
@@ -534,7 +534,7 @@ class PageAnalyzer:
                 for start_x in sorted(columned_groups.keys()):
                     column_lines = columned_groups[start_x]
                     column_heuristics = heuristics # TextHeuristics(ocr).analyze(column_lines)
-                    column_line_groups = self.group_consecutive_lines_by_y(column_lines, coordinate_tolerance)
+                    column_line_groups = self.create_line_groups(column_lines, coordinate_tolerance)
                     columns.append(ColumnData(column_line_groups, column_heuristics))
                 return PageData(self.lines, heuristics, columns, self.ocr)
 
