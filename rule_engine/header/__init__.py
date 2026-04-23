@@ -3,6 +3,7 @@ from .rules import *
 __all__ = [
     "BodyParagraphAtHeaderRegionRule",
     "HighCharacterCountLineAtHeaderRegionRule",
-    "JournalNameAtHeaderRule",
+    "SingleLineJournalNameAtHeaderRule",
+    'StartJournalNameAtHeaderRule',
     "FallbackHeaderRegionRule"
 ]

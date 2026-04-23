@@ -206,13 +206,16 @@ class FilterText:
             ParagraphStartIndentedRule(),
             EpigraphAuthorRule(),
             TitlePageRule(),
+            ItalicWordMidLineRule(),
+            BoldWordMidLineRule(),
             FallbackIndentedRule()
         ])
 
         self.header_rule_engine = RuleEngine([
             BodyParagraphAtHeaderRegionRule(),
             HighCharacterCountLineAtHeaderRegionRule(),
-            JournalNameAtHeaderRule(),
+            SingleLineJournalNameAtHeaderRule(),
+            StartJournalNameAtHeaderRule(),
             FallbackHeaderRegionRule()
         ])
 
@@ -231,6 +234,7 @@ class FilterText:
 
         self.at_left_margin_engine = RuleEngine([
             SingleEmphasizedLineRule(),
+            BoldSectionHeaderAtLeftMarginRule(),
             FallbackAtLeftMarginRule()
         ])
 

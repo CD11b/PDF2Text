@@ -166,6 +166,14 @@ class FontNameClassifier(Classifier):
 
         if line_font_name in self.layout.document.get_all_font_names():
             return FontName.MAIN
+
+        for font in self.layout.document.get_all_font_names():
+            if font in line_font_name:
+                if "italic" in line_font_name.lower():
+                    return FontName.MAIN_ITALIC
+                elif "bold" in line_font_name.lower():
+                    return FontName.MAIN_BOLD
+
         return FontName.OTHER
 
 class FontSizeClassifier(Classifier):

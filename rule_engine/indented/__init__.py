@@ -8,5 +8,7 @@ __all__ = [
     "ParagraphStartIndentedRule",
     "EpigraphAuthorRule",
     "TitlePageRule",
+    "ItalicWordMidLineRule",
+    "BoldWordMidLineRule",
     "FallbackIndentedRule",
 ]

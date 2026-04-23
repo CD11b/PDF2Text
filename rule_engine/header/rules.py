@@ -22,7 +22,7 @@ class HighCharacterCountLineAtHeaderRegionRule(HeaderRegionRule):
     def decide(self, ctx):
         return Decision.collect("High character count line at header", self.name)
 
-class JournalNameAtHeaderRule(HeaderRegionRule):
+class SingleLineJournalNameAtHeaderRule(HeaderRegionRule):
     priority = 30
 
     def matches(self, ctx):
@@ -30,7 +30,19 @@ class JournalNameAtHeaderRule(HeaderRegionRule):
                 ctx.position_in_paragraph is PositionInParagraph.SINGLE_LINE)
 
     def decide(self, ctx):
-        return Decision.skip("Journal name at header", self.name)
+        return Decision.skip("Single line journal name at header", self.name)
+
+class StartJournalNameAtHeaderRule(HeaderRegionRule):
+    priority = 40
+
+    def matches(self, ctx):
+        return (ctx.character_count is CharacterCount.LOW and
+                ctx.position_in_paragraph is PositionInParagraph.START and
+                ctx.font_name is not FontName.MAIN)
+
+    def decide(self, ctx):
+        return Decision.skip("Journal name of non-main font at header, start of paragraph", self.name)
+
 
 class FallbackHeaderRegionRule(HeaderRegionRule):
     priority = 999

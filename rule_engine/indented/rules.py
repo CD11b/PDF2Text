@@ -73,6 +73,28 @@ class TitlePageRule(IndentedLineRule):
     def decide(self, ctx):
         return Decision.skip("Title/sub-title", self.name)
 
+class ItalicWordMidLineRule(IndentedLineRule):
+    priority = 70
+
+    def matches(self, ctx):
+        return (ctx.indentation is LineIndentation.LARGE_INDENTATION and
+                ctx.font_size is FontSize.MAIN and
+                ctx.font_name is FontName.MAIN_ITALIC)
+
+    def decide(self, ctx):
+        return Decision.collect("Italic word with main font found within sentence", self.name)
+
+class BoldWordMidLineRule(IndentedLineRule):
+    priority = 80
+
+    def matches(self, ctx):
+        return (ctx.indentation is LineIndentation.LARGE_INDENTATION and
+                ctx.font_size is FontSize.MAIN and
+                ctx.font_name is FontName.MAIN_BOLD)
+
+    def decide(self, ctx):
+        return Decision.collect("Bold word with main font found within sentence", self.name)
+
 class FallbackIndentedRule(IndentedLineRule):
     priority = 999
 

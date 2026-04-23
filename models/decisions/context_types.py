@@ -28,6 +28,8 @@ class CharacterCount(Enum):
 
 class FontName(Enum):
     MAIN = auto()
+    MAIN_ITALIC = auto()
+    MAIN_BOLD = auto()
     OTHER = auto()
 
 class FontSize(Enum):

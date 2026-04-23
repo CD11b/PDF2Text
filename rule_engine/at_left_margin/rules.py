@@ -15,6 +15,18 @@ class SingleEmphasizedLineRule(AtLeftMarginRule):
     def decide(self, ctx):
         return Decision.collect("Single line that's part of main body", self.name)
 
+class BoldSectionHeaderAtLeftMarginRule(AtLeftMarginRule):
+    priority = 20
+
+    def matches(self, ctx):
+        return (ctx.position_in_paragraph is PositionInParagraph.SINGLE_LINE and
+                ctx.character_count is CharacterCount.LOW and
+                ctx.font_size is FontSize.LARGE and
+                ctx.font_name is FontName.MAIN_BOLD)
+
+    def decide(self, ctx):
+        return Decision.skip("Bold section header", self.name)
+
 
 class FallbackAtLeftMarginRule(AtLeftMarginRule):
     priority = 999
