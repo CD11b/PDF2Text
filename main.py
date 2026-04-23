@@ -378,7 +378,7 @@ class PageLayout:
     def is_in_order(self, line_group, filtered_lines):
         if not filtered_lines:
             return True
-        return line_group[0].start_y + self.page.heuristics.start_y.lower_bound >= filtered_lines[-1].start_y
+        return line_group[0].start_y + self.page.heuristics.start_y.upper_bound >= filtered_lines[-1].start_y
 
     def is_reference_page(self):
         current_line_count = len(self.page.lines)
