@@ -492,8 +492,7 @@ class PageAnalyzer:
 
     def compute_layout_profile(self, page_lines):
         start_x = IndentHeuristic(self.ocr).compute_feature_stats(page_lines)
-        start_y = FeatureStats(StartYHeuristic(self.ocr).compute_distribution(page_lines),
-                               LineGapHeuristic(self.ocr).compute_bounds(page_lines))
+        start_y = FeatureStats(StartYHeuristic(self.ocr).compute_distribution(page_lines), Bounds(None, None))
         end_x = EndXHeuristic(self.ocr).compute_feature_stats(page_lines)
         gap_within_rows = GapWithinRowsHeuristic(self.ocr).compute_bounds(page_lines) if self.ocr else Bounds(None, None)
         gap_between_rows = GapBetweenRowsHeuristic(self.ocr).compute_bounds(page_lines)
