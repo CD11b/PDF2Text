@@ -15,7 +15,6 @@ from rule_engine.continuous_paragraph import *
 from rule_engine.at_left_margin import *
 from rule_engine.before_left_margin import *
 
-from document_analysis import DocumentAnalysis
 from logger_config import setup_logging
 from text_heuristics import *
 from line_collector import LineCollector
@@ -520,7 +519,7 @@ def main():
             document_cache = DocumentCache()
             for page_blocks in pdf_reader.iter_pages(sort=True):
 
-                lines = PageLines(list(DocumentAnalysis.iter_pdf_styling_from_blocks(page_blocks=page_blocks)))
+                lines = PageLines(list(PDFReader.iter_pdf_styling_from_blocks(page_blocks=page_blocks)))
                 if len(lines) == 0:
                     continue
 
