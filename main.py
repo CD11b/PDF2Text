@@ -304,11 +304,7 @@ class FilterText:
             for line_group in groups_iter:
 
                 ctx = LineContext.create(self.layout, line_group, groups_iter, buffer)
-
-                if not self.layout.is_in_order(line_group, buffer):
-                    result.extend(self.collector.process(ctx.line_group, Decision.skip("Text outside regular read-order", "filter_by_boundaries")))
-                else:
-                    self._filter_line(ctx, buffer)
+                self._filter_line(ctx, buffer)
 
             if buffer:
                 buffer[-1] = buffer[-1].with_text(buffer[-1].text + "\n\n")
@@ -358,11 +354,6 @@ class PageLayout:
 
         indent_gap = next_group[0].start_x - line_group[-1].end_x
         return self.column.heuristics.gaps.within_rows.lower <= indent_gap <= self.column.heuristics.gaps.within_rows.upper
-
-    def is_in_order(self, line_group, filtered_lines):
-        if not filtered_lines:
-            return True
-        return line_group[0].start_y + self.page.heuristics.row_separation >= filtered_lines[-1].start_y
 
 class PageAnalyzer:
 
