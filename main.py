@@ -192,9 +192,9 @@ class BracketCleaner:
 
 class FilterText:
 
-    def __init__(self, page, document):
+    def __init__(self, page, document_cache):
         self.page = page
-        self.document = document
+        self.document_cache = document_cache
         self.layout = None
         self.collector = LineCollector()
 
@@ -298,7 +298,7 @@ class FilterText:
         for column in self.page.columns:
 
             buffer = []
-            self.layout = PageLayout(self.page, column, self.document)
+            self.layout = PageLayout(self.page, column, self.document_cache)
             logging.debug(f"Column: {column.heuristics}")
             groups_iter = PeekableIterator(column.lines)
             for line_group in groups_iter:
@@ -317,10 +317,10 @@ class FilterText:
 
 class PageLayout:
 
-    def __init__(self, page, column, document):
+    def __init__(self, page, column, document_cache):
         self.page = page
         self.column = column
-        self.document = document
+        self.document_cache = document_cache
         self.bottom_boundary = page.heuristics.start_y.maximum
         self.left_boundary = column.heuristics.start_x.most_common
         self.top_boundary = page.heuristics.start_y.minimum
@@ -468,42 +468,37 @@ class PageAnalyzer:
         columns.append(ColumnData(line_groups, page_heuristics))
         return PageData(page_heuristics, columns, self.ocr)
 
-class DocumentData:
+class DocumentCache:
     def __init__(self):
-        self.document = None
-
-        self._document_left_margins = set()
-        self._document_font_sizes = set()
-        self._document_font_names = set()
-        self._document_bottom_boundary = set()
-        self._document_top_boundary = set()
+        self._left_margins = set()
+        self._font_sizes = set()
+        self._font_names = set()
+        self._start_y_ranges = set()
+        self._row_separations = set()
 
     def update_cache(self, page_data):
         for column in page_data.columns:
-            self._document_left_margins.add(column.heuristics.start_x.most_common)
+            self._left_margins.add(column.heuristics.start_x.most_common)
 
-        self._document_bottom_boundary.add((page_data.heuristics.start_y.maximum, page_data.heuristics.row_separation))
-        self._document_top_boundary.add((page_data.heuristics.start_y.minimum, page_data.heuristics.row_separation))
-        self._document_font_sizes.add((page_data.heuristics.font_size.most_common, page_data.heuristics.font_size.lower_bound, page_data.heuristics.font_size.upper_bound))
-        self._document_font_names.add(page_data.heuristics.font_name.most_common)
+        self._start_y_ranges.add(page_data.heuristics.start_y.distribution.range)
+        self._row_separations.add(page_data.heuristics.row_separation)
+        self._font_sizes.add((page_data.heuristics.font_size.most_common, page_data.heuristics.font_size.bounds))
+        self._font_names.add(page_data.heuristics.font_name.most_common)
 
-    def add_page(self, page_data: PageData):
-        self.update_cache(page_data)
+    def left_margins(self) -> set[float]:
+        return self._left_margins
 
-    def get_all_left_margins(self) -> set[float]:
-        return self._document_left_margins
+    def start_y_ranges(self) -> set[Range]:
+        return self._start_y_ranges
 
-    def get_all_bottom_boundaries(self) -> set[tuple[float, float]]:
-        return self._document_bottom_boundary
+    def row_separations(self) -> set[float]:
+        return self._row_separations
 
-    def get_all_top_boundaries(self) -> set[tuple[float, float]]:
-        return self._document_top_boundary
+    def font_sizes(self) -> set[tuple[float, Bounds]]:
+        return self._font_sizes
 
-    def get_all_font_sizes(self) -> set[tuple[float, float, float]]:
-        return self._document_font_sizes
-
-    def get_all_font_names(self) -> set[str]:
-        return self._document_font_names
+    def font_names(self) -> set[str]:
+        return self._font_names
 
 def main():
 
@@ -531,7 +526,7 @@ def main():
             output_writer.write(mode="w")
             hanging_open = None
 
-            document_heuristics = DocumentData()
+            document_cache = DocumentCache()
             for page_blocks in pdf_reader.iter_pages(sort=True):
 
                 lines = PageLines(list(DocumentAnalysis.iter_pdf_styling_from_blocks(page_blocks=page_blocks)))
@@ -539,8 +534,8 @@ def main():
                     continue
 
                 page_data = PageAnalyzer(lines).analyze()
-                document_heuristics.add_page(page_data)
-                filter_text = FilterText(page=page_data, document=document_heuristics)
+                document_cache.update_cache(page_data)
+                filter_text = FilterText(page_data, document_cache)
 
                 filtered_lines = filter_text.filter_by_boundaries()
                 filtered_lines = remove_page_number_lines(filtered_lines)

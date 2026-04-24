@@ -95,7 +95,7 @@ class MarginClassifier(Classifier):
         if abs(line_start - self.layout.left_boundary) <= self.layout.coordinate_tolerance:
             return MarginPosition.AT
 
-        if line_start in self.layout.document.get_all_left_margins():
+        if line_start in self.layout.document_cache.left_margins():
             return MarginPosition.AT
 
         if line_start < self.layout.left_boundary:
@@ -118,9 +118,10 @@ class RegionClassifier(Classifier):
                 if line_start <= self.layout.top_boundary + self.layout.page.heuristics.row_separation:
                     return VerticalRegion.HEADER
 
-                for top_boundary, row_separation in self.layout.document.get_all_top_boundaries():
-                    if line_start <= top_boundary + row_separation:
-                        return VerticalRegion.HEADER
+                for start_y_range in self.layout.document_cache.start_y_ranges():
+                    for row_separation in self.layout.document_cache.row_separations():
+                        if line_start <= start_y_range.minimum + row_separation:
+                            return VerticalRegion.HEADER
             else:
                 if line_start <= self.layout.top_boundary:
                     return VerticalRegion.HEADER
@@ -131,9 +132,10 @@ class RegionClassifier(Classifier):
             if self.layout.has_default_bottom:
                 if line_start >= self.layout.bottom_boundary - self.layout.page.heuristics.row_separation:
                     return VerticalRegion.FOOTER
-                for bottom_boundary, row_separation in self.layout.document.get_all_bottom_boundaries():
-                    if line_start >= bottom_boundary - row_separation:
-                        return VerticalRegion.FOOTER
+                for start_y_range in self.layout.document_cache.start_y_ranges():
+                    for row_separation in  self.layout.document_cache.row_separations():
+                        if line_start <= start_y_range.maximum + row_separation:
+                            return VerticalRegion.FOOTER
             else:
                 if line_start >= self.layout.bottom_boundary:
                     return VerticalRegion.FOOTER
@@ -164,10 +166,10 @@ class FontNameClassifier(Classifier):
 
         line_font_name = features
 
-        if line_font_name in self.layout.document.get_all_font_names():
+        if line_font_name in self.layout.document_cache.font_names():
             return FontName.MAIN
 
-        for font in self.layout.document.get_all_font_names():
+        for font in self.layout.document_cache.font_names():
             if font in line_font_name:
                 if "italic" in line_font_name.lower():
                     return FontName.MAIN_ITALIC
@@ -186,8 +188,8 @@ class FontSizeClassifier(Classifier):
 
         line_font_size = features
 
-        for most_common, lower_bound, upper_bound in self.layout.document.get_all_font_sizes():
-            if lower_bound <= line_font_size <= upper_bound:
+        for most_common, bounds in self.layout.document_cache.font_sizes():
+            if bounds.lower <= line_font_size <= bounds.upper:
                 return FontSize.MAIN
 
         if line_font_size < self.layout.page.heuristics.font_size.lower_bound:
