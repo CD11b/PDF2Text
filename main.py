@@ -1,7 +1,6 @@
 import os
-import logging
 import argparse
-from itertools import tee, groupby
+from itertools import tee
 from collections import defaultdict
 
 from IO import PDFReader, OutputWriter
@@ -15,11 +14,11 @@ from rule_engine.continuous_paragraph import *
 from rule_engine.at_left_margin import *
 from rule_engine.before_left_margin import *
 
-from logger_config import setup_logging
-from text_heuristics import *
-from line_collector import LineCollector
-from classifer import IndentationClassifier, PositionClassifier, MarginClassifier, RegionClassifier, CharacterCountClassifier, FontNameClassifier, FontSizeClassifier
-from text_cleaning import remove_page_number_lines, join_lines, normalize_text
+from utils.logger_config import setup_logging
+from core.text_heuristics import *
+from core.line_collector import LineCollector
+from core.classifer import IndentationClassifier, PositionClassifier, MarginClassifier, RegionClassifier, CharacterCountClassifier, FontNameClassifier, FontSizeClassifier
+from utils.text_cleaning import remove_page_number_lines, join_lines, normalize_text
 
 os.environ["TESSDATA_PREFIX"] = "./training"
 
