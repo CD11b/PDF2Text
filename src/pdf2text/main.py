@@ -492,12 +492,10 @@ class DocumentCache:
 def main():
 
     parser = argparse.ArgumentParser(description="Process a PDF file.")
-
-    default_path = "tests/docs/butler.pdf"
-    parser.add_argument("--input-path", nargs="?", default=default_path, help="Path to the PDF file")
+    parser.add_argument("--input-path", required=True, nargs="?", help="Path to the PDF file")
     parser.add_argument("--page-start", type=int, nargs="?", help="Page to start reading")
     parser.add_argument("--page-end", type=int, nargs="?", help="Page to end reading")
-    parser.add_argument("--log-level", default="DEBUG", choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"], help="Set the logging level")
+    parser.add_argument("--log-level", default="INFO", choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"], help="Set the logging level")
 
     args = parser.parse_args()
     pdf_path = args.input_path
