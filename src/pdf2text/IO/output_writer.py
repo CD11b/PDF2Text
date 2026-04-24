@@ -13,15 +13,15 @@ class OutputWriter:
         """
         Sets the output path for the text file based on PDF metadata or filename.
         """
-        os.makedirs("./generated", exist_ok=True)
+        os.makedirs("./tests/generated", exist_ok=True)
 
         title = pdf.metadata.get('title', '')
         if len(title) > 1:
             sanitized_title = re.sub(r'[<>:"/\\|?*\n\r\t;]', '_', title).strip()
-            self.output_path = f"./generated/{sanitized_title}.txt"
+            self.output_path = f"./tests/generated/{sanitized_title}.txt"
         else:
             base_name = os.path.splitext(os.path.basename(pdf_path))[0]
-            self.output_path = f"./generated/{base_name}.txt"
+            self.output_path = f"./tests/generated/{base_name}.txt"
 
         return self.output_path
 
