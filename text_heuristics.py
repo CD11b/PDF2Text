@@ -150,3 +150,23 @@ class FontNameHeuristic(Heuristic):
     def compute_distribution(self, lines: list[StyledLine]):
         counter = self.build_counter(lines)
         return Distribution.create(counter, discrete=True)
+
+class ColumnCountHeuristic(Heuristic):
+
+    def build_counter(self, lines: list[StyledLine]) -> Counter[float]:
+
+        counter = Counter()
+        for row in lines.rows:
+            row_character_count = sum(line.character_count for line in row)
+            counter[len(row)] += row_character_count
+
+        return counter
+
+    @staticmethod
+    def compute_column_starts(lines: list[StyledLine], number_columns):
+        counter = Counter()
+        for row in lines.rows:
+            for line in row:
+                counter[line.start_x] += line.character_count
+
+        return sorted([column[0] for column in counter.most_common(number_columns)])

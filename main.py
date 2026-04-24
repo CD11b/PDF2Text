@@ -416,45 +416,6 @@ class PageAnalyzer:
 
         return self._ocr
 
-
-    @staticmethod
-    def group_line_groups_by_y(line_groups):
-
-        groups = defaultdict(list)
-        for group in line_groups:
-            for line in group:
-                groups[line.start_y].append(line)
-
-        return groups
-
-    @staticmethod
-    def compute_column_count(line_groups_by_y):
-
-        from collections import Counter
-
-        counter = Counter()
-
-        for group in line_groups_by_y.values():
-            row_character_count = sum(line.character_count for line in group)
-            counter[len(group)] += row_character_count
-
-        number_columns = counter.most_common(1)[0][0]
-        return number_columns
-
-    @staticmethod
-    def compute_column_starts(line_groups_by_y, number_columns):
-
-        from collections import Counter
-
-        start_x_counter = Counter()
-        for group in line_groups_by_y.values():
-            for line in group:
-                start_x_counter[line.start_x] += line.character_count
-
-        start_x_columns = [column[0] for column in start_x_counter.most_common(number_columns)]
-
-        return start_x_columns
-
     @staticmethod
     def sort_line_columns(line_groups, start_x_columns):
 
