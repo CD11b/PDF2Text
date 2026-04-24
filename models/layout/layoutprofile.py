@@ -16,12 +16,7 @@ class Distribution:
     def create(cls, counter, discrete = False):
         most_common = counter.most_common(1)[0][0]
 
-        if not discrete:
-            minimum = min(counter)
-            maximum = max(counter)
-        else:
-            minimum = None
-            maximum = None
+        minimum, maximum = ((None, None) if discrete else (min(counter), max(counter)))
 
         return cls(most_common, Range(minimum, maximum))
 
