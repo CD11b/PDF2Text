@@ -17,7 +17,7 @@ from rule_engine.before_left_margin import *
 from utils.logger_config import setup_logging
 from core.text_heuristics import *
 from core.line_collector import LineCollector
-from core.classifer import IndentationClassifier, PositionClassifier, MarginClassifier, RegionClassifier, CharacterCountClassifier, FontNameClassifier, FontSizeClassifier
+from core.classifier import IndentationClassifier, PositionClassifier, MarginClassifier, RegionClassifier, CharacterCountClassifier, FontNameClassifier, FontSizeClassifier
 from utils.text_cleaning import remove_page_number_lines, join_lines, normalize_text
 
 os.environ["TESSDATA_PREFIX"] = "./training"
