@@ -352,16 +352,6 @@ class PageLayout:
     def is_last_line(self, line_group) -> bool:
         return line_group is self.column.lines[-1]
 
-    # @memoize_group_method
-    def is_indented_paragraph(self, line_group) -> bool:
-
-        line_start = line_group[0].start_x
-        for most_common, upper_bound in self.document.get_all_indents():
-            if most_common < line_start <= upper_bound:
-                return True
-
-        return False
-
     def is_split_span(self, line_group, next_group) -> bool:
         if self.coordinate_tolerance == 0.0: # For efficiency
             return False
@@ -489,19 +479,14 @@ class DocumentData:
         self.document = None
 
         self._document_left_margins = set()
-        self._document_body_boundaries = set()
-        self._document_indents = set()
         self._document_font_sizes = set()
         self._document_font_names = set()
         self._document_bottom_boundary = set()
         self._document_top_boundary = set()
-        self._document_line_counts = set()
 
     def update_cache(self, page_data):
         for column in page_data.columns:
             self._document_left_margins.add(column.heuristics.start_x.most_common)
-            self._document_indents.add((column.heuristics.start_x.most_common, column.heuristics.start_x.upper_bound))
-            self._document_body_boundaries.add((column.heuristics.start_x.lower_bound, column.heuristics.start_x.upper_bound))
 
         self._document_bottom_boundary.add((page_data.heuristics.start_y.maximum, page_data.heuristics.row_separation))
         self._document_top_boundary.add((page_data.heuristics.start_y.minimum, page_data.heuristics.row_separation))
@@ -519,12 +504,6 @@ class DocumentData:
 
     def get_all_top_boundaries(self) -> set[tuple[float, float]]:
         return self._document_top_boundary
-
-    def get_all_indents(self) -> set[tuple[float, float]]:
-        return self._document_indents
-
-    def get_all_body_boundaries(self) -> set[tuple[float, float]]:
-        return self._document_body_boundaries
 
     def get_all_font_sizes(self) -> set[tuple[float, float, float]]:
         return self._document_font_sizes
