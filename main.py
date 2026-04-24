@@ -300,7 +300,7 @@ class FilterText:
             buffer = []
             self.layout = PageLayout(self.page, column, self.document)
             logging.debug(f"Column: {column.heuristics}")
-            groups_iter = PeekableIterator(column.line_groups)
+            groups_iter = PeekableIterator(column.lines)
             for line_group in groups_iter:
 
                 ctx = LineContext.create(self.layout, line_group, groups_iter, buffer)
@@ -350,7 +350,7 @@ class PageLayout:
         self.bottom_boundary = bottom_boundary
 
     def is_last_line(self, line_group) -> bool:
-        return line_group is self.column.line_groups[-1]
+        return line_group is self.column.lines[-1]
 
     # @memoize_group_method
     def is_indented_paragraph(self, line_group) -> bool:
@@ -440,7 +440,7 @@ class PageAnalyzer:
     @staticmethod
     def create_line_groups(lines, coordinate_tolerance):
         result = []
-        for x_sorted_lines in lines.rows:
+        for x_sorted_lines in lines:
             buffer = [x_sorted_lines[0]]
             for previous, current in zip(x_sorted_lines, x_sorted_lines[1:]):
                 if current.start_x - previous.end_x <= coordinate_tolerance:
