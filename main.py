@@ -343,12 +343,6 @@ class PageLayout:
     def has_default_bottom(self) -> bool:
         return self.bottom_boundary == self.page.heuristics.start_y.maximum
 
-    def set_top_boundary(self, top_boundary):
-        self.top_boundary = top_boundary
-
-    def set_bottom_boundary(self, bottom_boundary):
-        self.bottom_boundary = bottom_boundary
-
     def is_last_line(self, line_group) -> bool:
         return line_group is self.column.lines[-1]
 
