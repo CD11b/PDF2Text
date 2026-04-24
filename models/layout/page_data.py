@@ -28,7 +28,6 @@ class PageLines:
 
 @dataclass(frozen=True)
 class PageData:
-    lines: list[StyledLine]
     heuristics: LayoutProfile
     columns: list[ColumnData]
     ocr: bool

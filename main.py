@@ -380,14 +380,6 @@ class PageLayout:
             return True
         return line_group[0].start_y + self.page.heuristics.row_separation >= filtered_lines[-1].start_y
 
-    def is_reference_page(self):
-        current_line_count = len(self.page.lines)
-        for page_line_count in self.document.get_all_line_counts():
-            if current_line_count > page_line_count * 2:
-                return True
-
-        return False
-
 class PageAnalyzer:
 
     def __init__(self, lines: PageLines):
@@ -468,16 +460,16 @@ class PageAnalyzer:
 
     def analyze(self):
 
+        columns = []
         page_heuristics = self.compute_layout_profile(self.lines)
         coordinate_tolerance = page_heuristics.gaps.within_rows.upper if self.ocr else 0.0
         line_groups = self.create_line_groups(self.lines.rows, coordinate_tolerance)
 
-        columns = []
         if not self.ocr:
-
             column_count = ColumnCountHeuristic(self.ocr)
             column_count_stats = column_count.compute_feature_stats(self.lines)
             logging.debug(f"Detected {column_count_stats.upper_bound} column(s)")
+
             if column_count_stats.upper_bound > 1:
                 start_x_columns = column_count.compute_column_starts(self.lines, int(column_count_stats.upper_bound))
                 columned_groups = self.sort_line_columns(line_groups, start_x_columns)
@@ -487,11 +479,10 @@ class PageAnalyzer:
                     column_heuristics = self.compute_layout_profile(column_lines)
                     column_line_groups = self.create_line_groups(column_lines.rows, coordinate_tolerance)
                     columns.append(ColumnData(column_line_groups, column_heuristics))
-                return PageData(self.lines, page_heuristics, columns, self.ocr)
+                return PageData(page_heuristics, columns, self.ocr)
 
         columns.append(ColumnData(line_groups, page_heuristics))
-
-        return PageData(self.lines, page_heuristics, columns, self.ocr)
+        return PageData(page_heuristics, columns, self.ocr)
 
 class DocumentData:
     def __init__(self):
@@ -516,7 +507,6 @@ class DocumentData:
         self._document_top_boundary.add((page_data.heuristics.start_y.minimum, page_data.heuristics.row_separation))
         self._document_font_sizes.add((page_data.heuristics.font_size.most_common, page_data.heuristics.font_size.lower_bound, page_data.heuristics.font_size.upper_bound))
         self._document_font_names.add(page_data.heuristics.font_name.most_common)
-        self._document_line_counts.add(len(page_data.lines))
 
     def add_page(self, page_data: PageData):
         self.update_cache(page_data)
@@ -541,9 +531,6 @@ class DocumentData:
 
     def get_all_font_names(self) -> set[str]:
         return self._document_font_names
-
-    def get_all_line_counts(self) -> set[int]:
-        return self._document_line_counts
 
 def main():
 
