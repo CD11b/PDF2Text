@@ -471,7 +471,7 @@ class PageAnalyzer:
 class DocumentCache:
     def __init__(self):
         self._left_margins = set()
-        self._font_sizes = set()
+        self._font_size_bounds = set()
         self._font_names = set()
         self._start_y_ranges = set()
         self._row_separations = set()
@@ -482,7 +482,7 @@ class DocumentCache:
 
         self._start_y_ranges.add(page_data.heuristics.start_y.distribution.range)
         self._row_separations.add(page_data.heuristics.row_separation)
-        self._font_sizes.add((page_data.heuristics.font_size.most_common, page_data.heuristics.font_size.bounds))
+        self._font_size_bounds.add(page_data.heuristics.font_size.bounds)
         self._font_names.add(page_data.heuristics.font_name.most_common)
 
     def left_margins(self) -> set[float]:
@@ -494,8 +494,8 @@ class DocumentCache:
     def row_separations(self) -> set[float]:
         return self._row_separations
 
-    def font_sizes(self) -> set[tuple[float, Bounds]]:
-        return self._font_sizes
+    def font_size_bounds(self) -> set[tuple[float, Bounds]]:
+        return self._font_size_bounds
 
     def font_names(self) -> set[str]:
         return self._font_names

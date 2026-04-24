@@ -188,7 +188,7 @@ class FontSizeClassifier(Classifier):
 
         line_font_size = features
 
-        for most_common, bounds in self.layout.document_cache.font_sizes():
+        for bounds in self.layout.document_cache.font_size_bounds():
             if bounds.lower <= line_font_size <= bounds.upper:
                 return FontSize.MAIN
 
