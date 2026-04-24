@@ -3,7 +3,7 @@ import sys
 from logging import Logger
 
 
-def setup_logging(log_file: str = "pdf2text.log", log_level: str = "INFO") -> Logger | None:
+def setup_logging(log_file: str = "./tests/pdf2text.log", log_level: str = "INFO") -> Logger | None:
     """Configure logging for the application."""
 
     root_logger = logging.getLogger()
