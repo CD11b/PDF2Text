@@ -9,20 +9,35 @@ class OutputWriter:
     def __init__(self) -> None:
         self.output_path = None
 
-    def set_output_path(self, pdf: pymupdf.Document, pdf_path: str) -> str:
+    def set_output_path(self, pdf: pymupdf.Document, pdf_path: str, output_path: str | None, output_dir: str) -> str:
         """
-        Sets the output path for the text file based on PDF metadata or filename.
-        """
-        os.makedirs("./tests/generated", exist_ok=True)
+        Determines output file path.
 
-        title = pdf.metadata.get('title', '')
-        if len(title) > 1:
-            sanitized_title = re.sub(r'[<>:"/\\|?*\n\r\t;]', '_', title).strip()
-            self.output_path = f"./tests/generated/{sanitized_title}.txt"
+        Priority:
+        1. Explicit output_path (file path)
+        2. output_dir + derived filename
+        """
+
+        def sanitize(name: str) -> str:
+            return re.sub(r'[<>:"/\\|?*\n\r\t;]', '_', name).strip()
+
+        # Case 1: user provided full output file path
+        if output_path:
+            os.makedirs(os.path.dirname(output_path) or ".", exist_ok=True)
+            self.output_path = output_path
+            return self.output_path
+
+        # Case 2: derive filename from PDF metadata or file name
+        os.makedirs(output_dir, exist_ok=True)
+
+        title = (pdf.metadata or {}).get("title", "")
+        if title and len(title.strip()) > 1:
+            filename = sanitize(title) + ".txt"
         else:
             base_name = os.path.splitext(os.path.basename(pdf_path))[0]
-            self.output_path = f"./tests/generated/{base_name}.txt"
+            filename = sanitize(base_name) + ".txt"
 
+        self.output_path = os.path.join(output_dir, filename)
         return self.output_path
 
     def write(self, mode: str, text: Optional[str] = None) -> None:

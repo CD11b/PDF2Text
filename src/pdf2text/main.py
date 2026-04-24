@@ -497,8 +497,14 @@ def main():
     parser.add_argument("--page-end", type=int, nargs="?", help="Page to end reading")
     parser.add_argument("--log-level", default="INFO", choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"], help="Set the logging level")
 
+    path_group = parser.add_mutually_exclusive_group()
+    path_group.add_argument("--output-path", nargs="?", help="Path to write output to")
+    path_group.add_argument("--output-dir", default="generated", nargs="?", help="Path to write output to")
+
     args = parser.parse_args()
     pdf_path = args.input_path
+    output_path = args.output_path
+    output_dir = args.output_dir
     page_start = args.page_start
     page_end = args.page_end
 
@@ -508,7 +514,7 @@ def main():
         with PDFReader(pdf_path, page_start, page_end) as pdf_reader:
 
             output_writer = OutputWriter()
-            output_writer.set_output_path(pdf=pdf_reader.pdf, pdf_path=pdf_path)
+            output_writer.set_output_path(pdf_reader.pdf, pdf_path, output_path, output_dir)
 
             output_writer.write(mode="w")
             hanging_open = None
