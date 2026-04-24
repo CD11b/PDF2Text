@@ -4,7 +4,7 @@ from itertools import tee
 from collections import defaultdict
 
 from IO import PDFReader, OutputWriter
-from models import *
+from src.pdf2text.models import *
 
 from rule_engine import RuleEngine
 from rule_engine.indented import *
@@ -14,11 +14,11 @@ from rule_engine.continuous_paragraph import *
 from rule_engine.at_left_margin import *
 from rule_engine.before_left_margin import *
 
-from utils.logger_config import setup_logging
-from core.text_heuristics import *
-from core.line_collector import LineCollector
-from core.classifier import IndentationClassifier, PositionClassifier, MarginClassifier, RegionClassifier, CharacterCountClassifier, FontNameClassifier, FontSizeClassifier
-from utils.text_cleaning import remove_page_number_lines, join_lines, normalize_text
+from src.pdf2text.utils.logger_config import setup_logging
+from src.pdf2text.core.text_heuristics import *
+from src.pdf2text.core.line_collector import LineCollector
+from src.pdf2text.core.classifier import IndentationClassifier, PositionClassifier, MarginClassifier, RegionClassifier, CharacterCountClassifier, FontNameClassifier, FontSizeClassifier
+from src.pdf2text.utils.text_cleaning import remove_page_number_lines, join_lines, normalize_text
 
 os.environ["TESSDATA_PREFIX"] = "./training"
 
@@ -493,7 +493,7 @@ def main():
 
     parser = argparse.ArgumentParser(description="Process a PDF file.")
 
-    default_path = "./docs/butler.pdf"
+    default_path = "tests/docs/butler.pdf"
     parser.add_argument("--input-path", nargs="?", default=default_path, help="Path to the PDF file")
     parser.add_argument("--page-start", type=int, nargs="?", help="Page to start reading")
     parser.add_argument("--page-end", type=int, nargs="?", help="Page to end reading")

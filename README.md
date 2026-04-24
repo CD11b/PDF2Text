@@ -111,8 +111,9 @@ Output is written to `./generated/<document_title>.txt`.
 Each rule engine accepts a prioritized list of `Rule` subclasses. To add a rule, subclass `Rule` and implement `matches` and `decide`:
 
 ```python
-from rule_engine import Rule
-from models import Decision, Action, LineContext
+from src.pdf2text.rule_engine import Rule
+from src.pdf2text.models import Decision, Action, LineContext
+
 
 class MyCustomRule(Rule):
     priority = 30  # lower runs first

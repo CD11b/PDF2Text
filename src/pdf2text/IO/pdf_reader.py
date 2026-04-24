@@ -1,6 +1,6 @@
 from __future__ import annotations
 from typing import Generator, Optional, Tuple, List, Dict, Any
-from models import StyledLine
+from src.pdf2text.models import StyledLine
 import pymupdf
 import logging
 

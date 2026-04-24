@@ -1,5 +1,5 @@
 from statistics import median
-from models import *
+from src.pdf2text.models import *
 
 class Classifier:
 

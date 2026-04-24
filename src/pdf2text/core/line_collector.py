@@ -1,6 +1,6 @@
 import logging
 from statistics import mean
-from models import StyledLine, Decision, LineContext
+from src.pdf2text.models import StyledLine, Decision, LineContext
 
 logger = logging.getLogger(__name__)
 

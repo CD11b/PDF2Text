@@ -3,7 +3,7 @@ from collections import Counter
 from typing import Optional, Any
 import logging
 
-from models import StyledLine, FeatureStats, Bounds, Distribution
+from src.pdf2text.models import StyledLine, FeatureStats, Bounds, Distribution
 
 logger = logging.getLogger(__name__)
 

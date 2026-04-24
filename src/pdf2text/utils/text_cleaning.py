@@ -1,5 +1,5 @@
 import logging, unicodedata, re
-from models import StyledLine
+from src.pdf2text.models import StyledLine
 
 logger = logging.getLogger(__name__)
 

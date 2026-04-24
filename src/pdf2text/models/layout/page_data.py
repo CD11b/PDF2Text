@@ -1,6 +1,6 @@
 from dataclasses import dataclass
-from models.lines.styled_line import StyledLine
-from models.layout.layoutprofile import LayoutProfile
+from src.pdf2text.models.lines.styled_line import StyledLine
+from src.pdf2text.models.layout.layoutprofile import LayoutProfile
 
 from itertools import groupby
 

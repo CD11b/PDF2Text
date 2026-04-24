@@ -1,5 +1,5 @@
-from models import *
-from rule_engine import Rule
+from src.pdf2text.models import *
+from src.pdf2text.rule_engine import Rule
 
 class BeforeLeftMarginRule(Rule):
     pass
