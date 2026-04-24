@@ -468,8 +468,8 @@ class PageAnalyzer:
 
     def analyze(self):
 
-        heuristics = self.compute_layout_profile(self.lines)
-        coordinate_tolerance = heuristics.gaps.within_rows.upper if self.ocr else 0.0
+        page_heuristics = self.compute_layout_profile(self.lines)
+        coordinate_tolerance = page_heuristics.gaps.within_rows.upper if self.ocr else 0.0
         line_groups = self.create_line_groups(self.lines.rows, coordinate_tolerance)
 
         columns = []
@@ -487,11 +487,11 @@ class PageAnalyzer:
                     column_heuristics = self.compute_layout_profile(column_lines)
                     column_line_groups = self.create_line_groups(column_lines.rows, coordinate_tolerance)
                     columns.append(ColumnData(column_line_groups, column_heuristics))
-                return PageData(self.lines, heuristics, columns, self.ocr)
+                return PageData(self.lines, page_heuristics, columns, self.ocr)
 
-        columns.append(ColumnData(line_groups, heuristics))
+        columns.append(ColumnData(line_groups, page_heuristics))
 
-        return PageData(self.lines, heuristics, columns, self.ocr)
+        return PageData(self.lines, page_heuristics, columns, self.ocr)
 
 class DocumentData:
     def __init__(self):
