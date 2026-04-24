@@ -3,10 +3,14 @@ import numpy as np
 from collections import Counter
 
 @dataclass(frozen=True, slots=True)
-class Distribution:
-    most_common: float
+class Range:
     minimum: float | None
     maximum: float | None
+
+@dataclass(frozen=True, slots=True)
+class Distribution:
+    most_common: float
+    range: Range
 
     @classmethod
     def create(cls, counter, discrete = False):
@@ -19,7 +23,7 @@ class Distribution:
             minimum = None
             maximum = None
 
-        return cls(most_common, minimum, maximum)
+        return cls(most_common, Range(minimum, maximum))
 
 
 @dataclass(frozen=True, slots=True)
@@ -86,11 +90,11 @@ class FeatureStats:
 
     @property
     def minimum(self) -> float:
-        return self.distribution.minimum
+        return self.distribution.range.minimum
 
     @property
     def maximum(self) -> float:
-        return self.distribution.maximum
+        return self.distribution.range.maximum
 
 
 @dataclass(frozen=True, slots=True)
