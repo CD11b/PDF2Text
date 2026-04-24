@@ -35,5 +35,5 @@ class PageData:
 
 @dataclass(frozen=True)
 class ColumnData:
-    lines: list[list[StyledLine]]
+    lines: list[StyledLine]
     heuristics: LayoutProfile
