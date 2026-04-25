@@ -3,16 +3,16 @@ import argparse
 from itertools import tee
 from collections import defaultdict
 
-from IO import PDFReader, OutputWriter
+from src.pdf2text.IO import PDFReader, OutputWriter
 from src.pdf2text.models import *
 
-from rule_engine import RuleEngine
-from rule_engine.indented import *
-from rule_engine.footer import *
-from rule_engine.header import *
-from rule_engine.continuous_paragraph import *
-from rule_engine.at_left_margin import *
-from rule_engine.before_left_margin import *
+from src.pdf2text.rule_engine import RuleEngine
+from src.pdf2text.rule_engine.indented import *
+from src.pdf2text.rule_engine.footer import *
+from src.pdf2text.rule_engine.header import *
+from src.pdf2text.rule_engine.continuous_paragraph import *
+from src.pdf2text.rule_engine.at_left_margin import *
+from src.pdf2text.rule_engine.before_left_margin import *
 
 from src.pdf2text.utils.logger_config import setup_logging
 from src.pdf2text.core.text_heuristics import *
