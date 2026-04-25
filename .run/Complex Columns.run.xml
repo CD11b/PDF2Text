@@ -16,7 +16,7 @@
     <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
     <option name="RUN_TOOL" value="" />
     <option name="SCRIPT_NAME" value="src.pdf2text.main" />
-    <option name="PARAMETERS" value="--input-path ./tests/docs/complex_columns.pdf --output-dir generated --log-level DEBUG" />
+    <option name="PARAMETERS" value="--input-path ./tests/docs/complex_columns.pdf --output-dir &quot;tests/generated&quot; --log-level DEBUG" />
     <option name="SHOW_COMMAND_LINE" value="true" />
     <option name="EMULATE_TERMINAL" value="false" />
     <option name="MODULE_MODE" value="true" />
