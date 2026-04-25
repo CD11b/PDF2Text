@@ -28,11 +28,10 @@ class LineCollector:
 
         first_group, last_group = line_group[0], line_group[-1]
 
-        return StyledLine(
-            text=' '.join(line.text for line in line_group if line.text.strip()),
-            font_size=mean(line.font_size for line in line_group),
-            font_name=first_group.font_name,
-            start_x=first_group.start_x,
-            start_y=first_group.start_y,
-            end_x=last_group.end_x
+        return StyledLine.create(text=' '.join(line.text for line in line_group if line.text.strip()),
+                                 font_size=mean(line.font_size for line in line_group),
+                                 font_name=first_group.font_name,
+                                 start_x=first_group.start_x,
+                                 start_y=first_group.start_y,
+                                 end_x=last_group.end_x
         )

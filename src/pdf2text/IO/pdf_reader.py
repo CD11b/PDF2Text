@@ -71,12 +71,12 @@ class PDFReader:
                     for span in line.get("spans", []):
                         text = span.get("text", "").strip()
                         if text:
-                            yield StyledLine(text=text,
-                                             font_size=float(span["size"]),
-                                             font_name=str(span["font"]),
-                                             start_x=float(span["origin"][0]),
-                                             start_y=float(span["origin"][1]),
-                                             end_x=float(span["bbox"][2]))
+                            yield StyledLine.create(text=text,
+                                                    font_size=float(span["size"]),
+                                                    font_name=str(span["font"]),
+                                                    start_x=float(span["origin"][0]),
+                                                    start_y=float(span["origin"][1]),
+                                                    end_x=float(span["bbox"][2]))
 
         except Exception as e:
             logger.exception(f"Error reading styles from PDF blocks: {e}")

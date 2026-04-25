@@ -14,11 +14,9 @@ class StyledLine:
     def character_count(self):
         return len(self.text)
 
-    def __post_init__(self):
-        object.__setattr__(self, "font_size", round(self.font_size))
-        object.__setattr__(self, "start_x", round(self.start_x))
-        object.__setattr__(self, "start_y", round(self.start_y))
-        object.__setattr__(self, "end_x", round(self.end_x))
+    @classmethod
+    def create(cls, text, font_size, font_name, start_x, start_y, end_x):
+        return cls(text, round(font_size), font_name, round(start_x), round(start_y), round(end_x))
 
     def with_text(self, new_text: str) -> "StyledLine":
         """Return a new StyledLine with updated text but identical styling and geometry."""
