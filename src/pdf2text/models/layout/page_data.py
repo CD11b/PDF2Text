@@ -4,7 +4,7 @@ from src.pdf2text.models.layout.layoutprofile import LayoutProfile
 
 from itertools import groupby
 
-@dataclass(slots=True)
+@dataclass(frozen=True, slots=True)
 class PageLines:
     lines: list
     _rows: list | None = None
@@ -22,8 +22,10 @@ class PageLines:
     def rows(self):
         if self._rows is None:
             y_sorted_lines = sorted(self.lines, key=lambda line: line.start_y)
-            self._rows = [sorted(y_group, key=lambda line: line.start_x)
-                          for _, y_group in groupby(y_sorted_lines, key=lambda line: line.start_y)]
+            rows = [sorted(y_group, key=lambda line: line.start_x)
+                for _, y_group in groupby(y_sorted_lines, key=lambda line: line.start_y)]
+
+            object.__setattr__(self, "_rows", rows)
         return self._rows
 
 @dataclass(frozen=True)
