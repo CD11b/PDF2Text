@@ -3,7 +3,7 @@ from collections import Counter
 from typing import Optional, Any
 import logging
 
-from src.pdf2text.models import StyledLine, FeatureStats, Bounds, Distribution
+from src.pdf2text.models import FeatureStats, Bounds, Distribution, PageLines
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +32,7 @@ class Heuristic:
         return threshold
 
     @staticmethod
-    def get_styling_counter(lines: list[StyledLine], attribute: str) -> Counter[Any]:
+    def get_styling_counter(lines: PageLines, attribute: str) -> Counter[Any]:
         """Count occurrences of a given attribute across lines, weighted by text length."""
 
         counter: Counter[Any] = Counter()
@@ -41,19 +41,19 @@ class Heuristic:
             counter[attr_value] += len(line.text)
         return counter
 
-    def build_counter(self, lines: list[StyledLine]) -> Counter[Any]:
+    def build_counter(self, lines: PageLines) -> Counter[Any]:
         """Override in subclasses."""
         raise NotImplementedError
 
-    def compute_distribution(self, lines: list[StyledLine]):
+    def compute_distribution(self, lines: PageLines) -> Distribution:
         counter = self.build_counter(lines)
         return Distribution.create(counter)
 
-    def compute_bounds(self, lines: list[StyledLine]):
+    def compute_bounds(self, lines: PageLines) -> Bounds:
         counter = self.build_counter(lines)
         return Bounds.create(counter, self.threshold)
 
-    def compute_feature_stats(self, lines: list[StyledLine]):
+    def compute_feature_stats(self, lines: PageLines) -> FeatureStats:
         counter = self.build_counter(lines)
         bounds = Bounds.create(counter, self.threshold)
 
@@ -62,7 +62,7 @@ class Heuristic:
 
 class FontSizeHeuristic(Heuristic):
 
-    def build_counter(self, lines):
+    def build_counter(self, lines: PageLines) -> Counter[Any]:
         return self.get_styling_counter(lines, "font_size")
 
 
@@ -73,7 +73,7 @@ class CharacterCountHeuristic(Heuristic):
     def threshold(self) -> float:
         return self._THRESHOLD
 
-    def build_counter(self, lines)-> Counter[float]:
+    def build_counter(self, lines: PageLines)-> Counter[float]:
 
         counter: Counter[float] = Counter()
         for row in lines.rows:
@@ -91,7 +91,7 @@ class IndentHeuristic(Heuristic):
     def threshold(self) -> float:
         return self._THRESHOLD
 
-    def build_counter(self, lines) -> Counter[float]:
+    def build_counter(self, lines: PageLines) -> Counter[float]:
 
         counter: Counter[float] = Counter()
         for row in lines.rows:
@@ -102,7 +102,7 @@ class IndentHeuristic(Heuristic):
 
 class GapBetweenRowsHeuristic(Heuristic):
 
-    def build_counter(self, lines: list[StyledLine]) -> Counter[float]:
+    def build_counter(self, lines: PageLines) -> Counter[float]:
         start_y_counter = self.get_styling_counter(lines, "start_y")
 
         counter: Counter[float] = Counter()
@@ -129,31 +129,31 @@ class GapWithinRowsHeuristic(Heuristic):
 
 class EndXHeuristic(Heuristic):
 
-    def build_counter(self, lines: list[StyledLine]) -> Counter[float]:
+    def build_counter(self, lines: PageLines) -> Counter[float]:
         return self.get_styling_counter(lines, "end_x")
 
 class StartXHeuristic(Heuristic):
 
-    def build_counter(self, lines: list[StyledLine]) -> Counter[float]:
+    def build_counter(self, lines: PageLines) -> Counter[float]:
         return self.get_styling_counter(lines, "start_x")
 
 class StartYHeuristic(Heuristic):
 
-    def build_counter(self, lines: list[StyledLine]) -> Counter[float]:
+    def build_counter(self, lines: PageLines) -> Counter[float]:
         return self.get_styling_counter(lines, "start_y")
 
 class FontNameHeuristic(Heuristic):
 
-    def build_counter(self, lines: list[StyledLine]) -> Counter[float]:
+    def build_counter(self, lines: PageLines) -> Counter[float]:
         return self.get_styling_counter(lines, "font_name")
 
-    def compute_distribution(self, lines: list[StyledLine]):
+    def compute_distribution(self, lines: PageLines) -> Distribution:
         counter = self.build_counter(lines)
         return Distribution.create(counter, discrete=True)
 
 class ColumnCountHeuristic(Heuristic):
 
-    def build_counter(self, lines: list[StyledLine]) -> Counter[float]:
+    def build_counter(self, lines: PageLines) -> Counter[float]:
 
         counter = Counter()
         for row in lines.rows:
@@ -163,7 +163,7 @@ class ColumnCountHeuristic(Heuristic):
         return counter
 
     @staticmethod
-    def compute_column_starts(lines: list[StyledLine], number_columns):
+    def compute_column_starts(lines: PageLines, number_columns) -> list:
         counter = Counter()
         for row in lines.rows:
             for line in row:
