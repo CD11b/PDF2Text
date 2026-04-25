@@ -403,11 +403,11 @@ class PageAnalyzer:
         return columned_groups
 
     @staticmethod
-    def create_line_groups(lines, coordinate_tolerance):
+    def create_line_groups(line_rows, coordinate_tolerance):
         result = []
-        for x_sorted_lines in lines:
-            buffer = [x_sorted_lines[0]]
-            for previous, current in zip(x_sorted_lines, x_sorted_lines[1:]):
+        for row in line_rows:
+            buffer = [row[0]]
+            for previous, current in zip(row, row[1:]):
                 if current.start_x - previous.end_x <= coordinate_tolerance:
                     buffer.append(current)
                 else:
