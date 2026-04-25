@@ -13,6 +13,10 @@ class Heuristic:
         self.ocr: bool = ocr
         self.override_threshold = override_threshold
 
+        self._feature_stats = None
+        self._distribution = None
+        self._bounds = None
+
     @property
     def name(self):
         return self.__class__.__name__
@@ -46,19 +50,22 @@ class Heuristic:
         raise NotImplementedError
 
     def compute_distribution(self, lines: PageLines) -> Distribution:
-        counter = self.build_counter(lines)
-        return Distribution.create(counter)
+        if self._distribution is None:
+            counter = self.build_counter(lines)
+            self._distribution = Distribution.create(counter)
+
+        return self._distribution
 
     def compute_bounds(self, lines: PageLines) -> Bounds:
-        counter = self.build_counter(lines)
-        return Bounds.create(counter, self.threshold)
+        if self._bounds is None:
+            counter = self.build_counter(lines)
+            self._bounds = Bounds.create(counter, self.threshold)
+
+        return self._bounds
 
     def compute_feature_stats(self, lines: PageLines) -> FeatureStats:
-        counter = self.build_counter(lines)
-        bounds = Bounds.create(counter, self.threshold)
-
-        return FeatureStats(distribution=Distribution.create(counter),
-                            bounds = bounds)
+        self._feature_stats = FeatureStats(self.compute_distribution(lines), self.compute_bounds(lines))
+        return self._feature_stats
 
 class FontSizeHeuristic(Heuristic):
 
