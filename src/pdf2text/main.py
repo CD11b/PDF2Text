@@ -445,7 +445,7 @@ class DocumentCache:
     def left_margins(self) -> set[float]:
         return self._left_margins
 
-    def start_y_ranges(self) -> set[Range]:
+    def start_y_ranges(self):
         return self._start_y_ranges
 
     def row_separations(self) -> set[float]:

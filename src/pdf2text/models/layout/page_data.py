@@ -29,12 +29,12 @@ class PageLines:
         return self._rows
 
 @dataclass(frozen=True, slots=True)
+class ColumnData:
+    lines: list[StyledLine]
+    heuristics: LayoutProfile
+
+@dataclass(frozen=True, slots=True)
 class PageData:
     heuristics: LayoutProfile
     columns: list[ColumnData]
     ocr: bool
-
-@dataclass(frozen=True, slots=True)
-class ColumnData:
-    lines: list[StyledLine]
-    heuristics: LayoutProfile

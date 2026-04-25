@@ -28,7 +28,7 @@ class Bounds:
     upper: float | None
 
     @classmethod
-    def create(cls, data: Counter[float], threshold: float) -> Bounds:
+    def create(cls, data: Counter[float], threshold: float):
         """Compute statistical bounds for a numeric counter using MAD."""
         if not data:
             return cls(None, None)
