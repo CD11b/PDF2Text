@@ -19,6 +19,7 @@ class LineContext:
 
         line_start_x = line_group[0].start_x
         line_start_y = line_group[0].start_y
+        line_end_x = line_group[-1].end_x
         next_group = groups_iter.peek()
         previous_start_x = result[-1].start_x if len(result) >= 1 else None
         previous_start_y = result[-1].start_y if len(result) >= 1 else None
@@ -34,8 +35,8 @@ class LineContext:
             character_count=layout.line_character_count.classify(line_group),
             font_name=layout.line_font_name.classify(line_group),
             font_size=layout.line_font_size.classify(line_group),
-            split_span=layout.is_split_span(line_group, next_group),
-            last_line=layout.is_last_line(line_group)
+            split_span=layout.line_split_span.classify(context=(line_start_y, line_end_x, next_start_x, next_start_y)),
+            last_line=line_group is layout.column.lines[-1]
         )
 
     def __repr__(self):

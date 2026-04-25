@@ -17,7 +17,7 @@ from rule_engine.before_left_margin import *
 from src.pdf2text.utils.logger_config import setup_logging
 from src.pdf2text.core.text_heuristics import *
 from src.pdf2text.core.line_collector import LineCollector
-from src.pdf2text.core.classifier import IndentationClassifier, PositionClassifier, MarginClassifier, RegionClassifier, CharacterCountClassifier, FontNameClassifier, FontSizeClassifier
+from src.pdf2text.core.classifier import IndentationClassifier, PositionClassifier, MarginClassifier, RegionClassifier, CharacterCountClassifier, FontNameClassifier, FontSizeClassifier, SplitSpanClassifier
 from src.pdf2text.utils.text_cleaning import remove_page_number_lines, join_lines, normalize_text
 
 os.environ["TESSDATA_PREFIX"] = "./training"
@@ -312,46 +312,15 @@ class FilterText:
 class PageLayout:
 
     def __init__(self, page, column, document_cache):
-        self.page = page
         self.column = column
-        self.document_cache = document_cache
-        self.bottom_boundary = page.heuristics.start_y.maximum
-        self.left_boundary = column.heuristics.start_x.most_common
-        self.top_boundary = page.heuristics.start_y.minimum
-        self.coordinate_tolerance = page.heuristics.gaps.within_rows.upper if page.ocr else 0.0
-        self._cache = {}
-
-        self.line_position = PositionClassifier(self)
-        self.line_indentation = IndentationClassifier(self)
-        self.line_region = RegionClassifier(self)
-        self.margin_position = MarginClassifier(self)
-        self.line_character_count = CharacterCountClassifier(self)
-        self.line_font_name = FontNameClassifier(self)
-        self.line_font_size = FontSizeClassifier(self)
-
-    @property
-    def has_default_top(self) -> bool:
-        return self.top_boundary == self.page.heuristics.start_y.minimum
-
-    @property
-    def has_default_bottom(self) -> bool:
-        return self.bottom_boundary == self.page.heuristics.start_y.maximum
-
-    def is_last_line(self, line_group) -> bool:
-        return line_group is self.column.lines[-1]
-
-    def is_split_span(self, line_group, next_group) -> bool:
-        if self.coordinate_tolerance == 0.0: # For efficiency
-            return False
-
-        if next_group is None:
-            return False
-
-        if line_group[0].start_y != next_group[0].start_y:
-            return False
-
-        indent_gap = next_group[0].start_x - line_group[-1].end_x
-        return self.column.heuristics.gaps.within_rows.lower <= indent_gap <= self.column.heuristics.gaps.within_rows.upper
+        self.line_position = PositionClassifier(page, column, document_cache)
+        self.line_indentation = IndentationClassifier(page, column, document_cache)
+        self.line_region = RegionClassifier(page, column, document_cache)
+        self.margin_position = MarginClassifier(page, column, document_cache)
+        self.line_character_count = CharacterCountClassifier(page, column, document_cache)
+        self.line_font_name = FontNameClassifier(page, column, document_cache)
+        self.line_font_size = FontSizeClassifier(page, column, document_cache)
+        self.line_split_span = SplitSpanClassifier(page, column, document_cache)
 
 class PageAnalyzer:
 

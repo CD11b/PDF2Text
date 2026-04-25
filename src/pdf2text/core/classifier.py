@@ -3,9 +3,16 @@ from src.pdf2text.models import *
 
 class Classifier:
 
-    def __init__(self, layout):
-        self.layout = layout
+    def __init__(self, page, column, document_cache):
+        self.page = page
+        self.column = column
+        self.document_cache = document_cache
         self._cache = {}
+
+        self.bottom_boundary = page.heuristics.start_y.maximum
+        self.left_boundary = column.heuristics.start_x.most_common
+        self.top_boundary = page.heuristics.start_y.minimum
+        self.coordinate_tolerance = page.heuristics.gaps.within_rows.upper if page.ocr else 0.0
 
     @property
     def name(self):
@@ -32,6 +39,26 @@ class Classifier:
         key = self._make_cache_key(features)
         return self._cached(key, lambda: self._compute(features))
 
+class SplitSpanClassifier(Classifier):
+
+    def _extract_features(self, context):
+        line_start_y, line_end_x, next_start_x, next_start_y = context
+        return line_start_y, line_end_x, next_start_x, next_start_y
+
+
+    def _compute(self, features):
+        line_start_y, line_end_x, next_start_x, next_start_y = features
+
+        if self.coordinate_tolerance == 0.0: # For efficiency
+            return False
+
+        if line_start_y != next_start_y:
+            return False
+
+        indent_gap = next_start_x - line_end_x
+        return self.column.heuristics.gaps.within_rows.lower <= indent_gap <= self.column.heuristics.gaps.within_rows.upper
+
+
 class IndentationClassifier(Classifier):
 
     def _extract_features(self, context):
@@ -42,21 +69,21 @@ class IndentationClassifier(Classifier):
 
         line_start_x, previous_start_x, next_start_x = features
 
-        if abs(line_start_x - self.layout.left_boundary) <= self.layout.coordinate_tolerance:
+        if abs(line_start_x - self.left_boundary) <= self.coordinate_tolerance:
             return LineIndentation.NONE
 
-        max_indent_size = self.layout.column.heuristics.start_x.upper_bound - self.layout.column.heuristics.start_x.most_common # Too aggressive. Must fix. Losing out on first sentence of paragraph
+        max_indent_size = self.column.heuristics.start_x.upper_bound - self.column.heuristics.start_x.most_common # Too aggressive. Must fix. Losing out on first sentence of paragraph
         adjusted_line_start_x = line_start_x - max_indent_size
 
         if previous_start_x is not None:
-            if abs(line_start_x - previous_start_x) <= self.layout.coordinate_tolerance:
+            if abs(line_start_x - previous_start_x) <= self.coordinate_tolerance:
                 return LineIndentation.INDENTED_BLOCK
 
             elif adjusted_line_start_x <= previous_start_x:
                 return LineIndentation.INDENTED
 
         if next_start_x is not None:
-            if abs(line_start_x - next_start_x) <= self.layout.coordinate_tolerance:
+            if abs(line_start_x - next_start_x) <= self.coordinate_tolerance:
                 return LineIndentation.INDENTED_BLOCK
 
             elif adjusted_line_start_x <= next_start_x:
@@ -74,7 +101,7 @@ class PositionClassifier(Classifier):
 
         line_start_y, previous_start_y, next_start_y = features
 
-        start_y_upper_bound = self.layout.column.heuristics.row_separation
+        start_y_upper_bound = self.column.heuristics.row_separation
 
         close_to_previous_line = previous_start_y is not None and abs(line_start_y - previous_start_y) <= start_y_upper_bound
         close_to_next_line = next_start_y is not None and abs(line_start_y - next_start_y) <= start_y_upper_bound
@@ -100,13 +127,13 @@ class MarginClassifier(Classifier):
 
         line_start = features
 
-        if abs(line_start - self.layout.left_boundary) <= self.layout.coordinate_tolerance:
+        if abs(line_start - self.left_boundary) <= self.coordinate_tolerance:
             return MarginPosition.AT
 
-        if line_start in self.layout.document_cache.left_margins():
+        if line_start in self.document_cache.left_margins():
             return MarginPosition.AT
 
-        if line_start < self.layout.left_boundary:
+        if line_start < self.left_boundary:
             return MarginPosition.BEFORE
         return MarginPosition.AFTER
 
@@ -119,36 +146,27 @@ class RegionClassifier(Classifier):
 
         line_start = features
 
-        midway = (self.layout.bottom_boundary - self.layout.top_boundary) / 2 + self.layout.top_boundary
+        midway = (self.bottom_boundary - self.top_boundary) / 2 + self.top_boundary
 
         if line_start < midway:
-            if self.layout.has_default_top:
-                if line_start <= self.layout.top_boundary + self.layout.page.heuristics.row_separation:
-                    return VerticalRegion.HEADER
+            if line_start <= self.top_boundary + self.column.heuristics.row_separation:
+                return VerticalRegion.HEADER
 
-                for start_y_range in self.layout.document_cache.start_y_ranges():
-                    for row_separation in self.layout.document_cache.row_separations():
-                        if line_start <= start_y_range.minimum + row_separation:
-                            return VerticalRegion.HEADER
-            else:
-                if line_start <= self.layout.top_boundary:
-                    return VerticalRegion.HEADER
-
-            return VerticalRegion.BODY
+            for start_y_range in self.document_cache.start_y_ranges():
+                for row_separation in self.document_cache.row_separations():
+                    if line_start <= start_y_range.minimum + row_separation:
+                        return VerticalRegion.HEADER
 
         else:
-            if self.layout.has_default_bottom:
-                if line_start >= self.layout.bottom_boundary - self.layout.page.heuristics.row_separation:
-                    return VerticalRegion.FOOTER
-                for start_y_range in self.layout.document_cache.start_y_ranges():
-                    for row_separation in  self.layout.document_cache.row_separations():
-                        if line_start <= start_y_range.maximum + row_separation:
-                            return VerticalRegion.FOOTER
-            else:
-                if line_start >= self.layout.bottom_boundary:
-                    return VerticalRegion.FOOTER
+            if line_start >= self.bottom_boundary - self.column.heuristics.row_separation:
+                return VerticalRegion.FOOTER
+            for start_y_range in self.document_cache.start_y_ranges():
+                for row_separation in  self.document_cache.row_separations():
+                    if line_start <= start_y_range.maximum + row_separation:
+                        return VerticalRegion.FOOTER
 
-            return VerticalRegion.BODY
+
+        return VerticalRegion.BODY
 
 class CharacterCountClassifier(Classifier):
 
@@ -160,7 +178,7 @@ class CharacterCountClassifier(Classifier):
 
         line_character_count = features
 
-        if line_character_count >= self.layout.page.heuristics.character_count.lower_bound:
+        if line_character_count >= self.column.heuristics.character_count.lower_bound:
             return CharacterCount.HIGH
         else:
             return CharacterCount.LOW
@@ -174,10 +192,10 @@ class FontNameClassifier(Classifier):
 
         line_font_name = features
 
-        if line_font_name in self.layout.document_cache.font_names():
+        if line_font_name in self.document_cache.font_names():
             return FontName.MAIN
 
-        for font in self.layout.document_cache.font_names():
+        for font in self.document_cache.font_names():
             if font in line_font_name:
                 if "italic" in line_font_name.lower():
                     return FontName.MAIN_ITALIC
@@ -196,11 +214,11 @@ class FontSizeClassifier(Classifier):
 
         line_font_size = features
 
-        for bounds in self.layout.document_cache.font_size_bounds():
+        for bounds in self.document_cache.font_size_bounds():
             if bounds.lower <= line_font_size <= bounds.upper:
                 return FontSize.MAIN
 
-        if line_font_size < self.layout.page.heuristics.font_size.lower_bound:
+        if line_font_size < self.column.heuristics.font_size.lower_bound:
             return FontSize.SMALL
         else:
             return FontSize.LARGE
