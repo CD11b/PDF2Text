@@ -134,6 +134,16 @@ class GapWithinRowsHeuristic(Heuristic):
 
         return counter
 
+    def compute_bounds(self, lines: PageLines) -> Bounds:
+        if not self.ocr:
+            self._bounds = Bounds(None, None)
+
+        if self._bounds is None:
+            counter = self.build_counter(lines)
+            self._bounds = Bounds.create(counter, self.threshold)
+
+        return self._bounds
+
 class EndXHeuristic(Heuristic):
 
     def build_counter(self, lines: PageLines) -> Counter[float]:
@@ -149,6 +159,10 @@ class StartYHeuristic(Heuristic):
     def build_counter(self, lines: PageLines) -> Counter[float]:
         return self.get_styling_counter(lines, "start_y")
 
+    def compute_bounds(self, lines: PageLines) -> Bounds:
+        self._bounds = Bounds(None, None)
+        return self._bounds
+
 class FontNameHeuristic(Heuristic):
 
     def build_counter(self, lines: PageLines) -> Counter[float]:
@@ -157,6 +171,10 @@ class FontNameHeuristic(Heuristic):
     def compute_distribution(self, lines: PageLines) -> Distribution:
         counter = self.build_counter(lines)
         return Distribution.create(counter, discrete=True)
+
+    def compute_bounds(self, lines: PageLines) -> Bounds:
+        self._bounds = Bounds(None, None)
+        return self._bounds
 
 class ColumnCountHeuristic(Heuristic):
 
