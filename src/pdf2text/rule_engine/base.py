@@ -22,4 +22,4 @@ class RuleEngine:
         for rule in self.rules:
             if rule.matches(ctx):
                 return rule.decide(ctx)
-        return None
+        raise RuntimeError(f"No rule matched context: {ctx}. Missing a fallback rule.")

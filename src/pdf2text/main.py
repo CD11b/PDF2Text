@@ -283,7 +283,7 @@ class FilterText:
         engine = self._select_engine(ctx)
 
         if engine is None:
-            decision = Decision.unhandled("Unhandled case", "_handle")
+            decision = Decision.unhandled("Router could not find a suitable rule engine", "_select_engine")
         else:
             decision = engine.decide(ctx)
 
