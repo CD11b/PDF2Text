@@ -11,6 +11,14 @@ class Classifier:
     def name(self):
         return self.__class__.__name__
 
+    def _extract_features(self, context):
+        """Override in subclasses."""
+        raise NotImplementedError
+
+    def _compute(self, features):
+        """Override in subclasses."""
+        raise NotImplementedError
+
     def _cached(self, key, compute_fn):
         if key not in self._cache:
             self._cache[key] = compute_fn()
