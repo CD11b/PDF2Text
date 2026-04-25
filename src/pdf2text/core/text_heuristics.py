@@ -13,6 +13,7 @@ class Heuristic:
         self.ocr: bool = ocr
         self.override_threshold = override_threshold
 
+        self._counter = None
         self._feature_stats = None
         self._distribution = None
         self._bounds = None
@@ -49,16 +50,21 @@ class Heuristic:
         """Override in subclasses."""
         raise NotImplementedError
 
+    def _get_counter(self, lines: PageLines):
+        if self._counter is None:
+            self._counter = self.build_counter(lines)
+        return self._counter
+
     def compute_distribution(self, lines: PageLines) -> Distribution:
         if self._distribution is None:
-            counter = self.build_counter(lines)
+            counter = self._get_counter(lines)
             self._distribution = Distribution.create(counter)
 
         return self._distribution
 
     def compute_bounds(self, lines: PageLines) -> Bounds:
         if self._bounds is None:
-            counter = self.build_counter(lines)
+            counter = self._get_counter(lines)
             self._bounds = Bounds.create(counter, self.threshold)
 
         return self._bounds
