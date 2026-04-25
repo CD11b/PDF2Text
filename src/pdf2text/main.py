@@ -521,11 +521,11 @@ def main():
             document_cache = DocumentCache()
             for page_blocks in pdf_reader.iter_pages(sort=True):
 
-                lines = PageLines(list(PDFReader.iter_pdf_styling_from_blocks(page_blocks=page_blocks)))
-                if len(lines) == 0:
+                page_lines = PageLines(list(PDFReader.iter_pdf_styling_from_blocks(page_blocks)))
+                if len(page_lines) == 0:
                     continue
 
-                page_data = PageAnalyzer(lines).analyze()
+                page_data = PageAnalyzer(page_lines).analyze()
                 document_cache.update_cache(page_data)
                 filter_text = FilterText(page_data, document_cache)
 
