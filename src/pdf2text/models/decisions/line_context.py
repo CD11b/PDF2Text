@@ -47,4 +47,4 @@ class LineContext:
                 f" {self.character_count},"
                 f" {self.font_name}/{self.font_size},"
                 f" split_span={self.split_span},"
-                f" last_line={self.last_line})")
+                f" last_line={self.last_line}")
