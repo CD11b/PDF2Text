@@ -135,12 +135,12 @@ class GapWithinRowsHeuristic(Heuristic):
         return counter
 
     def compute_bounds(self, lines: PageLines) -> Bounds:
-        if not self.ocr:
-            self._bounds = Bounds(None, None)
-
         if self._bounds is None:
-            counter = self.build_counter(lines)
-            self._bounds = Bounds.create(counter, self.threshold)
+            if not self.ocr:
+                self._bounds = Bounds(None, None)
+            else:
+                counter = self.build_counter(lines)
+                self._bounds = Bounds.create(counter, self.threshold)
 
         return self._bounds
 
