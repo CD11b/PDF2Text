@@ -72,7 +72,7 @@ class IndentationClassifier(Classifier):
         if abs(line_start_x - self.left_boundary) <= self.coordinate_tolerance:
             return LineIndentation.NONE
 
-        max_indent_size = self.column.heuristics.start_x.upper_bound - self.column.heuristics.start_x.most_common # Too aggressive. Must fix. Losing out on first sentence of paragraph
+        max_indent_size = self.column.heuristics.start_x.upper_bound - self.column.heuristics.start_x.most_common
         adjusted_line_start_x = line_start_x - max_indent_size
 
         if previous_start_x is not None:
