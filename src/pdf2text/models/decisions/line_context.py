@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from .context_types import *
 
-@dataclass
+@dataclass(slots=True, frozen=True)
 class LineContext:
     line_group: list
     position_in_paragraph: PositionInParagraph

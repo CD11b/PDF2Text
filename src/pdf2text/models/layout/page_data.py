@@ -28,13 +28,13 @@ class PageLines:
             object.__setattr__(self, "_rows", rows)
         return self._rows
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class PageData:
     heuristics: LayoutProfile
     columns: list[ColumnData]
     ocr: bool
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class ColumnData:
     lines: list[StyledLine]
     heuristics: LayoutProfile
