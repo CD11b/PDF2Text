@@ -1,16 +1,17 @@
 import os
 import argparse
+import logging
 
 from src.pdf2text.IO import PDFReader, OutputWriter
 from src.pdf2text.core.document_cache import DocumentCache
 from src.pdf2text.core.page_analyzer import PageAnalyzer
 from src.pdf2text.core.page_filter import PageFilter
+from src.pdf2text.models import PageLines
 from src.pdf2text.rule_engine.rule_engines import RULE_ENGINES
 from src.pdf2text.utils.bracket_cleaner import BracketCleaner
 
 from src.pdf2text.utils.logger_config import setup_logging
 from src.pdf2text.core.line_filter import LineFilter
-from src.pdf2text.core.text_heuristics import *
 from src.pdf2text.utils.text_cleaning import remove_page_number_lines, join_lines, normalize_text
 
 os.environ["TESSDATA_PREFIX"] = "./training"
