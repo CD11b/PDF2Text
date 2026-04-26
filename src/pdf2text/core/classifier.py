@@ -241,14 +241,31 @@ class FontSizeClassifier(Classifier):
 
 class TextContentClassifier(Classifier):
 
-    def _extract_features(self, line_group):
-        return line_group[0].text
+    def _extract_features(self, context):
+        line_group, previous_group, next_group = context
+
+        current_text = ' '.join(line.text for line in line_group if line.text.strip())
+        previous_text = previous_group.line.text if previous_group else ""
+        next_text = ' '.join(line.text for line in next_group if line.text.strip()) if next_group else ""
+
+        return current_text, previous_text, next_text
 
     def _compute(self, features) -> FontSize:
 
-        text = features
+        current_text, previous_text, next_text = features
+        nearby_text = previous_text.lower() + next_text.lower()
 
-        if "http" in text:
+        if "http" in current_text.lower():
+            if "doi" in current_text.lower():
+                return TextContent.URL_DOI
             return TextContent.URL
-        else:
-            return TextContent.BODY_TEXT
+        elif "http" in nearby_text:
+            if "doi" in nearby_text or "from" in nearby_text:
+                return TextContent.REFERENCE
+        elif "retrieved from" in current_text.lower() or "retrieved from" in nearby_text:
+            return TextContent.REFERENCE
+
+
+
+
+        return TextContent.BODY_TEXT
