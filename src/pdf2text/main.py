@@ -289,24 +289,32 @@ class FilterText:
 
         result.extend(self.collector.process(ctx, decision))
 
+    @staticmethod
+    def _add_page_break(buffer):
+        if not buffer:
+            return []
+
+        last_line = buffer[-1].with_text(buffer[-1].text + "\n\n")
+        return [*buffer[:-1], last_line]
+
+    def _process_column(self, column):
+        buffer = []
+        self.layout = PageLayout(self.page, column, self.document_cache)
+        logging.debug(f"Column: {column.heuristics}")
+        groups_iter = PeekableIterator(column.lines)
+
+        for group in groups_iter:
+            ctx = LineContext.create(self.layout, group, groups_iter, buffer)
+            self._filter_line(ctx, buffer)
+
+        return self._add_page_break(buffer)
+
     def filter_by_boundaries(self):
-
         result = []
-        logging.debug(f"Page: {self.page.heuristics}")
+
         for column in self.page.columns:
+            result.extend(self._process_column(column))
 
-            buffer = []
-            self.layout = PageLayout(self.page, column, self.document_cache)
-            logging.debug(f"Column: {column.heuristics}")
-            groups_iter = PeekableIterator(column.lines)
-            for line_group in groups_iter:
-
-                ctx = LineContext.create(self.layout, line_group, groups_iter, buffer)
-                self._filter_line(ctx, buffer)
-
-            if buffer:
-                buffer[-1] = buffer[-1].with_text(buffer[-1].text + "\n\n")
-                result.extend(buffer)
         return result
 
 class PageLayout:
