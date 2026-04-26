@@ -333,8 +333,19 @@ class PageFilter:
                     first_idx = i
                 last_idx = i
 
-        if first_idx and last_idx:
-            return [*self.collected_lines[:first_idx], *self.collected_lines[last_idx + 1:]]
+        if first_idx is not None:
+            cleaned_lines = [*self.collected_lines[:first_idx], *self.collected_lines[last_idx + 1:]]
+
+            first_idx = last_idx = None
+            for i, collected_line in enumerate(self.collected_lines):
+                if collected_line.ctx.font_size in (FontSize.MAIN_PAGE, FontSize.MAIN_ELSEWHERE):
+                    if first_idx is None:
+                        first_idx = i
+                    last_idx = i
+            if first_idx is not None:
+                cleaned_lines = [*self.collected_lines[:first_idx], *self.collected_lines[last_idx + 1:]]
+
+            return cleaned_lines
 
         return self.collected_lines
 
