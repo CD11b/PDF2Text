@@ -4,7 +4,6 @@ from src.pdf2text.models import *
 class Classifier:
 
     def __init__(self, page, column, document_cache):
-        self.page = page
         self.column = column
         self.document_cache = document_cache
         self._cache = {}
