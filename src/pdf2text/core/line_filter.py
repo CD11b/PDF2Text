@@ -2,12 +2,6 @@ from src.pdf2text.core.peekable_iterator import PeekableIterator
 from src.pdf2text.models import VerticalRegion, MarginPosition, PositionInParagraph, Decision, LineContext
 from src.pdf2text.models.layout.column_layout import ColumnLayout
 from src.pdf2text.rule_engine import RuleEngine
-from src.pdf2text.rule_engine.indented import *
-from src.pdf2text.rule_engine.footer import *
-from src.pdf2text.rule_engine.header import *
-from src.pdf2text.rule_engine.continuous_paragraph import *
-from src.pdf2text.rule_engine.at_left_margin import *
-from src.pdf2text.rule_engine.before_left_margin import *
 
 from src.pdf2text.core.line_collector import LineCollector
 
@@ -17,54 +11,11 @@ logger = logging.getLogger(__name__)
 
 
 class LineFilter:
-    RULE_ENGINES = {
-        "indented": [
-            IndentedBlockLastLineRule(),
-            IndentedBlockParagraphRule(),
-            IndentedMainFontRule(),
-            SplitSpanIndentationLineRule(),
-            ParagraphStartIndentedRule(),
-            EpigraphAuthorRule(),
-            TitlePageRule(),
-            ItalicWordMidLineRule(),
-            BoldWordMidLineRule(),
-            FallbackIndentedRule(),
-        ],
-        "header": [
-            BodyParagraphAtHeaderRegionRule(),
-            HighCharacterCountLineAtHeaderRegionRule(),
-            SingleLineJournalNameAtHeaderRule(),
-            StartJournalNameAtHeaderRule(),
-            FallbackHeaderRegionRule(),
-        ],
-        "footer": [
-            FooterRegionBodyParagraphRule(),
-            FooterRegionLoneIndentedTextRule(),
-            FooterRegionHighCharacterCountLineRule(),
-            FallbackFooterRegionRule(),
-        ],
-        "continuous_paragraph": [
-            ContinuousParagraphMainFontRule(),
-            ContinuousParagraphMultiLineTitleRule(),
-            FallbackContinuousParagraphRule(),
-        ],
-        "at_left_margin": [
-            SingleEmphasizedLineRule(),
-            BoldSectionHeaderAtLeftMarginRule(),
-            FallbackAtLeftMarginRule(),
-        ],
-        "before_left_margin": [
-            FooterBeforeLeftMarginRule(),
-            HeadingBeforeLeftMarginRule(),
-            FallbackBeforeLeftMarginRule(),
-        ],
-    }
-
-    def __init__(self, page, document_cache):
+    def __init__(self, page, document_cache, rule_engines):
         self.page = page
         self.document_cache = document_cache
         self.collector = LineCollector()
-        self.engines = {key: RuleEngine(rules) for key, rules in self.RULE_ENGINES.items()}
+        self.engines = {key: RuleEngine(rules) for key, rules in rule_engines.items()}
 
     def add_paragraph_breaks(self, filtered_lines):
 

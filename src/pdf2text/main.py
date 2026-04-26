@@ -5,6 +5,7 @@ from collections import defaultdict
 from src.pdf2text.IO import PDFReader, OutputWriter
 from src.pdf2text.core.peekable_iterator import PeekableIterator
 from src.pdf2text.models import *
+from src.pdf2text.rule_engine.rule_engines import RULE_ENGINES
 
 from src.pdf2text.utils.logger_config import setup_logging
 from src.pdf2text.core.line_filter import LineFilter
@@ -286,7 +287,6 @@ class PageAnalyzer:
         return PageData(page_heuristics, columns, self.ocr)
 
 class DocumentCache:
-    from collections import Counter
 
     def __init__(self):
         self._left_margins = set()
@@ -364,7 +364,7 @@ def main():
                 page_data = PageAnalyzer(page_lines).analyze()
                 document_cache.update_cache(page_data)
 
-                filtered_lines = LineFilter(page_data, document_cache).filter_lines_individually()
+                filtered_lines = LineFilter(page_data, document_cache, RULE_ENGINES).filter_lines_individually()
                 filtered_lines = PageFilter(filtered_lines).filter_references()
 
 
