@@ -184,12 +184,21 @@ class FontNameHeuristic(Heuristic):
 
 class ColumnCountHeuristic(Heuristic):
 
-    def build_counter(self, lines: PageLines) -> Counter[float]:
+    def build_counter(self, lines: PageLines, coordinate_tolerance = None) -> Counter[float]:
 
         counter = Counter()
-        for row in lines.rows:
-            row_character_count = sum(line.character_count for line in row)
-            counter[len(row)] += row_character_count
+        if self.ocr and coordinate_tolerance:
+            for row in lines.rows:
+                count = 1
+                for previous, current in zip(row, row[1:]):
+                    if current.start_x - previous.end_x > coordinate_tolerance:
+                        count += 1
+                counter[count] += sum(line.character_count for line in row)
+            self._counter = counter
+        else:
+            for row in lines.rows:
+                row_character_count = sum(line.character_count for line in row)
+                counter[len(row)] += row_character_count
 
         return counter
 

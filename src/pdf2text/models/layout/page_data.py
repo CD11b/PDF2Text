@@ -38,3 +38,7 @@ class PageData:
     heuristics: LayoutProfile
     columns: list[ColumnData]
     ocr: bool
+
+    @property
+    def column_count(self):
+        return len(self.columns)

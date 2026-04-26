@@ -414,23 +414,23 @@ class PageAnalyzer:
         coordinate_tolerance = page_heuristics.gaps.within_rows.upper if self.ocr else 0.0
         line_groups = self.create_line_groups(self.lines.rows, coordinate_tolerance)
 
-        if not self.ocr:
-            column_count = ColumnCountHeuristic(self.ocr)
-            column_count_stats = column_count.compute_feature_stats(self.lines)
-            logging.debug(f"Detected {column_count_stats.upper_bound} column(s)")
+        column_count = ColumnCountHeuristic(self.ocr)
+        column_count.build_counter(self.lines, coordinate_tolerance)
+        column_count_stats = column_count.compute_feature_stats(self.lines)
+        logging.debug(f"Detected {column_count_stats.upper_bound} column(s)")
 
-            if column_count_stats.upper_bound > 1:
-                start_x_columns = column_count.compute_column_starts(self.lines, int(column_count_stats.upper_bound))
-                columned_groups = self.sort_line_columns(line_groups, start_x_columns)
+        if column_count_stats.upper_bound > 1:
+            start_x_columns = column_count.compute_column_starts(self.lines, int(column_count_stats.upper_bound))
+            columned_groups = self.sort_line_columns(line_groups, start_x_columns)
 
-                for start_x in sorted(columned_groups.keys()):
-                    column_lines = PageLines(columned_groups[start_x])
-                    column_heuristics = self.compute_layout_profile(column_lines)
-                    column_line_groups = self.create_line_groups(column_lines.rows, coordinate_tolerance)
-                    columns.append(ColumnData(column_line_groups, column_heuristics))
-                return PageData(page_heuristics, columns, self.ocr)
+            for start_x in sorted(columned_groups.keys()):
+                column_lines = PageLines(columned_groups[start_x])
+                column_heuristics = self.compute_layout_profile(column_lines)
+                column_line_groups = self.create_line_groups(column_lines.rows, coordinate_tolerance)
+                columns.append(ColumnData(column_line_groups, column_heuristics))
+        else:
+            columns.append(ColumnData(line_groups, page_heuristics))
 
-        columns.append(ColumnData(line_groups, page_heuristics))
         return PageData(page_heuristics, columns, self.ocr)
 
 class DocumentCache:
