@@ -213,14 +213,21 @@ class FontSizeClassifier(Classifier):
 
         line_font_size = features
 
-        for bounds in self.document_cache.font_size_bounds():
-            if bounds.lower <= line_font_size <= bounds.upper:
-                return FontSize.MAIN
-
-        if line_font_size < self.column.heuristics.font_size.lower_bound:
-            return FontSize.SMALL
+        if line_font_size == self.document_cache.dominant_font_sizes().most_common(1)[0][0]:
+            return FontSize.MAIN_DOCUMENT
+        elif line_font_size == self.column.heuristics.font_size.most_common:
+            return FontSize.MAIN_PAGE
+        elif line_font_size in self.document_cache.dominant_font_sizes():
+            return FontSize.MAIN_ELSEWHERE
         else:
-            return FontSize.LARGE
+            for bounds in self.document_cache.font_size_bounds():
+                if bounds.lower <= line_font_size <= bounds.upper:
+                    return FontSize.IN_RANGE_ELSEWHERE
+
+            if line_font_size < self.column.heuristics.font_size.lower_bound:
+                return FontSize.SMALL
+            else:
+                return FontSize.LARGE
 
 class TextContentClassifier(Classifier):
 

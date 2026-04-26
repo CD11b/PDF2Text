@@ -8,7 +8,7 @@ class ContinuousParagraphMainFontRule(ContinuousParagraphRule):
     priority = 10
 
     def matches(self, ctx):
-        return ctx.font_size is FontSize.MAIN
+        return ctx.font_size in (FontSize.MAIN_DOCUMENT, FontSize.MAIN_PAGE, FontSize.MAIN_ELSEWHERE, FontSize.IN_RANGE_ELSEWHERE)
 
     def decide(self, ctx):
         return Decision.collect("Continued Paragraph", self.name)

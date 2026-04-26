@@ -33,7 +33,10 @@ class FontName(Enum):
     OTHER = auto()
 
 class FontSize(Enum):
-    MAIN = auto()
+    MAIN_DOCUMENT = auto()
+    MAIN_PAGE = auto()
+    MAIN_ELSEWHERE = auto()
+    IN_RANGE_ELSEWHERE = auto()
     LARGE = auto()
     SMALL = auto()
 

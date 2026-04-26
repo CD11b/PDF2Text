@@ -10,7 +10,7 @@ class SingleEmphasizedLineRule(AtLeftMarginRule):
     def matches(self, ctx):
         return (ctx.position_in_paragraph is PositionInParagraph.SINGLE_LINE and
                 ctx.character_count is CharacterCount.HIGH and
-                ctx.font_size is FontSize.MAIN)
+                ctx.font_size in (FontSize.MAIN_DOCUMENT, FontSize.MAIN_PAGE, FontSize.MAIN_ELSEWHERE, FontSize.IN_RANGE_ELSEWHERE))
 
     def decide(self, ctx):
         return Decision.collect("Single line that's part of main body", self.name)

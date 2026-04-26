@@ -78,7 +78,7 @@ class ItalicWordMidLineRule(IndentedLineRule):
 
     def matches(self, ctx):
         return (ctx.indentation is LineIndentation.LARGE_INDENTATION and
-                ctx.font_size is FontSize.MAIN and
+                ctx.font_size in (FontSize.MAIN_DOCUMENT, FontSize.MAIN_PAGE, FontSize.MAIN_ELSEWHERE, FontSize.IN_RANGE_ELSEWHERE) and
                 ctx.font_name is FontName.MAIN_ITALIC)
 
     def decide(self, ctx):
@@ -89,7 +89,7 @@ class BoldWordMidLineRule(IndentedLineRule):
 
     def matches(self, ctx):
         return (ctx.indentation is LineIndentation.LARGE_INDENTATION and
-                ctx.font_size is FontSize.MAIN and
+                ctx.font_size in (FontSize.MAIN_DOCUMENT, FontSize.MAIN_PAGE, FontSize.MAIN_ELSEWHERE, FontSize.IN_RANGE_ELSEWHERE) and
                 ctx.font_name is FontName.MAIN_BOLD)
 
     def decide(self, ctx):
