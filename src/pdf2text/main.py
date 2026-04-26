@@ -193,7 +193,6 @@ class FilterText:
     def __init__(self, page, document_cache):
         self.page = page
         self.document_cache = document_cache
-        self.layout = None
         self.collector = LineCollector()
 
         self.indented_rule_engine = RuleEngine([
