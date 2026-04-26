@@ -1,10 +1,7 @@
 from src.pdf2text.models import *
 from src.pdf2text.rule_engine import Rule
 
-class BeforeLeftMarginRule(Rule):
-    pass
-
-class FooterBeforeLeftMarginRule(BeforeLeftMarginRule):
+class FooterBeforeLeftMarginRule(Rule):
     priority = 10
 
     def matches(self, ctx):
@@ -23,7 +20,7 @@ class HeadingBeforeLeftMarginRule(Rule):
     def decide(self, ctx):
         return Decision.skip("Heading before left margin", self.name)
 
-class FallbackBeforeLeftMarginRule(BeforeLeftMarginRule):
+class FallbackBeforeLeftMarginRule(Rule):
     priority = 999
 
     def matches(self, ctx):

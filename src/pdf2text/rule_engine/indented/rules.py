@@ -1,10 +1,7 @@
 from src.pdf2text.models import *
 from src.pdf2text.rule_engine import Rule
 
-class IndentedLineRule(Rule):
-    pass
-
-class IndentedBlockLastLineRule(IndentedLineRule):
+class IndentedBlockLastLineRule(Rule):
     priority = 10
 
     def matches(self, ctx):
@@ -13,7 +10,7 @@ class IndentedBlockLastLineRule(IndentedLineRule):
     def decide(self, ctx):
         return Decision.collect("Last Line is Continued Indented Paragraph", self.name)
 
-class IndentedBlockParagraphRule(IndentedLineRule):
+class IndentedBlockParagraphRule(Rule):
     priority = 20
 
     def matches(self, ctx):
@@ -22,7 +19,7 @@ class IndentedBlockParagraphRule(IndentedLineRule):
     def decide(self, ctx):
         return Decision.collect("Indented Block", self.name)
 
-class IndentedMainFontRule(IndentedLineRule):
+class IndentedMainFontRule(Rule):
     priority = 30
 
     def matches(self, ctx):
@@ -31,7 +28,7 @@ class IndentedMainFontRule(IndentedLineRule):
     def decide(self, ctx):
         return Decision.collect("Indented Paragraph", self.name)
 
-class SplitSpanIndentationLineRule(IndentedLineRule):
+class SplitSpanIndentationLineRule(Rule):
     priority = 40
 
     def matches(self, ctx):
@@ -40,7 +37,7 @@ class SplitSpanIndentationLineRule(IndentedLineRule):
     def decide(self, ctx):
         return Decision.collect("Span mistakenly split into two lines due to OCR fuzziness", self.name)
 
-class ParagraphStartIndentedRule(IndentedLineRule):
+class ParagraphStartIndentedRule(Rule):
     priority = 50
 
     def matches(self, ctx):
@@ -51,7 +48,7 @@ class ParagraphStartIndentedRule(IndentedLineRule):
     def decide(self, ctx):
         return Decision.collect("Start of paragraph is indented", self.name)
 
-class EpigraphAuthorRule(IndentedLineRule):
+class EpigraphAuthorRule(Rule):
     priority = 60
 
     def matches(self, ctx):
@@ -62,7 +59,7 @@ class EpigraphAuthorRule(IndentedLineRule):
     def decide(self, ctx):
         return Decision.skip("Source/author of epigraph", self.name)
 
-class TitlePageRule(IndentedLineRule):
+class TitlePageRule(Rule):
     priority = 60
 
     def matches(self, ctx):
@@ -73,7 +70,7 @@ class TitlePageRule(IndentedLineRule):
     def decide(self, ctx):
         return Decision.skip("Title/sub-title", self.name)
 
-class ItalicWordMidLineRule(IndentedLineRule):
+class ItalicWordMidLineRule(Rule):
     priority = 70
 
     def matches(self, ctx):
@@ -84,7 +81,7 @@ class ItalicWordMidLineRule(IndentedLineRule):
     def decide(self, ctx):
         return Decision.collect("Italic word with main font found within sentence", self.name)
 
-class BoldWordMidLineRule(IndentedLineRule):
+class BoldWordMidLineRule(Rule):
     priority = 80
 
     def matches(self, ctx):
@@ -95,7 +92,7 @@ class BoldWordMidLineRule(IndentedLineRule):
     def decide(self, ctx):
         return Decision.collect("Bold word with main font found within sentence", self.name)
 
-class FallbackIndentedRule(IndentedLineRule):
+class FallbackIndentedRule(Rule):
     priority = 999
 
     def matches(self, ctx):

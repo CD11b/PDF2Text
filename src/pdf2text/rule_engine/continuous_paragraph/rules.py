@@ -1,10 +1,7 @@
 from src.pdf2text.models import *
 from src.pdf2text.rule_engine import Rule
 
-class ContinuousParagraphRule(Rule):
-    pass
-
-class ContinuousParagraphMainFontRule(ContinuousParagraphRule):
+class ContinuousParagraphMainFontRule(Rule):
     priority = 10
 
     def matches(self, ctx):
@@ -13,7 +10,7 @@ class ContinuousParagraphMainFontRule(ContinuousParagraphRule):
     def decide(self, ctx):
         return Decision.collect("Continued Paragraph", self.name)
 
-class ContinuousParagraphMultiLineTitleRule(ContinuousParagraphRule):
+class ContinuousParagraphMultiLineTitleRule(Rule):
     priority = 20
 
     def matches(self, ctx):
@@ -22,7 +19,7 @@ class ContinuousParagraphMultiLineTitleRule(ContinuousParagraphRule):
     def decide(self, ctx):
         return Decision.skip("Multi-line Title", self.name)
 
-class FallbackContinuousParagraphRule(ContinuousParagraphRule):
+class FallbackContinuousParagraphRule(Rule):
     priority = 999
 
     def matches(self, ctx):

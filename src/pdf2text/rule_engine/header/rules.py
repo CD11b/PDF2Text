@@ -1,10 +1,7 @@
 from src.pdf2text.models import *
 from src.pdf2text.rule_engine import Rule
 
-class HeaderRegionRule(Rule):
-    pass
-
-class BodyParagraphAtHeaderRegionRule(HeaderRegionRule):
+class BodyParagraphAtHeaderRegionRule(Rule):
     priority = 10
 
     def matches(self, ctx):
@@ -13,7 +10,7 @@ class BodyParagraphAtHeaderRegionRule(HeaderRegionRule):
     def decide(self, ctx):
         return Decision.collect("Body paragraph at header", self.name)
 
-class HighCharacterCountLineAtHeaderRegionRule(HeaderRegionRule):
+class HighCharacterCountLineAtHeaderRegionRule(Rule):
     priority = 20
 
     def matches(self, ctx):
@@ -22,7 +19,7 @@ class HighCharacterCountLineAtHeaderRegionRule(HeaderRegionRule):
     def decide(self, ctx):
         return Decision.collect("High character count line at header", self.name)
 
-class SingleLineJournalNameAtHeaderRule(HeaderRegionRule):
+class SingleLineJournalNameAtHeaderRule(Rule):
     priority = 30
 
     def matches(self, ctx):
@@ -32,7 +29,7 @@ class SingleLineJournalNameAtHeaderRule(HeaderRegionRule):
     def decide(self, ctx):
         return Decision.skip("Single line journal name at header", self.name)
 
-class StartJournalNameAtHeaderRule(HeaderRegionRule):
+class StartJournalNameAtHeaderRule(Rule):
     priority = 40
 
     def matches(self, ctx):
@@ -44,7 +41,7 @@ class StartJournalNameAtHeaderRule(HeaderRegionRule):
         return Decision.skip("Journal name of non-main font at header, start of paragraph", self.name)
 
 
-class FallbackHeaderRegionRule(HeaderRegionRule):
+class FallbackHeaderRegionRule(Rule):
     priority = 999
 
     def matches(self, ctx):

@@ -1,10 +1,7 @@
 from src.pdf2text.models import *
 from src.pdf2text.rule_engine import Rule
 
-class FooterRegionRule(Rule):
-    pass
-
-class FooterRegionBodyParagraphRule(FooterRegionRule):
+class FooterRegionBodyParagraphRule(Rule):
     priority = 10
 
     def matches(self, ctx):
@@ -14,7 +11,7 @@ class FooterRegionBodyParagraphRule(FooterRegionRule):
     def decide(self, ctx):
         return Decision.collect("Body Paragraph at Footer Region", self.name)
 
-class FooterRegionLoneIndentedTextRule(FooterRegionRule):
+class FooterRegionLoneIndentedTextRule(Rule):
     priority = 40
 
     def matches(self, ctx):
@@ -24,7 +21,7 @@ class FooterRegionLoneIndentedTextRule(FooterRegionRule):
     def decide(self, ctx):
         return Decision.skip("Lone indented text at Footer Region", self.name)
 
-class FooterRegionHighCharacterCountLineRule(FooterRegionRule):
+class FooterRegionHighCharacterCountLineRule(Rule):
     priority = 30
 
     def matches(self, ctx):
@@ -33,7 +30,7 @@ class FooterRegionHighCharacterCountLineRule(FooterRegionRule):
     def decide(self, ctx):
         return Decision.collect("High character count line at Footer", self.name) # Would also collect citations
 
-class FallbackFooterRegionRule(FooterRegionRule):
+class FallbackFooterRegionRule(Rule):
     priority = 999
 
     def matches(self, ctx):

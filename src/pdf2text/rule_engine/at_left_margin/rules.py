@@ -1,10 +1,7 @@
 from src.pdf2text.models import *
 from src.pdf2text.rule_engine import Rule
 
-class AtLeftMarginRule(Rule):
-    pass
-
-class SingleEmphasizedLineRule(AtLeftMarginRule):
+class SingleEmphasizedLineRule(Rule):
     priority = 10
 
     def matches(self, ctx):
@@ -15,7 +12,7 @@ class SingleEmphasizedLineRule(AtLeftMarginRule):
     def decide(self, ctx):
         return Decision.collect("Single line that's part of main body", self.name)
 
-class BoldSectionHeaderAtLeftMarginRule(AtLeftMarginRule):
+class BoldSectionHeaderAtLeftMarginRule(Rule):
     priority = 20
 
     def matches(self, ctx):
@@ -28,7 +25,7 @@ class BoldSectionHeaderAtLeftMarginRule(AtLeftMarginRule):
         return Decision.skip("Bold section header", self.name)
 
 
-class FallbackAtLeftMarginRule(AtLeftMarginRule):
+class FallbackAtLeftMarginRule(Rule):
     priority = 999
 
     def matches(self, ctx):
