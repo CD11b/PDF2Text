@@ -3,6 +3,7 @@ import argparse
 from collections import defaultdict
 
 from src.pdf2text.IO import PDFReader, OutputWriter
+from src.pdf2text.core.page_filter import PageFilter
 from src.pdf2text.models import *
 from src.pdf2text.rule_engine.rule_engines import RULE_ENGINES
 from src.pdf2text.utils.bracket_cleaner import BracketCleaner
@@ -16,36 +17,6 @@ os.environ["TESSDATA_PREFIX"] = "./training"
 
 logger = logging.getLogger(__name__)
 
-class PageFilter:
-
-    def __init__(self, collected_lines):
-        self.collected_lines = collected_lines
-
-    def filter_references(self):
-        first_idx = None
-        last_idx = None
-
-        for i, collected_line in enumerate(self.collected_lines):
-            if collected_line.ctx.text_content in (TextContent.URL_DOI, TextContent.REFERENCE_BLOCK):
-                if first_idx is None:
-                    first_idx = i
-                last_idx = i
-
-        if first_idx is not None:
-            cleaned_lines = [*self.collected_lines[:first_idx], *self.collected_lines[last_idx + 1:]]
-
-            first_idx = last_idx = None
-            for i, collected_line in enumerate(self.collected_lines):
-                if collected_line.ctx.font_size in (FontSize.MAIN_PAGE, FontSize.MAIN_ELSEWHERE):
-                    if first_idx is None:
-                        first_idx = i
-                    last_idx = i
-            if first_idx is not None:
-                cleaned_lines = [*self.collected_lines[:first_idx], *self.collected_lines[last_idx + 1:]]
-
-            return cleaned_lines
-
-        return self.collected_lines
 
 class PageAnalyzer:
 
