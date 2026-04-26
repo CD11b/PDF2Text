@@ -11,4 +11,5 @@ __all__ = ["Action",
            "VerticalRegion",
            "CharacterCount",
            "FontName",
-           "FontSize"]
+           "FontSize",
+           "TextContent"]

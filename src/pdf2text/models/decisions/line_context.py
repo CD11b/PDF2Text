@@ -4,6 +4,7 @@ from .context_types import *
 @dataclass(slots=True, frozen=True)
 class LineContext:
     line_group: list
+    text_content: TextContent
     position_in_paragraph: PositionInParagraph
     indentation: LineIndentation
     region: VerticalRegion
@@ -28,6 +29,7 @@ class LineContext:
 
         return cls(
             line_group=line_group,
+            text_content=layout.line_text_content.classify(line_group),
             position_in_paragraph=layout.line_position.classify(context=(line_start_y, previous_start_y, next_start_y)),
             indentation=layout.line_indentation.classify(context=(line_start_x, previous_start_x, next_start_x)),
             region=layout.line_region.classify(line_group),
@@ -40,7 +42,8 @@ class LineContext:
         )
 
     def __repr__(self):
-        return (f"{self.position_in_paragraph},"
+        return (f"{self.text_content}, "
+                f"{self.position_in_paragraph},"
                 f" {self.indentation},"
                 f" {self.region},"
                 f" {self.margin_position},"

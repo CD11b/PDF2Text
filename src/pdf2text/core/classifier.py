@@ -221,3 +221,17 @@ class FontSizeClassifier(Classifier):
             return FontSize.SMALL
         else:
             return FontSize.LARGE
+
+class TextContentClassifier(Classifier):
+
+    def _extract_features(self, line_group):
+        return line_group[0].text
+
+    def _compute(self, features) -> FontSize:
+
+        text = features
+
+        if "http" in text:
+            return TextContent.URL
+        else:
+            return TextContent.BODY_TEXT

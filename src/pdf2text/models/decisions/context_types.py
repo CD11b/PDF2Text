@@ -36,3 +36,7 @@ class FontSize(Enum):
     MAIN = auto()
     LARGE = auto()
     SMALL = auto()
+
+class TextContent(Enum):
+    BODY_TEXT = auto()
+    URL = auto()

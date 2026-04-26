@@ -17,7 +17,7 @@ from src.pdf2text.rule_engine.before_left_margin import *
 from src.pdf2text.utils.logger_config import setup_logging
 from src.pdf2text.core.text_heuristics import *
 from src.pdf2text.core.line_collector import LineCollector
-from src.pdf2text.core.classifier import IndentationClassifier, PositionClassifier, MarginClassifier, RegionClassifier, CharacterCountClassifier, FontNameClassifier, FontSizeClassifier, SplitSpanClassifier
+from src.pdf2text.core.classifier import IndentationClassifier, PositionClassifier, MarginClassifier, RegionClassifier, CharacterCountClassifier, FontNameClassifier, FontSizeClassifier, SplitSpanClassifier, TextContentClassifier
 from src.pdf2text.utils.text_cleaning import remove_page_number_lines, join_lines, normalize_text
 
 os.environ["TESSDATA_PREFIX"] = "./training"
@@ -329,6 +329,7 @@ class PageLayout:
         self.line_font_name = FontNameClassifier(page, column, document_cache)
         self.line_font_size = FontSizeClassifier(page, column, document_cache)
         self.line_split_span = SplitSpanClassifier(page, column, document_cache)
+        self.line_text_content = TextContentClassifier(page, column, document_cache)
 
 class PageAnalyzer:
 
