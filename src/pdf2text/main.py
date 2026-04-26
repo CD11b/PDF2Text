@@ -328,7 +328,7 @@ class PageFilter:
         last_idx = None
 
         for i, collected_line in enumerate(self.collected_lines):
-            if collected_line.ctx.text_content in (TextContent.URL_DOI, TextContent.REFERENCE):
+            if collected_line.ctx.text_content in (TextContent.URL_DOI, TextContent.REFERENCE_BLOCK):
                 if first_idx is None:
                     first_idx = i
                 last_idx = i

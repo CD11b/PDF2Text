@@ -44,4 +44,4 @@ class TextContent(Enum):
     BODY_TEXT = auto()
     URL = auto()
     URL_DOI = auto()
-    REFERENCE = auto()
+    REFERENCE_BLOCK = auto()

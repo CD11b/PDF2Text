@@ -261,9 +261,9 @@ class TextContentClassifier(Classifier):
             return TextContent.URL
         elif "http" in nearby_text:
             if "doi" in nearby_text or "from" in nearby_text:
-                return TextContent.REFERENCE
+                return TextContent.REFERENCE_BLOCK
         elif "retrieved from" in current_text.lower() or "retrieved from" in nearby_text:
-            return TextContent.REFERENCE
+            return TextContent.REFERENCE_BLOCK
 
 
 
