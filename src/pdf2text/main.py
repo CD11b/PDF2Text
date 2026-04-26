@@ -189,13 +189,8 @@ class BracketCleaner:
         return result
 
 class LineFilter:
-
-    def __init__(self, page, document_cache):
-        self.page = page
-        self.document_cache = document_cache
-        self.collector = LineCollector()
-
-        self.indented_rule_engine = RuleEngine([
+    RULE_ENGINES = {
+        "indented": [
             IndentedBlockLastLineRule(),
             IndentedBlockParagraphRule(),
             IndentedMainFontRule(),
@@ -205,42 +200,43 @@ class LineFilter:
             TitlePageRule(),
             ItalicWordMidLineRule(),
             BoldWordMidLineRule(),
-            FallbackIndentedRule()
-        ])
-
-        self.header_rule_engine = RuleEngine([
+            FallbackIndentedRule(),
+        ],
+        "header": [
             BodyParagraphAtHeaderRegionRule(),
             HighCharacterCountLineAtHeaderRegionRule(),
             SingleLineJournalNameAtHeaderRule(),
             StartJournalNameAtHeaderRule(),
-            FallbackHeaderRegionRule()
-        ])
-
-        self.footer_rule_engine = RuleEngine([
+            FallbackHeaderRegionRule(),
+        ],
+        "footer": [
             FooterRegionBodyParagraphRule(),
             FooterRegionLoneIndentedTextRule(),
             FooterRegionHighCharacterCountLineRule(),
-            FallbackFooterRegionRule()
-        ])
-
-        self.continuous_paragraph_engine = RuleEngine([
+            FallbackFooterRegionRule(),
+        ],
+        "continuous_paragraph": [
             ContinuousParagraphMainFontRule(),
             ContinuousParagraphMultiLineTitleRule(),
-            FallbackContinuousParagraphRule()
-        ])
-
-        self.at_left_margin_engine = RuleEngine([
+            FallbackContinuousParagraphRule(),
+        ],
+        "at_left_margin": [
             SingleEmphasizedLineRule(),
             BoldSectionHeaderAtLeftMarginRule(),
-            FallbackAtLeftMarginRule()
-        ])
-
-        self.before_left_margin_engine = RuleEngine([
+            FallbackAtLeftMarginRule(),
+        ],
+        "before_left_margin": [
             FooterBeforeLeftMarginRule(),
             HeadingBeforeLeftMarginRule(),
-            FallbackBeforeLeftMarginRule()
-        ])
+            FallbackBeforeLeftMarginRule(),
+        ],
+    }
 
+    def __init__(self, page, document_cache):
+        self.page = page
+        self.document_cache = document_cache
+        self.collector = LineCollector()
+        self.engines = {key: RuleEngine(rules) for key, rules in self.RULE_ENGINES.items()}
 
     def add_paragraph_breaks(self, filtered_lines):
 
@@ -259,22 +255,21 @@ class LineFilter:
     def _select_engine(self, ctx):
 
         if ctx.region is VerticalRegion.HEADER:
-            return self.header_rule_engine
+            return self.engines["header"]
 
         if ctx.region is VerticalRegion.FOOTER:
-            return self.footer_rule_engine
+            return self.engines["footer"]
 
         if ctx.margin_position is MarginPosition.BEFORE:
-            return self.before_left_margin_engine
+            return self.engines["before_left_margin"]
 
         if ctx.margin_position is MarginPosition.AT:
             if ctx.position_in_paragraph is not PositionInParagraph.SINGLE_LINE:
-                return self.continuous_paragraph_engine
-
-            return self.at_left_margin_engine
+                return self.engines["continuous_paragraph"]
+            return self.engines["at_left_margin"]
 
         if ctx.margin_position is MarginPosition.AFTER:
-            return self.indented_rule_engine
+            return self.engines["indented"]
 
         return None
 
