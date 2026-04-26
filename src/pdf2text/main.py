@@ -309,13 +309,35 @@ class LineFilter:
 
         return self._add_page_break(buffer)
 
-    def filter_by_boundaries(self):
+    def filter_lines_individually(self):
         result = []
 
         for column in self.page.columns:
             result.extend(self._process_column(column))
 
         return result
+
+
+class PageFilter:
+
+    def __init__(self, collected_lines):
+        self.collected_lines = collected_lines
+
+    def filter_references(self):
+        first_idx = None
+        last_idx = None
+
+        for i, collected_line in enumerate(self.collected_lines):
+            if collected_line.ctx.text_content in (TextContent.URL_DOI, TextContent.REFERENCE):
+                if first_idx is None:
+                    first_idx = i
+                last_idx = i
+
+        if first_idx and last_idx:
+            return [*self.collected_lines[:first_idx], *self.collected_lines[last_idx + 1:]]
+
+        return self.collected_lines
+
 
 class ColumnLayout:
 
