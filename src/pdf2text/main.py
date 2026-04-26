@@ -299,12 +299,12 @@ class FilterText:
 
     def _process_column(self, column):
         buffer = []
-        self.layout = PageLayout(self.page, column, self.document_cache)
+        column_layout = ColumnLayout(self.page, column, self.document_cache)
         logging.debug(f"Column: {column.heuristics}")
         groups_iter = PeekableIterator(column.lines)
 
         for group in groups_iter:
-            ctx = LineContext.create(self.layout, group, groups_iter, buffer)
+            ctx = LineContext.create(column_layout, group, groups_iter, buffer)
             self._filter_line(ctx, buffer)
 
         return self._add_page_break(buffer)
@@ -317,7 +317,7 @@ class FilterText:
 
         return result
 
-class PageLayout:
+class ColumnLayout:
 
     def __init__(self, page, column, document_cache):
         self.column = column
