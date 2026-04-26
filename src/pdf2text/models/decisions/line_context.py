@@ -3,7 +3,6 @@ from .context_types import *
 
 @dataclass(slots=True, frozen=True)
 class LineContext:
-    line_group: list
     text_content: TextContent
     position_in_paragraph: PositionInParagraph
     indentation: LineIndentation

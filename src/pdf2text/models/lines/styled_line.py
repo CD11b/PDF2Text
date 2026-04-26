@@ -1,4 +1,5 @@
 from dataclasses import dataclass, replace
+from src.pdf2text.models.decisions import LineContext
 
 @dataclass(frozen=True)
 class StyledLine:
@@ -21,3 +22,16 @@ class StyledLine:
     def with_text(self, new_text: str) -> "StyledLine":
         """Return a new StyledLine with updated text but identical styling and geometry."""
         return replace(self, text=new_text)
+
+@dataclass(frozen=True)
+class CollectedLine:
+    line: StyledLine
+    ctx: LineContext
+
+    @classmethod
+    def create(cls, line, ctx):
+        return cls(line, ctx)
+
+    def with_line(self, new_line: str) -> "CollectedLine":
+        """Return a new CollectedLine with updated line but identical context."""
+        return replace(self, line=new_line)

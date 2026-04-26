@@ -42,7 +42,10 @@ class Classifier:
 class SplitSpanClassifier(Classifier):
 
     def _extract_features(self, context):
-        line_start_y, line_end_x, next_start_x, next_start_y = context
+        line_start_y, line_end_x, next_group = context
+        next_start_x = next_group[0].start_x if next_group else None
+        next_start_y = next_group[0].start_y if next_group else None
+
         return line_start_y, line_end_x, next_start_x, next_start_y
 
 
@@ -62,7 +65,10 @@ class SplitSpanClassifier(Classifier):
 class IndentationClassifier(Classifier):
 
     def _extract_features(self, context):
-        line_start_x, previous_start_x, next_start_x = context
+        line_start_x, previous_group, next_group = context
+        previous_start_x = previous_group.line.start_x if previous_group else None
+        next_start_x = next_group[0].start_x if next_group else None
+
         return line_start_x, previous_start_x, next_start_x
 
     def _compute(self, features):
@@ -94,7 +100,10 @@ class IndentationClassifier(Classifier):
 class PositionClassifier(Classifier):
 
     def _extract_features(self, context):
-        line_start_y, previous_start_y, next_start_y = context
+        line_start_y, previous_group, next_group = context
+        previous_start_y = previous_group.line.start_y if previous_group else None
+        next_start_y = next_group[0].start_y if next_group else None
+
         return line_start_y, previous_start_y, next_start_y
 
     def _compute(self, features):

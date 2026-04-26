@@ -1,3 +1,3 @@
-from .styled_line import StyledLine
+from .styled_line import StyledLine, CollectedLine
 
-__all__ = ["StyledLine"]
+__all__ = ["StyledLine", "CollectedLine"]

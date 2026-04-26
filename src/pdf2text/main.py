@@ -188,7 +188,7 @@ class BracketCleaner:
 
         return result
 
-class FilterText:
+class LineFilter:
 
     def __init__(self, page, document_cache):
         self.page = page
@@ -278,7 +278,7 @@ class FilterText:
 
         return None
 
-    def _filter_line(self, ctx, result):
+    def _filter_line(self, group, ctx, result):
         engine = self._select_engine(ctx)
 
         if engine is None:
@@ -286,15 +286,16 @@ class FilterText:
         else:
             decision = engine.decide(ctx)
 
-        result.extend(self.collector.process(ctx, decision))
+        result.extend(self.collector.process(group, ctx, decision))
 
     @staticmethod
     def _add_page_break(buffer):
         if not buffer:
             return []
 
-        last_line = buffer[-1].with_text(buffer[-1].text + "\n\n")
-        return [*buffer[:-1], last_line]
+        last_line = buffer[-1].line.with_text(buffer[-1].line.text + "\n\n")
+        last_collected_line = buffer[-1].with_line(last_line)
+        return [*buffer[:-1], last_collected_line]
 
     def _process_column(self, column):
         buffer = []
@@ -304,7 +305,7 @@ class FilterText:
 
         for group in groups_iter:
             ctx = LineContext.create(column_layout, group, groups_iter, buffer)
-            self._filter_line(ctx, buffer)
+            self._filter_line(group, ctx, buffer)
 
         return self._add_page_break(buffer)
 
@@ -511,9 +512,12 @@ def main():
 
                 page_data = PageAnalyzer(page_lines).analyze()
                 document_cache.update_cache(page_data)
-                filter_text = FilterText(page_data, document_cache)
 
-                filtered_lines = filter_text.filter_by_boundaries()
+                filtered_lines = LineFilter(page_data, document_cache).filter_lines_individually()
+                filtered_lines = PageFilter(filtered_lines).filter_references()
+
+
+
                 filtered_lines = remove_page_number_lines(filtered_lines)
 
                 cleaned_brackets = BracketCleaner(hanging_open)
