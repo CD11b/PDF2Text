@@ -2,6 +2,9 @@ import os
 import re
 import pymupdf
 from typing import Optional
+import logging
+
+logger = logging.getLogger(__name__)
 
 class OutputWriter:
     output_path: Optional[str]
@@ -47,6 +50,7 @@ class OutputWriter:
         if self.output_path is None:
             raise ValueError("Output path is not set. Call set_output_path() first.")
 
+        logger.debug(f"Writing to: {self.output_path}")
         with open(self.output_path, mode, encoding='utf-8') as f:
             if text is not None:
                 f.write(text)
