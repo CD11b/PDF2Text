@@ -18,6 +18,45 @@ os.environ["TESSDATA_PREFIX"] = "./training"
 
 logger = logging.getLogger(__name__)
 
+def process_page(page_blocks, document_cache, hanging_open):
+    page_lines = PageLines(list(PDFReader.iter_pdf_styling_from_blocks(page_blocks)))
+    if len(page_lines) == 0:
+        return None, hanging_open
+
+    page_data = PageAnalyzer(page_lines).analyze()
+    document_cache.update_cache(page_data)
+
+    filtered_lines = LineFilter(page_data, document_cache, RULE_ENGINES).filter_lines_individually()
+    filtered_lines = PageFilter(filtered_lines).filter_references()
+
+    filtered_lines = remove_page_number_lines(filtered_lines)
+
+    cleaned_brackets = BracketCleaner(hanging_open)
+    filtered_lines = cleaned_brackets.clean_brackets(filtered_lines)
+    hanging_open = cleaned_brackets.get_hanging_open()
+
+    # filtered_lines = filter_text.add_paragraph_breaks(filtered_lines=filtered_lines)
+    page_text = join_lines(filtered_lines)
+    page_text = normalize_text(page_text, page_data.ocr)
+
+    return page_text, hanging_open
+
+
+def process_pdf(pdf_path, page_start, page_end, output_path, output_dir):
+    with PDFReader(pdf_path, page_start, page_end) as pdf_reader:
+
+        output_writer = OutputWriter()
+        output_writer.set_output_path(pdf_reader.pdf, pdf_path, output_path, output_dir)
+
+        output_writer.write(mode="w")
+        hanging_open = None
+
+        document_cache = DocumentCache()
+        for page_blocks in pdf_reader.iter_pages(sort=True):
+            page_text, hanging_open = process_page(page_blocks, document_cache, hanging_open)
+            if page_text:
+                output_writer.write(mode="a", text=f'{page_text}\n\n')
+
 def main():
 
     parser = argparse.ArgumentParser(description="Process a PDF file.")
@@ -40,40 +79,7 @@ def main():
     setup_logging(log_level=args.log_level)
 
     if os.path.exists(pdf_path) and os.path.isfile(pdf_path):
-        with PDFReader(pdf_path, page_start, page_end) as pdf_reader:
-
-            output_writer = OutputWriter()
-            output_writer.set_output_path(pdf_reader.pdf, pdf_path, output_path, output_dir)
-
-            output_writer.write(mode="w")
-            hanging_open = None
-
-            document_cache = DocumentCache()
-            for page_blocks in pdf_reader.iter_pages(sort=True):
-
-                page_lines = PageLines(list(PDFReader.iter_pdf_styling_from_blocks(page_blocks)))
-                if len(page_lines) == 0:
-                    continue
-
-                page_data = PageAnalyzer(page_lines).analyze()
-                document_cache.update_cache(page_data)
-
-                filtered_lines = LineFilter(page_data, document_cache, RULE_ENGINES).filter_lines_individually()
-                filtered_lines = PageFilter(filtered_lines).filter_references()
-
-
-
-                filtered_lines = remove_page_number_lines(filtered_lines)
-
-                cleaned_brackets = BracketCleaner(hanging_open)
-                filtered_lines = cleaned_brackets.clean_brackets(filtered_lines)
-                hanging_open = cleaned_brackets.get_hanging_open()
-
-                # filtered_lines = filter_text.add_paragraph_breaks(filtered_lines=filtered_lines)
-                page_text = join_lines(filtered_lines)
-                page_text = normalize_text(page_text, page_data.ocr)
-
-                output_writer.write(mode="a", text=f'{page_text}\n\n')
+        process_pdf(pdf_path, page_start, page_end, output_path, output_dir)
 
 if __name__ == '__main__':
     main()
