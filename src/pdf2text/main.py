@@ -1,56 +1,19 @@
 import os
 import argparse
-from itertools import tee
 from collections import defaultdict
 
 from src.pdf2text.IO import PDFReader, OutputWriter
+from src.pdf2text.core.peekable_iterator import PeekableIterator
 from src.pdf2text.models import *
 
-from src.pdf2text.rule_engine import RuleEngine
-from src.pdf2text.rule_engine.indented import *
-from src.pdf2text.rule_engine.footer import *
-from src.pdf2text.rule_engine.header import *
-from src.pdf2text.rule_engine.continuous_paragraph import *
-from src.pdf2text.rule_engine.at_left_margin import *
-from src.pdf2text.rule_engine.before_left_margin import *
-
 from src.pdf2text.utils.logger_config import setup_logging
+from src.pdf2text.core.line_filter import LineFilter
 from src.pdf2text.core.text_heuristics import *
-from src.pdf2text.core.line_collector import LineCollector
-from src.pdf2text.core.classifier import IndentationClassifier, PositionClassifier, MarginClassifier, RegionClassifier, CharacterCountClassifier, FontNameClassifier, FontSizeClassifier, SplitSpanClassifier, TextContentClassifier
 from src.pdf2text.utils.text_cleaning import remove_page_number_lines, join_lines, normalize_text
 
 os.environ["TESSDATA_PREFIX"] = "./training"
 
 logger = logging.getLogger(__name__)
-
-
-class PeekableIterator:
-
-    def __init__(self, iterable):
-        self.iterator, self.peek_iterator = tee(iterable)
-        self._advance_peek()
-
-    def _advance_peek(self):
-        try:
-            self._peeked = next(self.peek_iterator)
-            self._has_peek = True
-        except StopIteration:
-            self._has_peek = False
-
-    def __iter__(self):
-        return self
-
-    def __next__(self):
-        item = next(self.iterator)
-        self._advance_peek()
-        return item
-
-    def peek(self):
-        return self._peeked if self._has_peek else None
-
-    def has_next(self):
-        return self._has_peek
 
 class BracketCleaner:
 
@@ -188,131 +151,6 @@ class BracketCleaner:
 
         return result
 
-class LineFilter:
-    RULE_ENGINES = {
-        "indented": [
-            IndentedBlockLastLineRule(),
-            IndentedBlockParagraphRule(),
-            IndentedMainFontRule(),
-            SplitSpanIndentationLineRule(),
-            ParagraphStartIndentedRule(),
-            EpigraphAuthorRule(),
-            TitlePageRule(),
-            ItalicWordMidLineRule(),
-            BoldWordMidLineRule(),
-            FallbackIndentedRule(),
-        ],
-        "header": [
-            BodyParagraphAtHeaderRegionRule(),
-            HighCharacterCountLineAtHeaderRegionRule(),
-            SingleLineJournalNameAtHeaderRule(),
-            StartJournalNameAtHeaderRule(),
-            FallbackHeaderRegionRule(),
-        ],
-        "footer": [
-            FooterRegionBodyParagraphRule(),
-            FooterRegionLoneIndentedTextRule(),
-            FooterRegionHighCharacterCountLineRule(),
-            FallbackFooterRegionRule(),
-        ],
-        "continuous_paragraph": [
-            ContinuousParagraphMainFontRule(),
-            ContinuousParagraphMultiLineTitleRule(),
-            FallbackContinuousParagraphRule(),
-        ],
-        "at_left_margin": [
-            SingleEmphasizedLineRule(),
-            BoldSectionHeaderAtLeftMarginRule(),
-            FallbackAtLeftMarginRule(),
-        ],
-        "before_left_margin": [
-            FooterBeforeLeftMarginRule(),
-            HeadingBeforeLeftMarginRule(),
-            FallbackBeforeLeftMarginRule(),
-        ],
-    }
-
-    def __init__(self, page, document_cache):
-        self.page = page
-        self.document_cache = document_cache
-        self.collector = LineCollector()
-        self.engines = {key: RuleEngine(rules) for key, rules in self.RULE_ENGINES.items()}
-
-    def add_paragraph_breaks(self, filtered_lines):
-
-        result = []
-
-        for line in filtered_lines:
-            text = line.text
-            if self.layout.is_new_paragraph([line], filtered_list=result):
-                new_line = line.with_text("\n" + text)
-                result.append(new_line)
-            else:
-                result.append(line)
-
-        return result
-
-    def _select_engine(self, ctx):
-
-        if ctx.region is VerticalRegion.HEADER:
-            return self.engines["header"]
-
-        if ctx.region is VerticalRegion.FOOTER:
-            return self.engines["footer"]
-
-        if ctx.margin_position is MarginPosition.BEFORE:
-            return self.engines["before_left_margin"]
-
-        if ctx.margin_position is MarginPosition.AT:
-            if ctx.position_in_paragraph is not PositionInParagraph.SINGLE_LINE:
-                return self.engines["continuous_paragraph"]
-            return self.engines["at_left_margin"]
-
-        if ctx.margin_position is MarginPosition.AFTER:
-            return self.engines["indented"]
-
-        return None
-
-    def _filter_line(self, group, ctx, result):
-        engine = self._select_engine(ctx)
-
-        if engine is None:
-            decision = Decision.unhandled("Router could not find a suitable rule engine", "_select_engine")
-        else:
-            decision = engine.decide(ctx)
-
-        result.extend(self.collector.process(group, ctx, decision))
-
-    @staticmethod
-    def _add_page_break(buffer):
-        if not buffer:
-            return []
-
-        last_line = buffer[-1].line.with_text(buffer[-1].line.text + "\n\n")
-        last_collected_line = buffer[-1].with_line(last_line)
-        return [*buffer[:-1], last_collected_line]
-
-    def _process_column(self, column):
-        buffer = []
-        column_layout = ColumnLayout(self.page, column, self.document_cache)
-        logging.debug(f"Column: {column.heuristics}")
-        groups_iter = PeekableIterator(column.lines)
-
-        for group in groups_iter:
-            ctx = LineContext.create(column_layout, group, groups_iter, buffer)
-            self._filter_line(group, ctx, buffer)
-
-        return self._add_page_break(buffer)
-
-    def filter_lines_individually(self):
-        result = []
-
-        for column in self.page.columns:
-            result.extend(self._process_column(column))
-
-        return result
-
-
 class PageFilter:
 
     def __init__(self, collected_lines):
@@ -343,21 +181,6 @@ class PageFilter:
             return cleaned_lines
 
         return self.collected_lines
-
-
-class ColumnLayout:
-
-    def __init__(self, page, column, document_cache):
-        self.column = column
-        self.line_position = PositionClassifier(page, column, document_cache)
-        self.line_indentation = IndentationClassifier(page, column, document_cache)
-        self.line_region = RegionClassifier(page, column, document_cache)
-        self.margin_position = MarginClassifier(page, column, document_cache)
-        self.line_character_count = CharacterCountClassifier(page, column, document_cache)
-        self.line_font_name = FontNameClassifier(page, column, document_cache)
-        self.line_font_size = FontSizeClassifier(page, column, document_cache)
-        self.line_split_span = SplitSpanClassifier(page, column, document_cache)
-        self.line_text_content = TextContentClassifier(page, column, document_cache)
 
 class PageAnalyzer:
 
