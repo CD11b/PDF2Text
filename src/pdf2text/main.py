@@ -4,9 +4,9 @@ import logging
 
 from src.pdf2text.IO import PDFReader, OutputWriter
 from src.pdf2text.core.document_cache import DocumentCache
-from src.pdf2text.core.page_analyzer import PageAnalyzer
+from src.pdf2text.core.page_analyzer import SpansAnalysis
 from src.pdf2text.core.page_filter import PageFilter
-from src.pdf2text.models import PageLines
+from src.pdf2text.models import Spans
 from src.pdf2text.rule_engine.rule_engines import RULE_ENGINES
 from src.pdf2text.utils.bracket_cleaner import BracketCleaner
 
@@ -19,17 +19,20 @@ os.environ["TESSDATA_PREFIX"] = "./training"
 logger = logging.getLogger(__name__)
 
 def analyze_page_step(page_lines):
-    return PageAnalyzer(page_lines).analyze()
+    return SpansAnalysis(page_lines).analyze_page()
+
+def update_cache_step(page_data, document_cache):
+    document_cache.update_cache(page_data)
+    return document_cache
 
 def filter_lines_step(page_data, document_cache):
-    document_cache.update_cache(page_data)
     return LineFilter(page_data, document_cache, RULE_ENGINES).filter_lines_individually()
 
-def page_filter_step(lines):
-    return PageFilter(lines).filter_references()
+def page_filter_step(classified_lines):
+    return PageFilter(classified_lines).filter_references()
 
-def clean_page_numbers_step(lines):
-    return remove_page_number_lines(lines)
+def clean_page_numbers_step(classified_lines):
+    return remove_page_number_lines(classified_lines)
 
 def clean_brackets_step(lines, hanging_open):
     cleaned_brackets = BracketCleaner(hanging_open)
@@ -40,24 +43,24 @@ def clean_brackets_step(lines, hanging_open):
 def join_lines_step(lines):
     return join_lines(lines)
 
-def normalize_text_step(page_text, ocr):
-    return normalize_text(page_text, ocr)
+def normalize_text_step(text, ocr):
+    return normalize_text(text, ocr)
 
 def process_page(page_blocks, document_cache, hanging_open):
-    lines = PageLines(list(PDFReader.iter_pdf_styling_from_blocks(page_blocks)))
-    if len(lines) == 0:
+    page_spans = Spans(list(PDFReader.iter_pdf_styling_from_blocks(page_blocks)))
+    if len(page_spans) == 0:
         return None, hanging_open
 
-    page_data = analyze_page_step(lines)
-
-    lines = filter_lines_step(page_data, document_cache)
-    lines = page_filter_step(lines)
-    lines = clean_page_numbers_step(lines)
+    page_data = analyze_page_step(page_spans)
+    document_cache = update_cache_step(page_data, document_cache)
+    classified_lines = filter_lines_step(page_data, document_cache)
+    classified_lines = page_filter_step(classified_lines)
+    lines = clean_page_numbers_step(classified_lines)
     lines, hanging_open = clean_brackets_step(lines, hanging_open)
-    lines = join_lines_step(lines)
-    lines = normalize_text_step(lines, page_data.ocr)
+    text = join_lines_step(lines)
+    text = normalize_text_step(text, page_data.ocr)
 
-    return lines, hanging_open
+    return text, hanging_open
 
 
 def process_pdf(pdf_path, page_start, page_end, output_path, output_dir):

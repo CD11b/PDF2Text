@@ -1,10 +1,10 @@
 from .decision import Action, Decision
-from .line_context import LineContext
+from .line_context import SpanContext
 from .context_types import *
 
 __all__ = ["Action",
            "Decision",
-           "LineContext",
+           "SpanContext",
            "LineIndentation",
            "PositionInParagraph",
            "MarginPosition",

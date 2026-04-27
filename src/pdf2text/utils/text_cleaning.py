@@ -1,12 +1,12 @@
 import logging, unicodedata, re
-from src.pdf2text.models import StyledLine, CollectedLine
+from src.pdf2text.models import Span, ClassifiedSpan
 
 logger = logging.getLogger(__name__)
 
 PAGE_NUMBER_PATTERN = re.compile(r'\s*\d+\s*')
 COMMON_OCR_ERRORS = str.maketrans({"ﬁ": "fi", "ﬂ": "fl", "“": "\"", "”": "\"", "‘": "'", "’": "'", "|": "I"})
 
-def remove_page_number_lines(collected_lines: list[CollectedLine]) -> list[StyledLine]:
+def remove_page_number_lines(collected_lines: list[ClassifiedSpan]) -> list[Span]:
     """
     Remove lines that appear to be standalone page numbers.
 
@@ -21,10 +21,10 @@ def remove_page_number_lines(collected_lines: list[CollectedLine]) -> list[Style
     """
     logger.debug("Cleaning page numbers from %d lines", len(collected_lines))
 
-    lines = [collected_line.line for collected_line in collected_lines]
+    lines = [collected_line.span for collected_line in collected_lines]
     return [line for line in lines if not PAGE_NUMBER_PATTERN.fullmatch(line.text)]
 
-def join_lines(lines: list[StyledLine], clean_hyphens: bool = True) -> str:
+def join_lines(lines: list[Span], clean_hyphens: bool = True) -> str:
     """
     Join extracted lines into a single text string.
 

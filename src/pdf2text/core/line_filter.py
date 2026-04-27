@@ -1,5 +1,5 @@
 from src.pdf2text.core.peekable_iterator import PeekableIterator
-from src.pdf2text.models import VerticalRegion, MarginPosition, PositionInParagraph, Decision, LineContext
+from src.pdf2text.models import VerticalRegion, MarginPosition, PositionInParagraph, Decision, SpanContext
 from src.pdf2text.models.layout.column_layout import ColumnLayout
 from src.pdf2text.rule_engine import RuleEngine
 
@@ -67,7 +67,7 @@ class LineFilter:
         if not buffer:
             return []
 
-        last_line = buffer[-1].line.with_text(buffer[-1].line.text + "\n\n")
+        last_line = buffer[-1].span.with_text(buffer[-1].span.text + "\n\n")
         last_collected_line = buffer[-1].with_line(last_line)
         return [*buffer[:-1], last_collected_line]
 
@@ -75,10 +75,10 @@ class LineFilter:
         buffer = []
         column_layout = ColumnLayout(self.page, column, self.document_cache)
         logging.debug(f"Column: {column.heuristics}")
-        groups_iter = PeekableIterator(column.lines)
+        groups_iter = PeekableIterator(column.spans)
 
         for group in groups_iter:
-            ctx = LineContext.create(column_layout, group, groups_iter, buffer)
+            ctx = SpanContext.create(column_layout, group, groups_iter, buffer)
             self._filter_line(group, ctx, buffer)
 
         return self._add_page_break(buffer)

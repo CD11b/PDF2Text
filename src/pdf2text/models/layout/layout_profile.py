@@ -1,96 +1,8 @@
 from dataclasses import dataclass
-import numpy as np
-from collections import Counter
+from src.pdf2text.models.layout import FeatureStats, GapData
 
-@dataclass(frozen=True, slots=True)
-class Range:
-    minimum: float | None
-    maximum: float | None
-
-@dataclass(frozen=True, slots=True)
-class Distribution:
-    most_common: float
-    range: Range
-
-    @classmethod
-    def create(cls, counter, discrete = False):
-        most_common = counter.most_common(1)[0][0]
-
-        minimum, maximum = ((None, None) if discrete else (min(counter), max(counter)))
-
-        return cls(most_common, Range(minimum, maximum))
-
-
-@dataclass(frozen=True, slots=True)
-class Bounds:
-    """Lower and upper bounds for a metric."""
-    lower: float | None
-    upper: float | None
-
-    @classmethod
-    def create(cls, data: Counter[float], threshold: float):
-        """Compute statistical bounds for a numeric counter using MAD."""
-        if not data:
-            return cls(None, None)
-
-        values = np.array(list(data.keys()))
-        weights = np.array(list(data.values()))
-
-        # Weighted median
-        sorted_idx = np.argsort(values)
-        sorted_values = values[sorted_idx]
-        sorted_weights = weights[sorted_idx]
-        cumulative_sum = np.cumsum(sorted_weights)
-        median = sorted_values[np.searchsorted(cumulative_sum, cumulative_sum[-1] / 2)]
-
-        # Median Absolute Deviation
-        deviations = np.abs(values - median)
-        mad = np.average(deviations, weights=weights)
-
-        if mad == 0 or np.isnan(mad):
-            return cls(float(values.min()), float(values.max()))
-
-        # MAD filtering
-        mad_scores = np.abs((values - median) / (1.4826 * mad))
-        inliers = values[mad_scores <= threshold]
-
-        if len(inliers) == 0:
-            return cls(float(values.min()), float(values.max()))
-
-        return cls(float(inliers.min()), float(inliers.max()))
-
-
-@dataclass(frozen=True, slots=True)
-class GapData:
-    within_rows: Bounds
-    between_rows: Bounds
-
-
-@dataclass(frozen=True, slots=True)
-class FeatureStats:
-    distribution: Distribution
-    bounds: Bounds
-
-    @property
-    def lower_bound(self) -> float | None:
-        return self.bounds.lower
-
-    @property
-    def upper_bound(self) -> float | None:
-        return self.bounds.upper
-
-    @property
-    def most_common(self) -> float:
-        return self.distribution.most_common
-
-    @property
-    def minimum(self) -> float:
-        return self.distribution.range.minimum
-
-    @property
-    def maximum(self) -> float:
-        return self.distribution.range.maximum
-
+from src.pdf2text.core.text_heuristics import IndentHeuristic, StartYHeuristic, EndXHeuristic, CharacterCountHeuristic, \
+    FontNameHeuristic, FontSizeHeuristic, GapWithinRowsHeuristic, GapBetweenRowsHeuristic
 
 @dataclass(frozen=True, slots=True)
 class LayoutProfile:
@@ -106,3 +18,18 @@ class LayoutProfile:
     @property
     def row_separation(self) -> float:
         return self.gaps.between_rows.upper
+
+    @classmethod
+    def create(cls, spans):
+        start_x = IndentHeuristic(spans.ocr).compute_feature_stats(spans)
+        start_y = StartYHeuristic(spans.ocr).compute_feature_stats(spans)
+        end_x = EndXHeuristic(spans.ocr).compute_feature_stats(spans)
+        character_count = CharacterCountHeuristic(spans.ocr).compute_feature_stats(spans)
+        font_size = FontSizeHeuristic(spans.ocr).compute_feature_stats(spans)
+        font_name = FontNameHeuristic(spans.ocr).compute_feature_stats(spans)
+
+        gap_within_rows = GapWithinRowsHeuristic(spans.ocr).compute_bounds(spans)
+        gap_between_rows = GapBetweenRowsHeuristic(spans.ocr).compute_bounds(spans)
+        gap_data = GapData(gap_within_rows, gap_between_rows)
+
+        return cls(start_x, start_y, end_x, gap_data, character_count, font_size, font_name)

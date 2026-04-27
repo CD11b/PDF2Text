@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from .context_types import *
 
 @dataclass(slots=True, frozen=True)
-class LineContext:
+class SpanContext:
     text_content: TextContent
     position_in_paragraph: PositionInParagraph
     indentation: LineIndentation
@@ -33,7 +33,7 @@ class LineContext:
             font_name=layout.line_font_name.classify(line_group),
             font_size=layout.line_font_size.classify(line_group),
             split_span=layout.line_split_span.classify(context=(line_start_y, line_end_x, next_group)),
-            last_line=line_group is layout.column.lines[-1]
+            last_line=line_group is layout.column.spans[-1]
         )
 
     def __repr__(self):

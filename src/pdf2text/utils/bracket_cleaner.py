@@ -1,7 +1,7 @@
 import logging
 
 from src.pdf2text.core.peekable_iterator import PeekableIterator
-from src.pdf2text.models import StyledLine
+from src.pdf2text.models import Span
 
 logger = logging.getLogger(__name__)
 
@@ -108,7 +108,7 @@ class BracketCleaner:
 
         return cleaned_text
 
-    def clean_brackets(self, filtered_lines) -> list[StyledLine]:
+    def clean_brackets(self, filtered_lines) -> list[Span]:
 
         result = []
         lines_iter = PeekableIterator(filtered_lines)

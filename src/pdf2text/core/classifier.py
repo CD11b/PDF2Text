@@ -66,7 +66,7 @@ class IndentationClassifier(Classifier):
 
     def _extract_features(self, context):
         line_start_x, previous_group, next_group = context
-        previous_start_x = previous_group.line.start_x if previous_group else None
+        previous_start_x = previous_group.span.start_x if previous_group else None
         next_start_x = next_group[0].start_x if next_group else None
 
         return line_start_x, previous_start_x, next_start_x
@@ -101,7 +101,7 @@ class PositionClassifier(Classifier):
 
     def _extract_features(self, context):
         line_start_y, previous_group, next_group = context
-        previous_start_y = previous_group.line.start_y if previous_group else None
+        previous_start_y = previous_group.span.start_y if previous_group else None
         next_start_y = next_group[0].start_y if next_group else None
 
         return line_start_y, previous_start_y, next_start_y
@@ -245,7 +245,7 @@ class TextContentClassifier(Classifier):
         line_group, previous_group, next_group = context
 
         current_text = ' '.join(line.text for line in line_group if line.text.strip())
-        previous_text = previous_group.line.text if previous_group else ""
+        previous_text = previous_group.span.text if previous_group else ""
         next_text = ' '.join(line.text for line in next_group if line.text.strip()) if next_group else ""
 
         return current_text, previous_text, next_text

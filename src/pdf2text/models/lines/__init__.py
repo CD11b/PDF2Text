@@ -1,3 +1,3 @@
-from .styled_line import StyledLine, CollectedLine
+from .styled_line import Span, ClassifiedSpan
 
-__all__ = ["StyledLine", "CollectedLine"]
+__all__ = ["Span", "ClassifiedSpan"]

@@ -112,16 +112,16 @@ Each rule engine accepts a prioritized list of `Rule` subclasses. To add a rule,
 
 ```python
 from src.pdf2text.rule_engine import Rule
-from src.pdf2text.models import Decision, Action, LineContext
+from src.pdf2text.models import Decision, Action, SpanContext
 
 
 class MyCustomRule(Rule):
     priority = 30  # lower runs first
 
-    def matches(self, ctx: LineContext) -> bool:
+    def matches(self, ctx: SpanContext) -> bool:
         return ctx.font_size is FontSize.LARGE and ctx.region is VerticalRegion.BODY
 
-    def decide(self, ctx: LineContext) -> Decision:
+    def decide(self, ctx: SpanContext) -> Decision:
         return Decision(Action.SKIP, "Large font in body, likely a chapter heading", self.name)
 ```
 
