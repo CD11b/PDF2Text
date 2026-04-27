@@ -38,46 +38,46 @@ class Heuristic:
         return threshold
 
     @staticmethod
-    def get_styling_counter(lines: Spans, attribute: str) -> Counter[Any]:
-        """Count occurrences of a given attribute across lines, weighted by text length."""
+    def get_styling_counter(spans: Spans, attribute: str) -> Counter[Any]:
+        """Count occurrences of a given attribute across spans, weighted by text length."""
 
         counter: Counter[Any] = Counter()
-        for line in lines:
+        for line in spans:
             attr_value = getattr(line, attribute)
             counter[attr_value] += len(line.text)
         return counter
 
-    def build_counter(self, lines: Spans) -> Counter[Any]:
+    def build_counter(self, spans: Spans) -> Counter[Any]:
         """Override in subclasses."""
         raise NotImplementedError
 
-    def _get_counter(self, lines: Spans):
+    def _get_counter(self, spans: Spans):
         if self._counter is None:
-            self._counter = self.build_counter(lines)
+            self._counter = self.build_counter(spans)
         return self._counter
 
-    def compute_distribution(self, lines: Spans) -> Distribution:
+    def compute_distribution(self, spans: Spans) -> Distribution:
         if self._distribution is None:
-            counter = self._get_counter(lines)
+            counter = self._get_counter(spans)
             self._distribution = Distribution.create(counter)
 
         return self._distribution
 
-    def compute_bounds(self, lines: Spans) -> Bounds:
+    def compute_bounds(self, spans: Spans) -> Bounds:
         if self._bounds is None:
-            counter = self._get_counter(lines)
+            counter = self._get_counter(spans)
             self._bounds = Bounds.create(counter, self.threshold)
 
         return self._bounds
 
-    def compute_feature_stats(self, lines: Spans) -> FeatureStats:
-        self._feature_stats = FeatureStats(self.compute_distribution(lines), self.compute_bounds(lines))
+    def compute_feature_stats(self, spans: Spans) -> FeatureStats:
+        self._feature_stats = FeatureStats(self.compute_distribution(spans), self.compute_bounds(spans))
         return self._feature_stats
 
 class FontSizeHeuristic(Heuristic):
 
-    def build_counter(self, lines: Spans) -> Counter[Any]:
-        return self.get_styling_counter(lines, "font_size")
+    def build_counter(self, spans: Spans) -> Counter[Any]:
+        return self.get_styling_counter(spans, "font_size")
 
 
 class CharacterCountHeuristic(Heuristic):
@@ -87,10 +87,10 @@ class CharacterCountHeuristic(Heuristic):
     def threshold(self) -> float:
         return self._THRESHOLD
 
-    def build_counter(self, lines: Spans)-> Counter[float]:
+    def build_counter(self, spans: Spans)-> Counter[float]:
 
         counter: Counter[float] = Counter()
-        for row in lines.rows:
+        for row in spans.rows:
             character_count = sum(line.character_count for line in row)
             if character_count > 0:
                 counter[character_count] += 1
@@ -105,10 +105,10 @@ class IndentHeuristic(Heuristic):
     def threshold(self) -> float:
         return self._THRESHOLD
 
-    def build_counter(self, lines: Spans) -> Counter[float]:
+    def build_counter(self, spans: Spans) -> Counter[float]:
 
         counter: Counter[float] = Counter()
-        for row in lines.rows:
+        for row in spans.rows:
             indent = row[0].start_x
             counter[indent] += 1
 
@@ -116,8 +116,8 @@ class IndentHeuristic(Heuristic):
 
 class GapBetweenRowsHeuristic(Heuristic):
 
-    def build_counter(self, lines: Spans) -> Counter[float]:
-        start_y_counter = self.get_styling_counter(lines, "start_y")
+    def build_counter(self, spans: Spans) -> Counter[float]:
+        start_y_counter = self.get_styling_counter(spans, "start_y")
 
         counter: Counter[float] = Counter()
         values = sorted(start_y_counter)
@@ -130,10 +130,10 @@ class GapBetweenRowsHeuristic(Heuristic):
 
 class GapWithinRowsHeuristic(Heuristic):
 
-    def build_counter(self, lines) -> Counter[float]:
+    def build_counter(self, spans) -> Counter[float]:
         counter: Counter[float] = Counter()
 
-        for row in lines.rows:
+        for row in spans.rows:
             for i in range(len(row) - 1):
                 gap = row[i + 1].start_x - row[i].end_x
                 if gap > 0:
@@ -141,55 +141,55 @@ class GapWithinRowsHeuristic(Heuristic):
 
         return counter
 
-    def compute_bounds(self, lines: Spans) -> Bounds:
+    def compute_bounds(self, spans: Spans) -> Bounds:
         if self._bounds is None:
             if not self.ocr:
                 self._bounds = Bounds(None, None)
             else:
-                counter = self.build_counter(lines)
+                counter = self.build_counter(spans)
                 self._bounds = Bounds.create(counter, self.threshold)
 
         return self._bounds
 
 class EndXHeuristic(Heuristic):
 
-    def build_counter(self, lines: Spans) -> Counter[float]:
-        return self.get_styling_counter(lines, "end_x")
+    def build_counter(self, spans: Spans) -> Counter[float]:
+        return self.get_styling_counter(spans, "end_x")
 
 class StartXHeuristic(Heuristic):
 
-    def build_counter(self, lines: Spans) -> Counter[float]:
-        return self.get_styling_counter(lines, "start_x")
+    def build_counter(self, spans: Spans) -> Counter[float]:
+        return self.get_styling_counter(spans, "start_x")
 
 class StartYHeuristic(Heuristic):
 
-    def build_counter(self, lines: Spans) -> Counter[float]:
-        return self.get_styling_counter(lines, "start_y")
+    def build_counter(self, spans: Spans) -> Counter[float]:
+        return self.get_styling_counter(spans, "start_y")
 
-    def compute_bounds(self, lines: Spans) -> Bounds:
+    def compute_bounds(self, spans: Spans) -> Bounds:
         self._bounds = Bounds(None, None)
         return self._bounds
 
 class FontNameHeuristic(Heuristic):
 
-    def build_counter(self, lines: Spans) -> Counter[float]:
-        return self.get_styling_counter(lines, "font_name")
+    def build_counter(self, spans: Spans) -> Counter[float]:
+        return self.get_styling_counter(spans, "font_name")
 
-    def compute_distribution(self, lines: Spans) -> Distribution:
-        counter = self.build_counter(lines)
+    def compute_distribution(self, spans: Spans) -> Distribution:
+        counter = self.build_counter(spans)
         return Distribution.create(counter, discrete=True)
 
-    def compute_bounds(self, lines: Spans) -> Bounds:
+    def compute_bounds(self, spans: Spans) -> Bounds:
         self._bounds = Bounds(None, None)
         return self._bounds
 
 class ColumnCountHeuristic(Heuristic):
 
-    def build_counter(self, lines: Spans, coordinate_tolerance = None) -> Counter[float]:
+    def build_counter(self, spans: Spans, coordinate_tolerance = None) -> Counter[float]:
 
         counter = Counter()
         if self.ocr and coordinate_tolerance:
-            for row in lines.rows:
+            for row in spans.rows:
                 count = 1
                 for previous, current in zip(row, row[1:]):
                     if current.start_x - previous.end_x > coordinate_tolerance:
@@ -197,16 +197,16 @@ class ColumnCountHeuristic(Heuristic):
                 counter[count] += sum(line.character_count for line in row)
             self._counter = counter
         else:
-            for row in lines.rows:
+            for row in spans.rows:
                 row_character_count = sum(line.character_count for line in row)
                 counter[len(row)] += row_character_count
 
         return counter
 
     @staticmethod
-    def compute_column_starts(lines: Spans, number_columns) -> list:
+    def compute_column_starts(spans: Spans, number_columns) -> list:
         counter = Counter()
-        for row in lines.rows:
+        for row in spans.rows:
             for line in row:
                 counter[line.start_x] += line.character_count
 
