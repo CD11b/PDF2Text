@@ -42,9 +42,9 @@ class Heuristic:
         """Count occurrences of a given attribute across spans, weighted by text length."""
 
         counter: Counter[Any] = Counter()
-        for line in spans:
-            attr_value = getattr(line, attribute)
-            counter[attr_value] += len(line.text)
+        for span in spans:
+            attr_value = getattr(span, attribute)
+            counter[attr_value] += len(span.text)
         return counter
 
     def build_counter(self, spans: Spans) -> Counter[Any]:
@@ -91,7 +91,7 @@ class CharacterCountHeuristic(Heuristic):
 
         counter: Counter[float] = Counter()
         for row in spans.rows:
-            character_count = sum(line.character_count for line in row)
+            character_count = sum(span.character_count for span in row)
             if character_count > 0:
                 counter[character_count] += 1
 
@@ -194,11 +194,11 @@ class ColumnCountHeuristic(Heuristic):
                 for previous, current in zip(row, row[1:]):
                     if current.start_x - previous.end_x > coordinate_tolerance:
                         count += 1
-                counter[count] += sum(line.character_count for line in row)
+                counter[count] += sum(span.character_count for span in row)
             self._counter = counter
         else:
             for row in spans.rows:
-                row_character_count = sum(line.character_count for line in row)
+                row_character_count = sum(span.character_count for span in row)
                 counter[len(row)] += row_character_count
 
         return counter
@@ -207,7 +207,7 @@ class ColumnCountHeuristic(Heuristic):
     def compute_column_starts(spans: Spans, number_columns) -> list:
         counter = Counter()
         for row in spans.rows:
-            for line in row:
-                counter[line.start_x] += line.character_count
+            for span in row:
+                counter[span.start_x] += span.character_count
 
         return sorted([column[0] for column in counter.most_common(number_columns)])
