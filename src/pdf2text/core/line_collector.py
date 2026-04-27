@@ -19,7 +19,7 @@ class LineCollector:
                    "%s [%s - CASE: %s]: %s, %s",
                    decision.action.action_label,
                    decision.handler_name, decision.reason,
-                   merged if decision.action.log_verbose else merged.text,
+                   merged if decision.action.log_verbose else merged.line.text,
                    ctx if decision.action.log_verbose else "")
 
     @staticmethod
