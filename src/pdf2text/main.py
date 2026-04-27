@@ -18,28 +18,46 @@ os.environ["TESSDATA_PREFIX"] = "./training"
 
 logger = logging.getLogger(__name__)
 
+def analyze_page_step(page_lines):
+    return PageAnalyzer(page_lines).analyze()
+
+def filter_lines_step(page_data, document_cache):
+    document_cache.update_cache(page_data)
+    return LineFilter(page_data, document_cache, RULE_ENGINES).filter_lines_individually()
+
+def page_filter_step(lines):
+    return PageFilter(lines).filter_references()
+
+def clean_page_numbers_step(lines):
+    return remove_page_number_lines(lines)
+
+def clean_brackets_step(lines, hanging_open):
+    cleaned_brackets = BracketCleaner(hanging_open)
+    lines = cleaned_brackets.clean_brackets(lines)
+    hanging_open = cleaned_brackets.get_hanging_open()
+    return lines, hanging_open
+
+def join_lines_step(lines):
+    return join_lines(lines)
+
+def normalize_text_step(page_text, ocr):
+    return normalize_text(page_text, ocr)
+
 def process_page(page_blocks, document_cache, hanging_open):
-    page_lines = PageLines(list(PDFReader.iter_pdf_styling_from_blocks(page_blocks)))
-    if len(page_lines) == 0:
+    lines = PageLines(list(PDFReader.iter_pdf_styling_from_blocks(page_blocks)))
+    if len(lines) == 0:
         return None, hanging_open
 
-    page_data = PageAnalyzer(page_lines).analyze()
-    document_cache.update_cache(page_data)
+    page_data = analyze_page_step(lines)
 
-    filtered_lines = LineFilter(page_data, document_cache, RULE_ENGINES).filter_lines_individually()
-    filtered_lines = PageFilter(filtered_lines).filter_references()
+    lines = filter_lines_step(page_data, document_cache)
+    lines = page_filter_step(lines)
+    lines = clean_page_numbers_step(lines)
+    lines, hanging_open = clean_brackets_step(lines, hanging_open)
+    lines = join_lines_step(lines)
+    lines = normalize_text_step(lines, page_data.ocr)
 
-    filtered_lines = remove_page_number_lines(filtered_lines)
-
-    cleaned_brackets = BracketCleaner(hanging_open)
-    filtered_lines = cleaned_brackets.clean_brackets(filtered_lines)
-    hanging_open = cleaned_brackets.get_hanging_open()
-
-    # filtered_lines = filter_text.add_paragraph_breaks(filtered_lines=filtered_lines)
-    page_text = join_lines(filtered_lines)
-    page_text = normalize_text(page_text, page_data.ocr)
-
-    return page_text, hanging_open
+    return lines, hanging_open
 
 
 def process_pdf(pdf_path, page_start, page_end, output_path, output_dir):
