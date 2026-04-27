@@ -5,7 +5,7 @@ from collections import defaultdict
 
 @dataclass(slots=True)
 class Spans:
-    spans: list[Span]
+    spans: tuple(list[Span])
     _rows: list | None = None
     _ocr: bool | None = None
     _horizontal_clusters: list | None = None
