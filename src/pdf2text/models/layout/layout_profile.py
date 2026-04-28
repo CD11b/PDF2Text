@@ -21,15 +21,15 @@ class LayoutProfile:
 
     @classmethod
     def create(cls, spans):
-        start_x = IndentHeuristic(spans.ocr).compute_feature_stats(spans)
-        start_y = StartYHeuristic(spans.ocr).compute_feature_stats(spans)
-        end_x = EndXHeuristic(spans.ocr).compute_feature_stats(spans)
-        character_count = CharacterCountHeuristic(spans.ocr).compute_feature_stats(spans)
-        font_size = FontSizeHeuristic(spans.ocr).compute_feature_stats(spans)
-        font_name = FontNameHeuristic(spans.ocr).compute_feature_stats(spans)
+        start_x = IndentHeuristic(spans.is_ocr).compute_feature_stats(spans)
+        start_y = StartYHeuristic(spans.is_ocr).compute_feature_stats(spans)
+        end_x = EndXHeuristic(spans.is_ocr).compute_feature_stats(spans)
+        character_count = CharacterCountHeuristic(spans.is_ocr).compute_feature_stats(spans)
+        font_size = FontSizeHeuristic(spans.is_ocr).compute_feature_stats(spans)
+        font_name = FontNameHeuristic(spans.is_ocr).compute_feature_stats(spans)
 
-        gap_within_rows = GapWithinRowsHeuristic(spans.ocr).compute_bounds(spans)
-        gap_between_rows = GapBetweenRowsHeuristic(spans.ocr).compute_bounds(spans)
+        gap_within_rows = GapWithinRowsHeuristic(spans.is_ocr).compute_bounds(spans)
+        gap_between_rows = GapBetweenRowsHeuristic(spans.is_ocr).compute_bounds(spans)
         gap_data = GapData(gap_within_rows, gap_between_rows)
 
         return cls(start_x, start_y, end_x, gap_data, character_count, font_size, font_name)

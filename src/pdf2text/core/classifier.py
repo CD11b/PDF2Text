@@ -11,7 +11,7 @@ class Classifier:
         self.bottom_boundary = page.heuristics.start_y.maximum
         self.left_boundary = column.heuristics.start_x.most_common
         self.top_boundary = page.heuristics.start_y.minimum
-        self.coordinate_tolerance = page.heuristics.gaps.within_rows.upper if page.ocr else 0.0
+        self.coordinate_tolerance = page.heuristics.gaps.within_rows.upper if page.is_ocr else 0.0
         self.column_count = page.column_count
 
     @property

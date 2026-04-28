@@ -11,7 +11,7 @@ class ColumnLayout:
 class PageLayout:
     heuristics: LayoutProfile
     columns: list[ColumnLayout]
-    ocr: bool
+    is_ocr: bool
 
     @property
     def column_count(self):
