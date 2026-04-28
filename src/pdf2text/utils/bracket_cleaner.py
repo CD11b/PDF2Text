@@ -3,76 +3,64 @@ import logging
 from src.pdf2text.core.peekable_iterator import PeekableIterator
 from src.pdf2text.models.layout.span import Span
 
+
+from dataclasses import dataclass
+
+@dataclass
+class BracketCleanerContext:
+    multipage_open: str | None = None
+    open: str | None = None
+    close: str | None = None
+
 logger = logging.getLogger(__name__)
 
 class BracketCleaner:
 
-    def __init__(self, hanging_open = None):
-        self.current_open = None
-        self.current_close = None
-        self.hanging_open = hanging_open
-
-
-    def get_hanging_open(self):
-        return self.hanging_open
+    def __init__(self, context: BracketCleanerContext):
+        self.context = context
 
     def prioritized_pairs(self):
 
         pairs = {'(': ')', '[': ']', '{': '}', '<': '>'}
 
-        if self.hanging_open:
-            self.current_open = self.hanging_open
-            self.current_close = pairs[self.hanging_open]
-            yield self.current_open, self.current_close
-        for open_bracket, close_bracket in pairs.items():
-            if open_bracket != self.hanging_open:
-                self.current_open = open_bracket
-                self.current_close = close_bracket
-                yield self.current_open, self.current_close
+        if self.context.multipage_open:
+            yield self.context.multipage_open, pairs[self.context.multipage_open]
+
+        for open, close in pairs.items():
+            if open != self.context.multipage_open:
+                yield open, close
 
     def partition_by_brackets(self, text):
 
-        before_open, _, _ = text.partition(self.current_open)
-        _, _, after_close = text.partition(self.current_close)
+        before_open, _, _ = text.partition(self.context.open)
+        _, _, after_close = text.partition(self.context.close)
 
         return before_open, after_close
 
-    def handle_hanging_bracket(self, text):
+    def clean_and_join(self, text):
 
         before_open, after_close = self.partition_by_brackets(text)
 
-        cleaned_text = after_close.lstrip()
-        self.hanging_open = None
+        if self.context.close in before_open:  # Author typo: hanging close
+            before_typo, _, after_typo = before_open.partition(self.context.close)
+            before_open = before_typo + after_typo
+            _, _, after_close = after_close.partition(self.context.close)
 
-        logger.debug(f"Resolved hanging bracket: text={cleaned_text}")
-        return cleaned_text
+        return before_open.rstrip() + after_close
 
-    def handle_hanging_close(self, before_open, after_close):
+    def close_multipage_bracket(self, text):
 
-        before_typo, _, after_typo = before_open.partition(self.current_close)
-        before_open = before_typo + after_typo
-        _, _, after_close = after_close.partition(self.current_close)
+        _, after_close = self.partition_by_brackets(text)
+        self.context.multipage_open = None
+        return after_close.lstrip()
 
-        return ''.join([before_open.rstrip(), after_close])
-
-    def handle_opening_bracket(self, text, lines_iter):
-
-        if self.current_close in text:
-            logger.debug(f"Found open and close brackets in line: {text}")
-            cleaned_text = self.clean_and_join(text)
-
-        else:
-            cleaned_text = self.handle_multiline_bracket(text, lines_iter)
-
-        return cleaned_text
-
-    def handle_multiline_bracket(self, text, lines_iter):
+    def handle_multiline_bracket(self, text, spans_iter):
         buffer_lines = [text]
         found_close = False
 
-        for lookahead in lines_iter:
+        for lookahead in spans_iter:
             buffer_lines.append(lookahead.text)
-            if self.current_close in lookahead.text:
+            if self.context.close in lookahead.text:
                 found_close = True
                 break
 
@@ -80,57 +68,38 @@ class BracketCleaner:
             logger.debug(f"Found open and close brackets across multiple lines: {text} ... {buffer_lines[-1]}")
             block_text = "\n".join(buffer_lines)
             cleaned_text = self.clean_and_join(block_text)
-            self.hanging_open = None
+            self.context.multipage_open = None
         else:
             logger.debug(f"Found hanging open bracket: {text}")
-            self.hanging_open = self.current_open
-            cleaned_text = text.partition(self.current_open)[0].rstrip()
+            self.context.multipage_open = self.context.open
+            cleaned_text = text.partition(self.context.open)[0].rstrip()
 
         return cleaned_text
 
-    def clean_and_join(self, text):
-
-        before_open, after_close = self.partition_by_brackets(text)
-
-        if self.current_close in before_open:  # Author typo: hanging close
-            logger.warning(f"Cleaning [CASE: Author typo - Hanging Close]: line={text}")
-            cleaned_text = self.handle_hanging_close(before_open, after_close)
-
-        else:
-            logger.debug(f"Cleaning [CASE: Brackets Closed on Same Line]: line={text}")
-            cleaned_text = ''.join([before_open.rstrip(), after_close])
-
-        return cleaned_text
-
-    def clean_brackets(self, filtered_lines) -> list[Span]:
+    def clean_brackets(self, spans: list[Span]) -> list[Span]:
 
         result = []
-        lines_iter = PeekableIterator(filtered_lines)
+        spans_iter = PeekableIterator(spans)
 
-        for line in lines_iter:
+        for span in spans_iter:
+            text_buffer = span.text
+            for self.context.open, self.context.close in self.prioritized_pairs():
+                while True:
+                    if self.context.multipage_open and self.context.close in text_buffer:
+                        text_buffer = self.close_multipage_bracket(text_buffer)
 
-            text = line.text
-            for open_b, close_b in self.prioritized_pairs():
-                line_cleaned = False
-                while not line_cleaned:
-                    if self.hanging_open and close_b in text:
-                        logger.debug(f"Found closing bracket of hanging open: {line}")
-                        cleaned_text = self.handle_hanging_bracket(text)
+                    elif self.context.open in text_buffer and self.context.close in text_buffer:
+                        text_buffer = self.clean_and_join(text_buffer)
 
-                    elif open_b in text:
-                        cleaned_text = self.handle_opening_bracket(text, lines_iter)
+                    elif self.context.open in text_buffer:
+                        text_buffer = self.handle_multiline_bracket(text_buffer, spans_iter)
 
                     else:
-                        cleaned_text = text
+                        break
 
-                    if open_b not in cleaned_text:
-                        line_cleaned = True
-                    else:
-                        text = cleaned_text
-
-                text = cleaned_text
-
-            cleaned_line = line.with_text(cleaned_text)
-            result.append(cleaned_line)
+            if span.text == text_buffer:
+                result.append(span)
+            else:
+                result.append(span.with_text(text_buffer))
 
         return result

@@ -10,7 +10,7 @@ from src.pdf2text.core.page_analyzer import SpansAnalysis
 from src.pdf2text.core.page_filter import PageFilter
 from src.pdf2text.models.layout.spans import Spans
 from src.pdf2text.rule_engine.rule_engines import RULE_ENGINES
-from src.pdf2text.utils.bracket_cleaner import BracketCleaner
+from src.pdf2text.utils.bracket_cleaner import BracketCleaner, BracketCleanerContext
 
 from src.pdf2text.utils.logger_config import setup_logging
 from src.pdf2text.core.line_filter import LineFilter
@@ -36,11 +36,10 @@ def page_filter_step(classified_lines):
 def clean_page_numbers_step(classified_lines):
     return remove_page_number_lines(classified_lines)
 
-def clean_brackets_step(lines, hanging_open):
-    cleaned_brackets = BracketCleaner(hanging_open)
+def clean_brackets_step(lines, bracket_cleaner_context):
+    cleaned_brackets = BracketCleaner(bracket_cleaner_context)
     lines = cleaned_brackets.clean_brackets(lines)
-    hanging_open = cleaned_brackets.get_hanging_open()
-    return lines, hanging_open
+    return lines, bracket_cleaner_context
 
 def join_lines_step(lines):
     return join_lines(lines)
@@ -48,22 +47,21 @@ def join_lines_step(lines):
 def normalize_text_step(text, ocr):
     return normalize_text(text, ocr)
 
-def process_page(page_blocks, document_cache, hanging_open):
+def process_page(page_blocks, document_cache, bracket_cleaner_context):
     page_spans = Spans(list(PDFReader.iter_pdf_styling_from_blocks(page_blocks)))
     if len(page_spans) == 0:
-        return None, hanging_open
+        return None, bracket_cleaner_context
 
     page_data = analyze_page_step(page_spans)
     document_cache = update_cache_step(page_data, document_cache)
     classified_lines = filter_lines_step(page_data, document_cache)
     classified_lines = page_filter_step(classified_lines)
     lines = clean_page_numbers_step(classified_lines)
-    lines, hanging_open = clean_brackets_step(lines, hanging_open)
+    lines, hanging_open = clean_brackets_step(lines, bracket_cleaner_context)
     text = join_lines_step(lines)
     text = normalize_text_step(text, page_data.is_ocr)
 
     return text, hanging_open
-
 
 def process_pdf(pdf_path, page_start, page_end, output_path, output_dir):
     with PDFReader(pdf_path, page_start, page_end) as pdf_reader:
@@ -72,11 +70,11 @@ def process_pdf(pdf_path, page_start, page_end, output_path, output_dir):
         output_writer.set_output_path(pdf_reader.pdf, pdf_path, output_path, output_dir)
 
         output_writer.write(mode="w")
-        hanging_open = None
+        bracket_cleaner_context = BracketCleanerContext(multipage_open=None)
 
         document_cache = DocumentCache()
         for page_blocks in pdf_reader.iter_pages(sort=True):
-            page_text, hanging_open = process_page(page_blocks, document_cache, hanging_open)
+            page_text, hanging_open = process_page(page_blocks, document_cache, bracket_cleaner_context)
             if page_text:
                 output_writer.write(mode="a", text=f'{page_text}\n\n')
 
