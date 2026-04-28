@@ -1,6 +1,6 @@
 from __future__ import annotations
 from typing import Generator, Optional, Tuple, List, Dict, Any
-from src.pdf2text.models import Span
+from src.pdf2text.models.layout.span import Span
 import pymupdf
 import logging
 

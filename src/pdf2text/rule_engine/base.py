@@ -1,4 +1,4 @@
-from src.pdf2text.models import Decision
+from src.pdf2text.models.decisions.decision import Decision
 
 class Rule:
     priority = None

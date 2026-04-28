@@ -1,5 +1,7 @@
 from src.pdf2text.core.text_heuristics import ColumnCountHeuristic
-from src.pdf2text.models import Spans, HorizontalClusters, Columns, LayoutProfile, ColumnLayout, PageLayout
+from src.pdf2text.models.layout.spans import Spans, HorizontalClusters, Columns
+from src.pdf2text.models.layout.layout_profile import LayoutProfile
+from src.pdf2text.models.layout.page_layout import PageLayout, ColumnLayout
 
 import logging
 

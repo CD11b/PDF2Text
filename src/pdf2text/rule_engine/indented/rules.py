@@ -1,4 +1,6 @@
-from src.pdf2text.models import *
+from src.pdf2text.models.decisions.context_types import LineIndentation, PositionInParagraph, FontName, FontSize, \
+    CharacterCount
+from src.pdf2text.models.decisions.decision import Decision
 from src.pdf2text.rule_engine import Rule
 
 class IndentedBlockLastLineRule(Rule):

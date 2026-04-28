@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from .context_types import *
+from src.pdf2text.models.decisions.context_types import *
 
 @dataclass(slots=True, frozen=True)
 class SpanContext:

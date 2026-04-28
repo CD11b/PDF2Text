@@ -1,4 +1,4 @@
-from src.pdf2text.models import Bounds
+from src.pdf2text.models.layout.feature_stats import Bounds
 from collections import Counter
 
 class DocumentCache:

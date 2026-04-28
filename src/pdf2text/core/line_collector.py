@@ -1,6 +1,6 @@
 import logging
 from statistics import mean
-from src.pdf2text.models import Span, Decision, SpanContext, ClassifiedSpan
+from src.pdf2text.models.layout.span import Span, SpanContext, ClassifiedSpan
 
 logger = logging.getLogger(__name__)
 

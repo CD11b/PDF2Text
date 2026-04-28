@@ -1,5 +1,6 @@
 from statistics import median
-from src.pdf2text.models import *
+from src.pdf2text.models.decisions.context_types import LineIndentation, PositionInParagraph, MarginPosition, \
+    VerticalRegion, CharacterCount, FontName, FontSize, TextContent
 
 class Classifier:
 

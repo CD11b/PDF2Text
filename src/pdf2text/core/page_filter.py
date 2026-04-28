@@ -1,5 +1,4 @@
-from src.pdf2text.models import TextContent, FontSize
-
+from src.pdf2text.models.decisions.context_types import TextContent, FontSize
 
 class PageFilter:
 

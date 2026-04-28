@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from src.pdf2text.models.layout import FeatureStats, GapData
+from src.pdf2text.models.layout.feature_stats import FeatureStats, GapData
 
 from src.pdf2text.core.text_heuristics import IndentHeuristic, StartYHeuristic, EndXHeuristic, CharacterCountHeuristic, \
     FontNameHeuristic, FontSizeHeuristic, GapWithinRowsHeuristic, GapBetweenRowsHeuristic

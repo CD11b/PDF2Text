@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from itertools import groupby
-from src.pdf2text.models.lines import Span
+from src.pdf2text.models.layout.span import Span
 from collections import defaultdict
 
 @dataclass(frozen=True, slots=True)

@@ -1,5 +1,7 @@
 from src.pdf2text.core.peekable_iterator import PeekableIterator
-from src.pdf2text.models import VerticalRegion, MarginPosition, PositionInParagraph, Decision, SpanContext
+from src.pdf2text.models.decisions.context_types import VerticalRegion, MarginPosition, PositionInParagraph
+from src.pdf2text.models.decisions.decision import Decision
+from src.pdf2text.models.decisions.span_context import SpanContext
 from src.pdf2text.models.layout.column_layout import ColumnLayout
 from src.pdf2text.rule_engine import RuleEngine
 

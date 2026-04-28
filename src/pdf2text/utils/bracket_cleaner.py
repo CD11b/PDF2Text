@@ -1,7 +1,7 @@
 import logging
 
 from src.pdf2text.core.peekable_iterator import PeekableIterator
-from src.pdf2text.models import Span
+from src.pdf2text.models.layout.span import Span
 
 logger = logging.getLogger(__name__)
 

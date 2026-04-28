@@ -2,11 +2,13 @@ import os
 import argparse
 import logging
 
-from src.pdf2text.IO import PDFReader, OutputWriter
+from src.pdf2text.IO.pdf_reader import PDFReader
+from src.pdf2text.IO.output_writer import OutputWriter
+
 from src.pdf2text.core.document_cache import DocumentCache
 from src.pdf2text.core.page_analyzer import SpansAnalysis
 from src.pdf2text.core.page_filter import PageFilter
-from src.pdf2text.models import Spans
+from src.pdf2text.models.layout.spans import Spans
 from src.pdf2text.rule_engine.rule_engines import RULE_ENGINES
 from src.pdf2text.utils.bracket_cleaner import BracketCleaner
 

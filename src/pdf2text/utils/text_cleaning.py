@@ -1,5 +1,5 @@
 import logging, unicodedata, re
-from src.pdf2text.models import Span, ClassifiedSpan
+from src.pdf2text.models.layout.span import Span, ClassifiedSpan
 
 logger = logging.getLogger(__name__)
 

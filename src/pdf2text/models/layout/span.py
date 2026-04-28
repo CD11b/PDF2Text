@@ -1,5 +1,5 @@
 from dataclasses import dataclass, replace
-from src.pdf2text.models.decisions import SpanContext
+from src.pdf2text.models.decisions.span_context import SpanContext
 
 @dataclass(frozen=True)
 class Span:
