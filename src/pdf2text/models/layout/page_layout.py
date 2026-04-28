@@ -10,9 +10,9 @@ class ColumnLayout:
 @dataclass(frozen=True, slots=True)
 class PageLayout:
     heuristics: LayoutProfile
-    columns: list[ColumnLayout]
+    column_layouts: list[ColumnLayout]
     is_ocr: bool
 
     @property
     def column_count(self):
-        return len(self.columns)
+        return len(self.column_layouts)

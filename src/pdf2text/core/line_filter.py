@@ -86,7 +86,7 @@ class LineFilter:
     def filter_lines_individually(self):
         result = []
 
-        for column in self.page.columns:
+        for column in self.page.column_layouts:
             result.extend(self._process_column(column))
 
         return result

@@ -19,8 +19,8 @@ class SpansAnalysis:
         column_count_bounds = column_count_heuristic.compute_bounds(self.spans)
         return column_count_bounds.upper
 
-    def create_columns(self, horizontal_clusters, column_count_heuristic, column_count):
-        result = []
+    def create_column_layouts(self, horizontal_clusters, column_count_heuristic, column_count):
+        column_layouts = []
         start_x_columns = column_count_heuristic.compute_column_starts(self.spans, int(column_count))
         columns = Columns.create(horizontal_clusters, start_x_columns)
 
@@ -28,9 +28,9 @@ class SpansAnalysis:
             column_spans = Spans(columns[start_x])
             layout_profile = LayoutProfile.create(column_spans)
             column_horizontal_clusters = HorizontalClusters.create(column_spans, self._coordinate_tolerance)
-            result.append(ColumnLayout(column_horizontal_clusters, layout_profile))
+            column_layouts.append(ColumnLayout(column_horizontal_clusters, layout_profile))
 
-        return result
+        return column_layouts
 
     def analyze_page(self):
 
@@ -42,8 +42,8 @@ class SpansAnalysis:
         horizontal_clusters = HorizontalClusters.create(self.spans, self._coordinate_tolerance)
 
         if column_count > 1:
-            columns = self.create_columns(horizontal_clusters, column_count_heuristic, column_count)
+            column_layouts = self.create_column_layouts(horizontal_clusters, column_count_heuristic, column_count)
         else:
-            columns = [ColumnLayout(horizontal_clusters, page_heuristics)]
+            column_layouts = [ColumnLayout(horizontal_clusters, page_heuristics)]
 
-        return PageLayout(page_heuristics, columns, self.spans.is_ocr)
+        return PageLayout(page_heuristics, column_layouts, self.spans.is_ocr)

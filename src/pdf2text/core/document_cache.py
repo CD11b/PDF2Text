@@ -12,7 +12,7 @@ class DocumentCache:
         self._font_size_most_common = Counter()
 
     def update_cache(self, page_data):
-        for column in page_data.columns:
+        for column in page_data.column_layouts:
             self._left_margins.add(column.heuristics.start_x.most_common)
 
         self._start_y_ranges.add(page_data.heuristics.start_y.distribution.range)
