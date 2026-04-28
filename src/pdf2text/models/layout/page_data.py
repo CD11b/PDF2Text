@@ -3,9 +3,9 @@ from itertools import groupby
 from src.pdf2text.models.lines import Span
 from collections import defaultdict
 
-@dataclass(slots=True)
+@dataclass(frozen=True, slots=True)
 class Spans:
-    spans: tuple(list[Span])
+    spans: list[Span]
     _rows: list | None = None
     _is_ocr: bool | None = None
     _horizontal_clusters: list | None = None
@@ -23,10 +23,10 @@ class Spans:
     def rows(self):
         if self._rows is None:
             y_sorted_spans = sorted(self.spans, key=lambda span: span.start_y)
-            self._rows = [sorted(y_group, key=lambda span: span.start_x)
+            rows = [sorted(y_group, key=lambda span: span.start_x)
                           for _, y_group in groupby(y_sorted_spans, key=lambda span: span.start_y)]
 
-
+            object.__setattr__(self, "_rows", rows)
         return self._rows
 
     @property
@@ -34,8 +34,9 @@ class Spans:
         if self._is_ocr is None:
             word_like = sum(" " not in span.text.strip() for span in self.spans)
             phrase_like = len(self.spans) - word_like
-            self._is_ocr = word_like > phrase_like
+            is_ocr = word_like > phrase_like
 
+            object.__setattr__(self, "_is_ocr", is_ocr)
         return self._is_ocr
 
 @dataclass(frozen=True, slots=True)
