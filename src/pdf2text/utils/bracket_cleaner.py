@@ -1,6 +1,4 @@
 import logging
-
-from src.pdf2text.core.peekable_iterator import PeekableIterator
 from src.pdf2text.models.layout.span import Span
 
 
@@ -54,13 +52,15 @@ class BracketCleaner:
         self.context.multipage_open = None
         return after_close.lstrip()
 
-    def handle_multiline_bracket(self, text, spans_iter):
+    def handle_multiline_bracket(self, text, spans):
         buffer_lines = [text]
         found_close = False
+        consumed = 0
 
-        for lookahead in spans_iter:
-            buffer_lines.append(lookahead.text)
-            if self.context.close in lookahead.text:
+        for span in spans[1:]:
+            buffer_lines.append(span.text)
+            consumed += 1
+            if self.context.close in span.text:
                 found_close = True
                 break
 
@@ -68,21 +68,24 @@ class BracketCleaner:
             logger.debug(f"Found open and close brackets across multiple lines: {text} ... {buffer_lines[-1]}")
             block_text = "\n".join(buffer_lines)
             cleaned_text = self.clean_and_join(block_text)
-            self.context.multipage_open = None
+            if self.context.multipage_open and self.context.open == self.context.multipage_open:
+                self.context.multipage_open = None
         else:
             logger.debug(f"Found hanging open bracket: {text}")
             self.context.multipage_open = self.context.open
             cleaned_text = text.partition(self.context.open)[0].rstrip()
 
-        return cleaned_text
+        return cleaned_text, consumed
+
 
     def clean_brackets(self, spans: list[Span]) -> list[Span]:
 
         result = []
-        spans_iter = PeekableIterator(spans)
+        i = 0
+        j = 0
 
-        for span in spans_iter:
-            text_buffer = span.text
+        while i < len(spans):
+            text_buffer = spans[i].text
             for self.context.open, self.context.close in self.prioritized_pairs():
                 while True:
                     if self.context.multipage_open and self.context.close in text_buffer:
@@ -92,14 +95,18 @@ class BracketCleaner:
                         text_buffer = self.clean_and_join(text_buffer)
 
                     elif self.context.open in text_buffer:
-                        text_buffer = self.handle_multiline_bracket(text_buffer, spans_iter)
+                        text_buffer, consumed = self.handle_multiline_bracket(text_buffer, spans[i:])
+                        j += consumed
 
                     else:
                         break
 
-            if span.text == text_buffer:
-                result.append(span)
+            if spans[i].text == text_buffer:
+                result.append(spans[i])
             else:
-                result.append(span.with_text(text_buffer))
+                result.append(spans[i].with_text(text_buffer))
+
+            i += 1 + j
+            j = 0
 
         return result
