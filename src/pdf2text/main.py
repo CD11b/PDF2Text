@@ -70,7 +70,7 @@ def process_pdf(pdf_path, page_start, page_end, output_path, output_dir):
         output_writer.set_output_path(pdf_reader.pdf, pdf_path, output_path, output_dir)
 
         output_writer.write(mode="w")
-        bracket_cleaner_context = BracketCleanerContext(multipage_open=None)
+        bracket_cleaner_context = BracketCleanerContext(multipage_open_b=None)
 
         document_cache = DocumentCache()
         for page_blocks in pdf_reader.iter_pages(sort=True):
