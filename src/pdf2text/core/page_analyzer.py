@@ -1,5 +1,5 @@
 from src.pdf2text.core.text_heuristics import ColumnCountHeuristic
-from src.pdf2text.models import Spans, HorizontalClusters, Column, LayoutProfile, ColumnLayout, PageLayout
+from src.pdf2text.models import Spans, HorizontalClusters, Columns, LayoutProfile, ColumnLayout, PageLayout
 
 import logging
 
@@ -20,21 +20,20 @@ class SpansAnalysis:
         return column_count_bounds.upper
 
     def create_columns(self, horizontal_clusters, column_count_heuristic, column_count):
-        columns = []
+        result = []
         start_x_columns = column_count_heuristic.compute_column_starts(self.spans, int(column_count))
-        columned_groups = Column.create(horizontal_clusters, start_x_columns)
+        columns = Columns.create(horizontal_clusters, start_x_columns)
 
-        for start_x in sorted(columned_groups.keys()):
-            column_spans = Spans(columned_groups[start_x])
-            column_heuristics = LayoutProfile.create(column_spans)
-            column_line_groups = HorizontalClusters.create(column_spans, self._coordinate_tolerance)
-            columns.append(ColumnLayout(column_line_groups, column_heuristics))
+        for start_x in sorted(columns.keys()):
+            column_spans = Spans(columns[start_x])
+            layout_profile = LayoutProfile.create(column_spans)
+            column_horizontal_clusters = HorizontalClusters.create(column_spans, self._coordinate_tolerance)
+            result.append(ColumnLayout(column_horizontal_clusters, layout_profile))
 
-        return columns
+        return result
 
     def analyze_page(self):
 
-        columns = []
         page_heuristics = LayoutProfile.create(self.spans)
         self.compute_tolerance(page_heuristics)
 
@@ -45,6 +44,6 @@ class SpansAnalysis:
         if column_count > 1:
             columns = self.create_columns(horizontal_clusters, column_count_heuristic, column_count)
         else:
-            columns.append(ColumnLayout(horizontal_clusters, page_heuristics))
+            columns = [ColumnLayout(horizontal_clusters, page_heuristics)]
 
         return PageLayout(page_heuristics, columns, self.spans.is_ocr)

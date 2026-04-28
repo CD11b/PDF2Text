@@ -66,7 +66,7 @@ class HorizontalClusters:
 
 
 @dataclass(frozen=True, slots=True)
-class Column:
+class Columns:
     spans: dict[int, list[Span]]
 
     def __iter__(self):
