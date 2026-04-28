@@ -45,6 +45,9 @@ class HorizontalClusters:
     def __getitem__(self, index):
         return self.spans[index]
 
+    def __len__(self):
+        return len(self.spans)
+
     @classmethod
     def create(cls, spans: Spans, coordinate_tolerance):
         horizontal_clusters = []
