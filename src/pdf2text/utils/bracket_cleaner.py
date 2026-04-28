@@ -61,12 +61,6 @@ class BracketCleaner:
             logger.debug(f"Found open and close brackets in line: {text}")
             cleaned_text = self.clean_and_join(text)
 
-        elif lines_iter.peek() and self.current_close in lines_iter.peek().text:
-            next_line = next(lines_iter)
-            combined = text + " " + next_line.text
-            logger.debug(f"Found open and close brackets across consecutive lines: {text}, {next_line}")
-            cleaned_text = self.clean_and_join(combined)
-
         else:
             cleaned_text = self.handle_multiline_bracket(text, lines_iter)
 
