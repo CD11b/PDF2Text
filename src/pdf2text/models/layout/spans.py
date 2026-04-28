@@ -8,10 +8,6 @@ class Spans:
     spans: list[Span]
     _rows: list | None = None
     _is_ocr: bool | None = None
-    _horizontal_clusters: list | None = None
-
-    def __iter__(self):
-        return iter(self.spans)
 
     def __getitem__(self, item):
         return self.spans[item]
@@ -69,23 +65,11 @@ class HorizontalClusters:
 class Columns:
     spans: dict[int, list[Span]]
 
-    def __iter__(self):
-        return iter(self.spans)
-
     def __getitem__(self, key):
         return self.spans[key]
 
-    def __len__(self):
-        return len(self.spans)
-
     def keys(self):
         return self.spans.keys()
-
-    def items(self):
-        return self.spans.items()
-
-    def values(self):
-        return self.spans.values()
 
     @classmethod
     def create(cls, horizontal_clusters, start_x_columns):
