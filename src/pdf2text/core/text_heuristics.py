@@ -4,7 +4,7 @@ from typing import Optional, Any
 import logging
 
 from src.pdf2text.models.layout.feature_stats import FeatureStats, Bounds, Distribution
-from src.pdf2text.models.layout.page_data import Spans
+from src.pdf2text.models.layout.spans import Spans
 
 logger = logging.getLogger(__name__)
 
