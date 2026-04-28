@@ -58,7 +58,7 @@ def process_page(page_blocks, document_cache, hanging_open):
     lines = clean_page_numbers_step(classified_lines)
     lines, hanging_open = clean_brackets_step(lines, hanging_open)
     text = join_lines_step(lines)
-    text = normalize_text_step(text, page_data.ocr)
+    text = normalize_text_step(text, page_data.is_ocr)
 
     return text, hanging_open
 
